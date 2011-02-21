@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceDefinition name="AcceleratorService" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition">
+  <WorkerRole name="AcceleratorWorkerRole" enableNativeCodeExecution="true" vmsize="Small">
+    <ConfigurationSettings>
+      <!--[ BASE ]-->
+      <Setting name="AcceleratorApplication" />
+      <Setting name="AcceleratorConnectionString" />
+      <Setting name="LocalSitePath" />
+      <Setting name="AcceleratorConfigBlobUri" />
+      <Setting name="AcceleratorContainerSyncUri" />
+      <Setting name="AcceleratorMachineKey" />
+      <Setting name="EnableDevStorage" />
+      <Setting name="allowInsecureRemoteEndpoints" />
+      <Setting name="Hostheader" />
+      <!--[ DIAGNOSTICS ]-->
+      <Setting name="Diagnostics" />
+      <Setting name="DiagnosticsConnectionString" />
+      <Setting name="DiagnosticsServiceBus" />
+      <!--[ DOTNETNUKE ]-->
+      <Setting name="AcceleratorDrivePageBlobUri" />
+      <Setting name="DatabaseConnectionString" />
+    </ConfigurationSettings>
+    <Endpoints>
+      <!--[ BASE ]-->
+      <InputEndpoint name="HttpIn" protocol="http" port="80" />
+      <InputEndpoint name="HttpInAlt" protocol="http" port="8080" />
+      <!--[ DIAGNOSTICS ]-->
+      <!-- Warning: do not enable outside of limited and restricted testing.
+                      this is an open port to a console in the worker role for
+                      debug only.  (EnableServiceConsole must be set to true
+                      as well).
+        <InputEndpoint name="DiagnosticsConsole" protocol="tcp" port="7777" />-->
+    </Endpoints>
+    <LocalResources>
+      <!--[ LOCAL STORAGE ]
+                
+                [LocalStorage]    - General local instance storage for use by the Accelerator
+                                    engine. 
+
+                [CloudDriveCache] - Required if mounting cache drives. Size must exceed
+                                    cummulative cache requirements of component applications. 
+
+                [DiagnosticLogs]  - Temporary storage location for trace files and event log
+                                    collection created by the Accelerator engine during
+                                    applications startup and teardown orchestration. 
+            -->
+      <LocalStorage name="LocalStorage" cleanOnRoleRecycle="true" sizeInMB="16384" />
+      <LocalStorage name="CloudDriveCache" cleanOnRoleRecycle="true" sizeInMB="2048" />
+      <LocalStorage name="DiagnosticLogs" cleanOnRoleRecycle="false" sizeInMB="16384" />
+    </LocalResources>
+    <Certificates>
+    </Certificates>
+  </WorkerRole>
+</ServiceDefinition>

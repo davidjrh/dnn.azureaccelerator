@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<ServiceConfiguration serviceName="AcceleratorService" osVersion="WA-GUEST-OS-1.3_201004-01" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration">
+  <Role name="AcceleratorWorkerRole">
+    <Instances count="1" />
+    <ConfigurationSettings>
+      <!--[ BASE ]-->
+      <Setting name="AcceleratorApplication" value="DotNetNuke,5.6.1" />
+      <Setting name="AcceleratorConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="LocalSitePath" value="C:\inetpub\wwwroot" />
+      <!--[ DOTNETNUKE ]-->
+      <Setting name="AcceleratorDrivePageBlobUri" value="azure-accelerator-drives/DotNetNuke.vhd" />
+      <Setting name="DatabaseConnectionString" value="Server=tcp:???.database.windows.net;Database=DotNetNuke;User ID=???@???;Password=???;dbUser=???;dbPassword=???;Trusted_Connection=False;Encrypt=True;" />
+      <!--[ DIAGNOSTICS ]-->
+      <Setting name="DiagnosticsConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="Diagnostics" value="ApplicationName=DotNetNuke;EnableLogging=true;DiagnosticsConsole=false;RealtimeTracing=false;LogFilter=Verbose;LogTransferInterval=5;BufferQuotaInMB=512" />
+      <Setting name="DiagnosticsServiceBus" value="ServiceNamespace=enterservicebus;ServicePath=diag/umbraco;IssuerName=owner;IssuerSecret=enterissuersecret" />
+      <!--[ OTHER: SHOULD NOT REQUIRE UPDATE ]-->
+      <Setting name="AcceleratorConfigBlobUri" value="wa-accelerator-apps/dotnetnuke.config" />
+      <Setting name="AcceleratorContainerSyncUri" value="wa-accelerator-apps" />
+      <Setting name="AcceleratorMachineKey" value="&lt;machineKey validationKey=&quot;88B316536D606BB0521A0096B2DD82D0F60A734815030B1C6976C1683FE885567DE5C7CEF2D4060BBAD9601FE30C72023829464A1DCEBF5814C8F4F425CE9493&quot; decryptionKey=&quot;67AC62B815C9177E77B60E33639172A08A4FB2B057EB44C5C03811E3AEE79A0E&quot; validation=&quot;SHA1&quot; decryption=&quot;AES&quot; /&gt;" />
+      <Setting name="EnableDevStorage" value="true" />
+      <Setting name="allowInsecureRemoteEndpoints" value="true" />
+      <Setting name="Hostheader" value="" />
+    </ConfigurationSettings>
+    <Certificates>
+    </Certificates>
+  </Role>
+</ServiceConfiguration>
