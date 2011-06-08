@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ServiceConfiguration serviceName="AcceleratorService" osVersion="WA-GUEST-OS-1.3_201004-01" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration">
+  <!-- 06/06/2011 - David Rodriguez - THIS FILE IS OBSOLETE AND IS USED AS A TEMPLATE FOR THE UPLOAD PROCESS ONLY FOR COMPATIBILITY WITH DE ACCELERATOR PROJECT-->
+  <Role name="AcceleratorWorkerRole">
+    <Instances count="0"/>
+    <ConfigurationSettings>
+      <Setting name="AcceleratorConnectionString" 
+                value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="DatabaseConnectionString" 
+                value="Server=tcp:@@DBSERVER@@.database.windows.net;Database=@@DBNAME@@;User ID=@@DBADMINUSER@@@@@DBSERVER@@;Password=@@DBADMINPASSWORD@@;dbUser=@@DBUSER@@;dbPassword=@@DBPASSWORD@@;Trusted_Connection=False;Encrypt=True;" />
+      <Setting name="AcceleratorDrivePageBlobUri" value="azure-accelerator-drives/dotnetnuke.vhd" />
+      <Setting name="AcceleratorContainerSyncUri" value="wa-accelerator-apps" />
+    </ConfigurationSettings>
+    <Certificates></Certificates>
+  </Role>
+</ServiceConfiguration>

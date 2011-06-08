@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <DeploymentBuildOnly>True</DeploymentBuildOnly>
+    <DeploymentIsExpanded>False</DeploymentIsExpanded>
+    <DeploymentAccountName>iPista</DeploymentAccountName>
+    <DeploymentHostedService>ipista</DeploymentHostedService>
+    <DeploymentHostedServiceLabel>iPista.com</DeploymentHostedServiceLabel>
+    <DeploymentSlot>Production</DeploymentSlot>
+    <DeploymentIncludeIntellitrace>True</DeploymentIncludeIntellitrace>
+    <DeploymentEnableWebDeploy>False</DeploymentEnableWebDeploy>
+    <DeploymentStorageService>ipista</DeploymentStorageService>
+    <DeploymentStorageServiceLabel>ipista</DeploymentStorageServiceLabel>
+    <DeploymentLabel>DNNAzureSMB - 6/8/2011 3:04:14 AM</DeploymentLabel>
+    <DeploymentPromptBeforeDeleting>True</DeploymentPromptBeforeDeleting>
+  </PropertyGroup>
+</Project>
