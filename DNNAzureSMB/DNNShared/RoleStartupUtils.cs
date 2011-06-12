@@ -81,6 +81,7 @@ namespace DNNShared
 
                 webconfig.Save(webConfigPath);
                 Trace.TraceInformation("Web.config modified successfully");
+                success = true;
             }
             catch (Exception ex)
             {
