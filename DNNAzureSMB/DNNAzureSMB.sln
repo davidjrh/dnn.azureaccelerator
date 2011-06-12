@@ -9,7 +9,47 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNAzure", "DNNAzure\DNNAzu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNAzureWizard", "DNNAzureWizard\DNNAzureWizard.csproj", "{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB}"
 EndProject
+Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "DNNAzureSingle", "DNNAzureSingle\DNNAzureSingle.ccproj", "{C3C027B3-4B57-49F2-844A-B137A3435CBA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cloud Service Packages", "Cloud Service Packages", "{69CB10B5-024F-4751-8CF3-EAECD235FF05}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Roles", "Roles", "{D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Installation Wizard", "Installation Wizard", "{3AFC3AC8-068B-4A3B-8941-159DFCE47076}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNShared", "DNNShared\DNNShared.csproj", "{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}"
+EndProject
 Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 7
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs22
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = DNNAzureSMB\\DNNAzureSMB.ccproj
+		SccProjectTopLevelParentUniqueName1 = DNNAzureSMB.sln
+		SccProjectName1 = DNNAzureSMB
+		SccLocalPath1 = DNNAzureSMB
+		SccProjectUniqueName2 = SMBServer\\SMBServer.csproj
+		SccProjectTopLevelParentUniqueName2 = DNNAzureSMB.sln
+		SccProjectName2 = SMBServer
+		SccLocalPath2 = SMBServer
+		SccProjectUniqueName3 = DNNAzure\\DNNAzure.csproj
+		SccProjectTopLevelParentUniqueName3 = DNNAzureSMB.sln
+		SccProjectName3 = DNNAzure
+		SccLocalPath3 = DNNAzure
+		SccProjectUniqueName4 = DNNAzureWizard\\DNNAzureWizard.csproj
+		SccProjectTopLevelParentUniqueName4 = DNNAzureSMB.sln
+		SccProjectName4 = DNNAzureWizard
+		SccLocalPath4 = DNNAzureWizard
+		SccProjectUniqueName5 = DNNAzureSingle\\DNNAzureSingle.ccproj
+		SccProjectTopLevelParentUniqueName5 = DNNAzureSMB.sln
+		SccProjectName5 = DNNAzureSingle
+		SccLocalPath5 = DNNAzureSingle
+		SccProjectUniqueName6 = DNNShared\\DNNShared.csproj
+		SccProjectTopLevelParentUniqueName6 = DNNAzureSMB.sln
+		SccProjectName6 = DNNShared
+		SccLocalPath6 = DNNShared
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -59,8 +99,36 @@ Global
 		{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB}.Release|Mixed Platforms.Build.0 = Release|x86
 		{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB}.Release|x86.ActiveCfg = Release|x86
 		{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB}.Release|x86.Build.0 = Release|x86
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|x86.ActiveCfg = Release|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
+		{1512B578-B7DB-4CAD-823F-CDC910A708B7} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
+		{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
+		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
+		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
+		{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB} = {3AFC3AC8-068B-4A3B-8941-159DFCE47076}
 	EndGlobalSection
 EndGlobal

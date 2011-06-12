@@ -4,13 +4,13 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>1.3.0</ProductVersion>
-    <ProjectGuid>{1512b578-b7db-4cad-823f-cdc910a708b7}</ProjectGuid>
+    <ProjectGuid>{c3c027b3-4b57-49f2-844a-b137a3435cba}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DNNAzureSMB</RootNamespace>
-    <AssemblyName>DNNAzureSMB</AssemblyName>
+    <RootNamespace>DNNAzureSingle</RootNamespace>
+    <AssemblyName>DNNAzureSingle</AssemblyName>
     <StartDevelopmentStorage>True</StartDevelopmentStorage>
-    <Name>DNNAzureSMB</Name>
+    <Name>DNNAzureSingle</Name>
     <SccProjectName>SAK</SccProjectName>
     <SccProvider>SAK</SccProvider>
     <SccAuxPath>SAK</SccAuxPath>
@@ -45,13 +45,6 @@
       <Private>True</Private>
       <RoleType>Web</RoleType>
       <RoleName>DNNAzure</RoleName>
-    </ProjectReference>
-    <ProjectReference Include="..\SMBServer\SMBServer.csproj">
-      <Name>SMBServer</Name>
-      <Project>{e20e816a-b031-4d1a-9988-3d49bf2ddee7}</Project>
-      <Private>True</Private>
-      <RoleType>Worker</RoleType>
-      <RoleName>SMBServer</RoleName>
     </ProjectReference>
   </ItemGroup>
   <!-- Import the target files for this project template -->

@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition">
+  <WebRole name="DNNAzure" vmsize="ExtraSmall">
+    <Runtime executionContext="elevated">
+    </Runtime>
+    <Sites>
+      <Site name="Web">
+        <Bindings>
+          <Binding name="HttpIn" endpointName="HttpIn" />
+        </Bindings>
+      </Site>
+    </Sites>
+    <Endpoints>
+      <InputEndpoint name="HttpIn" protocol="http" port="80" />
+      <InternalEndpoint name="SMB" protocol="tcp" port="445" />
+    </Endpoints>
+    <Imports>
+      <Import moduleName="Diagnostics" />
+    </Imports>
+    <ConfigurationSettings>
+      <Setting name="AcceleratorConnectionString" />
+      <Setting name="driveName" />
+      <Setting name="driveSize" />
+      <Setting name="driveContainer" />
+      <Setting name="DatabaseConnectionString" />
+      <Setting name="dnnFolder" />
+      <Setting name="hostHeaders" />
+      <Setting name="managedRuntimeVersion" />
+      <Setting name="managedPipelineMode" />
+      <Setting name="fileshareUserName" />
+      <Setting name="fileshareUserPassword" />
+      <Setting name="shareName" />
+      <Setting name="localPath" />
+      <Setting name="SMBMode" />
+    </ConfigurationSettings>
+    <LocalResources>
+      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="300" />
+    </LocalResources>
+  </WebRole>
+</ServiceDefinition>
