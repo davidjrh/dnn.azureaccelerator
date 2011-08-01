@@ -19,7 +19,5 @@
       <Setting name="localPath" value="X:" />
       <Setting name="SMBMode" value="false" />
     </ConfigurationSettings>
-    <Certificates>
-    </Certificates>
   </Role>
 </ServiceConfiguration>
