@@ -16,7 +16,7 @@
       <Setting name="driveContainer" />
       <Setting name="DatabaseConnectionString" />
       <Setting name="packageContainer" />
-      <Setting name="packageName" />
+      <Setting name="package" />
       <Setting name="dnnFolder" />
     </ConfigurationSettings>
     <LocalResources>
