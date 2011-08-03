@@ -31,16 +31,27 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmDNNAzureWizard));
             this.split = new System.Windows.Forms.SplitContainer();
             this.pnl = new System.Windows.Forms.Panel();
-            this.pnl5 = new System.Windows.Forms.Panel();
+            this.pnl6 = new System.Windows.Forms.Panel();
             this.panel2 = new System.Windows.Forms.Panel();
+            this.lstTasks = new System.Windows.Forms.ListView();
+            this.TaskDescription = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.TaskStatus = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.txtLOG = new System.Windows.Forms.TextBox();
             this.label27 = new System.Windows.Forms.Label();
             this.label28 = new System.Windows.Forms.Label();
-            this.pnl4 = new System.Windows.Forms.Panel();
-            this.pnlConfig = new System.Windows.Forms.Panel();
-            this.txtConfig = new System.Windows.Forms.TextBox();
-            this.label26 = new System.Windows.Forms.Label();
-            this.label25 = new System.Windows.Forms.Label();
+            this.pnl1 = new System.Windows.Forms.Panel();
+            this.pictureBox6 = new System.Windows.Forms.PictureBox();
+            this.chkDontShow = new System.Windows.Forms.CheckBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
+            this.pictureBox3 = new System.Windows.Forms.PictureBox();
+            this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.pnl7 = new System.Windows.Forms.Panel();
+            this.panel3 = new System.Windows.Forms.Panel();
+            this.txtLogFinal = new System.Windows.Forms.TextBox();
+            this.label29 = new System.Windows.Forms.Label();
+            this.lblSuccess = new System.Windows.Forms.Label();
             this.pnl2 = new System.Windows.Forms.Panel();
             this.DBSettings = new System.Windows.Forms.Panel();
             this.label24 = new System.Windows.Forms.Label();
@@ -68,6 +79,21 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.pictureBox4 = new System.Windows.Forms.PictureBox();
+            this.pnl4 = new System.Windows.Forms.Panel();
+            this.panel4 = new System.Windows.Forms.Panel();
+            this.label31 = new System.Windows.Forms.Label();
+            this.txtStorageContainer = new System.Windows.Forms.TextBox();
+            this.lstPackages = new System.Windows.Forms.ListView();
+            this.packageName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.packageDescription = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.label36 = new System.Windows.Forms.Label();
+            this.pictureBox7 = new System.Windows.Forms.PictureBox();
+            this.label37 = new System.Windows.Forms.Label();
+            this.pnl5 = new System.Windows.Forms.Panel();
+            this.pnlConfig = new System.Windows.Forms.Panel();
+            this.txtConfig = new System.Windows.Forms.TextBox();
+            this.label26 = new System.Windows.Forms.Label();
+            this.label25 = new System.Windows.Forms.Label();
             this.pnl3 = new System.Windows.Forms.Panel();
             this.AzureSettings = new System.Windows.Forms.Panel();
             this.label22 = new System.Windows.Forms.Label();
@@ -83,42 +109,34 @@
             this.label18 = new System.Windows.Forms.Label();
             this.pictureBox5 = new System.Windows.Forms.PictureBox();
             this.label17 = new System.Windows.Forms.Label();
-            this.pnl1 = new System.Windows.Forms.Panel();
-            this.chkDontShow = new System.Windows.Forms.CheckBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
-            this.pictureBox3 = new System.Windows.Forms.PictureBox();
-            this.pictureBox2 = new System.Windows.Forms.PictureBox();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.btnBack = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnOK = new System.Windows.Forms.Button();
-            this.pnl6 = new System.Windows.Forms.Panel();
-            this.panel3 = new System.Windows.Forms.Panel();
-            this.txtLogFinal = new System.Windows.Forms.TextBox();
-            this.label29 = new System.Windows.Forms.Label();
-            this.label30 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.split)).BeginInit();
             this.split.Panel1.SuspendLayout();
             this.split.Panel2.SuspendLayout();
             this.split.SuspendLayout();
             this.pnl.SuspendLayout();
-            this.pnl5.SuspendLayout();
+            this.pnl6.SuspendLayout();
             this.panel2.SuspendLayout();
-            this.pnl4.SuspendLayout();
-            this.pnlConfig.SuspendLayout();
-            this.pnl2.SuspendLayout();
-            this.DBSettings.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox4)).BeginInit();
-            this.pnl3.SuspendLayout();
-            this.AzureSettings.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox5)).BeginInit();
             this.pnl1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox6)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
-            this.pnl6.SuspendLayout();
+            this.pnl7.SuspendLayout();
             this.panel3.SuspendLayout();
+            this.pnl2.SuspendLayout();
+            this.DBSettings.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox4)).BeginInit();
+            this.pnl4.SuspendLayout();
+            this.panel4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox7)).BeginInit();
+            this.pnl5.SuspendLayout();
+            this.pnlConfig.SuspendLayout();
+            this.pnl3.SuspendLayout();
+            this.AzureSettings.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox5)).BeginInit();
             this.SuspendLayout();
             // 
             // split
@@ -146,11 +164,12 @@
             // 
             // pnl
             // 
-            this.pnl.Controls.Add(this.pnl6);
-            this.pnl.Controls.Add(this.pnl5);
-            this.pnl.Controls.Add(this.pnl4);
+            this.pnl.Controls.Add(this.pnl7);
             this.pnl.Controls.Add(this.pnl2);
+            this.pnl.Controls.Add(this.pnl4);
+            this.pnl.Controls.Add(this.pnl5);
             this.pnl.Controls.Add(this.pnl3);
+            this.pnl.Controls.Add(this.pnl6);
             this.pnl.Controls.Add(this.pnl1);
             this.pnl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnl.Location = new System.Drawing.Point(0, 0);
@@ -158,14 +177,14 @@
             this.pnl.Size = new System.Drawing.Size(628, 359);
             this.pnl.TabIndex = 0;
             // 
-            // pnl5
+            // pnl6
             // 
-            this.pnl5.Controls.Add(this.panel2);
-            this.pnl5.Controls.Add(this.label28);
-            this.pnl5.Location = new System.Drawing.Point(25, 3);
-            this.pnl5.Name = "pnl5";
-            this.pnl5.Size = new System.Drawing.Size(583, 92);
-            this.pnl5.TabIndex = 8;
+            this.pnl6.Controls.Add(this.panel2);
+            this.pnl6.Controls.Add(this.label28);
+            this.pnl6.Location = new System.Drawing.Point(9, 1);
+            this.pnl6.Name = "pnl6";
+            this.pnl6.Size = new System.Drawing.Size(607, 344);
+            this.pnl6.TabIndex = 8;
             // 
             // panel2
             // 
@@ -173,12 +192,38 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel2.BackColor = System.Drawing.SystemColors.Control;
+            this.panel2.Controls.Add(this.lstTasks);
             this.panel2.Controls.Add(this.txtLOG);
             this.panel2.Controls.Add(this.label27);
             this.panel2.Location = new System.Drawing.Point(0, 57);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(581, 34);
+            this.panel2.Size = new System.Drawing.Size(605, 286);
             this.panel2.TabIndex = 3;
+            // 
+            // lstTasks
+            // 
+            this.lstTasks.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lstTasks.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.TaskDescription,
+            this.TaskStatus});
+            this.lstTasks.Location = new System.Drawing.Point(14, 49);
+            this.lstTasks.Name = "lstTasks";
+            this.lstTasks.Size = new System.Drawing.Size(579, 220);
+            this.lstTasks.TabIndex = 2;
+            this.lstTasks.UseCompatibleStateImageBehavior = false;
+            this.lstTasks.View = System.Windows.Forms.View.Details;
+            // 
+            // TaskDescription
+            // 
+            this.TaskDescription.Text = "Task description";
+            this.TaskDescription.Width = 450;
+            // 
+            // TaskStatus
+            // 
+            this.TaskStatus.Text = "Status";
+            this.TaskStatus.Width = 100;
             // 
             // txtLOG
             // 
@@ -187,13 +232,14 @@
             this.txtLOG.BackColor = System.Drawing.Color.MidnightBlue;
             this.txtLOG.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txtLOG.ForeColor = System.Drawing.Color.Silver;
-            this.txtLOG.Location = new System.Drawing.Point(13, 41);
+            this.txtLOG.Location = new System.Drawing.Point(529, 18);
             this.txtLOG.Multiline = true;
             this.txtLOG.Name = "txtLOG";
             this.txtLOG.ReadOnly = true;
             this.txtLOG.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtLOG.Size = new System.Drawing.Size(553, 229);
+            this.txtLOG.Size = new System.Drawing.Size(69, 18);
             this.txtLOG.TabIndex = 1;
+            this.txtLOG.Visible = false;
             // 
             // label27
             // 
@@ -201,7 +247,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label27.Location = new System.Drawing.Point(14, 17);
             this.label27.Name = "label27";
-            this.label27.Size = new System.Drawing.Size(546, 21);
+            this.label27.Size = new System.Drawing.Size(570, 21);
             this.label27.TabIndex = 0;
             this.label27.Text = "Check the log window in order to review the process of uploading DotNetNuke to Wi" +
     "ndows Azure";
@@ -216,70 +262,157 @@
             this.label28.TabIndex = 2;
             this.label28.Text = "Uploading DotNetNuke to Windows Azure";
             // 
-            // pnl4
+            // pnl1
             // 
-            this.pnl4.Controls.Add(this.pnlConfig);
-            this.pnl4.Controls.Add(this.label25);
-            this.pnl4.Location = new System.Drawing.Point(408, 0);
-            this.pnl4.Name = "pnl4";
-            this.pnl4.Size = new System.Drawing.Size(272, 71);
-            this.pnl4.TabIndex = 7;
+            this.pnl1.Controls.Add(this.pictureBox6);
+            this.pnl1.Controls.Add(this.chkDontShow);
+            this.pnl1.Controls.Add(this.label2);
+            this.pnl1.Controls.Add(this.label1);
+            this.pnl1.Controls.Add(this.pictureBox3);
+            this.pnl1.Controls.Add(this.pictureBox2);
+            this.pnl1.Controls.Add(this.pictureBox1);
+            this.pnl1.Location = new System.Drawing.Point(12, 12);
+            this.pnl1.Name = "pnl1";
+            this.pnl1.Size = new System.Drawing.Size(596, 332);
+            this.pnl1.TabIndex = 3;
             // 
-            // pnlConfig
+            // pictureBox6
             // 
-            this.pnlConfig.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.pictureBox6.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox6.Image")));
+            this.pictureBox6.Location = new System.Drawing.Point(110, 86);
+            this.pictureBox6.Name = "pictureBox6";
+            this.pictureBox6.Size = new System.Drawing.Size(103, 50);
+            this.pictureBox6.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
+            this.pictureBox6.TabIndex = 19;
+            this.pictureBox6.TabStop = false;
+            // 
+            // chkDontShow
+            // 
+            this.chkDontShow.AutoSize = true;
+            this.chkDontShow.Location = new System.Drawing.Point(234, 256);
+            this.chkDontShow.Name = "chkDontShow";
+            this.chkDontShow.Size = new System.Drawing.Size(208, 17);
+            this.chkDontShow.TabIndex = 18;
+            this.chkDontShow.Text = "Don\'t show this message at startup";
+            this.chkDontShow.UseVisualStyleBackColor = true;
+            // 
+            // label2
+            // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label2.Location = new System.Drawing.Point(231, 84);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(351, 158);
+            this.label2.TabIndex = 17;
+            this.label2.Text = resources.GetString("label2.Text");
+            // 
+            // label1
+            // 
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label1.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(230, 34);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(352, 44);
+            this.label1.TabIndex = 16;
+            this.label1.Text = "Welcome to the DotNetNuke Azure Accelerator Wizard";
+            // 
+            // pictureBox3
+            // 
+            this.pictureBox3.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox3.Image")));
+            this.pictureBox3.Location = new System.Drawing.Point(13, 194);
+            this.pictureBox3.Name = "pictureBox3";
+            this.pictureBox3.Size = new System.Drawing.Size(200, 58);
+            this.pictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
+            this.pictureBox3.TabIndex = 15;
+            this.pictureBox3.TabStop = false;
+            // 
+            // pictureBox2
+            // 
+            this.pictureBox2.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox2.Image")));
+            this.pictureBox2.Location = new System.Drawing.Point(13, 151);
+            this.pictureBox2.Name = "pictureBox2";
+            this.pictureBox2.Size = new System.Drawing.Size(200, 37);
+            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
+            this.pictureBox2.TabIndex = 14;
+            this.pictureBox2.TabStop = false;
+            // 
+            // pictureBox1
+            // 
+            this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
+            this.pictureBox1.Location = new System.Drawing.Point(13, 36);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(200, 52);
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
+            this.pictureBox1.TabIndex = 13;
+            this.pictureBox1.TabStop = false;
+            // 
+            // pnl7
+            // 
+            this.pnl7.Controls.Add(this.panel3);
+            this.pnl7.Controls.Add(this.lblSuccess);
+            this.pnl7.Location = new System.Drawing.Point(12, 7);
+            this.pnl7.Name = "pnl7";
+            this.pnl7.Size = new System.Drawing.Size(583, 343);
+            this.pnl7.TabIndex = 9;
+            // 
+            // panel3
+            // 
+            this.panel3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pnlConfig.BackColor = System.Drawing.SystemColors.Control;
-            this.pnlConfig.Controls.Add(this.txtConfig);
-            this.pnlConfig.Controls.Add(this.label26);
-            this.pnlConfig.Location = new System.Drawing.Point(0, 57);
-            this.pnlConfig.Name = "pnlConfig";
-            this.pnlConfig.Size = new System.Drawing.Size(270, 13);
-            this.pnlConfig.TabIndex = 3;
+            this.panel3.BackColor = System.Drawing.SystemColors.Control;
+            this.panel3.Controls.Add(this.txtLogFinal);
+            this.panel3.Controls.Add(this.label29);
+            this.panel3.Location = new System.Drawing.Point(0, 57);
+            this.panel3.Name = "panel3";
+            this.panel3.Size = new System.Drawing.Size(581, 285);
+            this.panel3.TabIndex = 3;
             // 
-            // txtConfig
+            // txtLogFinal
             // 
-            this.txtConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtLogFinal.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtConfig.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtConfig.Location = new System.Drawing.Point(18, 63);
-            this.txtConfig.Multiline = true;
-            this.txtConfig.Name = "txtConfig";
-            this.txtConfig.ReadOnly = true;
-            this.txtConfig.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtConfig.Size = new System.Drawing.Size(231, 207);
-            this.txtConfig.TabIndex = 1;
-            this.txtConfig.WordWrap = false;
+            this.txtLogFinal.BackColor = System.Drawing.SystemColors.Control;
+            this.txtLogFinal.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtLogFinal.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.txtLogFinal.Location = new System.Drawing.Point(13, 41);
+            this.txtLogFinal.Multiline = true;
+            this.txtLogFinal.Name = "txtLogFinal";
+            this.txtLogFinal.ReadOnly = true;
+            this.txtLogFinal.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtLogFinal.Size = new System.Drawing.Size(553, 229);
+            this.txtLogFinal.TabIndex = 1;
             // 
-            // label26
+            // label29
             // 
-            this.label26.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.label29.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.label26.Location = new System.Drawing.Point(14, 17);
-            this.label26.Name = "label26";
-            this.label26.Size = new System.Drawing.Size(235, 43);
-            this.label26.TabIndex = 0;
-            this.label26.Text = resources.GetString("label26.Text");
+            this.label29.Location = new System.Drawing.Point(14, 17);
+            this.label29.Name = "label29";
+            this.label29.Size = new System.Drawing.Size(546, 21);
+            this.label29.TabIndex = 0;
+            this.label29.Text = "Check the log window in order to review the process of uploading DotNetNuke to Wi" +
+    "ndows Azure";
             // 
-            // label25
+            // lblSuccess
             // 
-            this.label25.AutoSize = true;
-            this.label25.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label25.Location = new System.Drawing.Point(14, 16);
-            this.label25.Name = "label25";
-            this.label25.Size = new System.Drawing.Size(370, 21);
-            this.label25.TabIndex = 2;
-            this.label25.Text = "Summary of settings and Service Configuration";
+            this.lblSuccess.AutoSize = true;
+            this.lblSuccess.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSuccess.Location = new System.Drawing.Point(14, 16);
+            this.lblSuccess.Name = "lblSuccess";
+            this.lblSuccess.Size = new System.Drawing.Size(73, 21);
+            this.lblSuccess.TabIndex = 2;
+            this.lblSuccess.Text = "Success!";
             // 
             // pnl2
             // 
             this.pnl2.Controls.Add(this.DBSettings);
             this.pnl2.Controls.Add(this.label3);
             this.pnl2.Controls.Add(this.pictureBox4);
-            this.pnl2.Location = new System.Drawing.Point(12, 101);
+            this.pnl2.Location = new System.Drawing.Point(9, 7);
             this.pnl2.Name = "pnl2";
-            this.pnl2.Size = new System.Drawing.Size(586, 246);
+            this.pnl2.Size = new System.Drawing.Size(586, 359);
             this.pnl2.TabIndex = 4;
             // 
             // DBSettings
@@ -313,7 +446,7 @@
             this.DBSettings.Controls.Add(this.label4);
             this.DBSettings.Location = new System.Drawing.Point(0, 60);
             this.DBSettings.Name = "DBSettings";
-            this.DBSettings.Size = new System.Drawing.Size(585, 185);
+            this.DBSettings.Size = new System.Drawing.Size(585, 298);
             this.DBSettings.TabIndex = 2;
             // 
             // label24
@@ -537,14 +670,174 @@
             this.pictureBox4.TabIndex = 0;
             this.pictureBox4.TabStop = false;
             // 
+            // pnl4
+            // 
+            this.pnl4.Controls.Add(this.panel4);
+            this.pnl4.Controls.Add(this.pictureBox7);
+            this.pnl4.Controls.Add(this.label37);
+            this.pnl4.Location = new System.Drawing.Point(22, 18);
+            this.pnl4.Name = "pnl4";
+            this.pnl4.Size = new System.Drawing.Size(585, 323);
+            this.pnl4.TabIndex = 10;
+            // 
+            // panel4
+            // 
+            this.panel4.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel4.BackColor = System.Drawing.SystemColors.Control;
+            this.panel4.Controls.Add(this.label31);
+            this.panel4.Controls.Add(this.txtStorageContainer);
+            this.panel4.Controls.Add(this.lstPackages);
+            this.panel4.Controls.Add(this.label36);
+            this.panel4.Location = new System.Drawing.Point(0, 55);
+            this.panel4.Name = "panel4";
+            this.panel4.Size = new System.Drawing.Size(584, 267);
+            this.panel4.TabIndex = 4;
+            // 
+            // label31
+            // 
+            this.label31.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label31.AutoSize = true;
+            this.label31.Location = new System.Drawing.Point(13, 236);
+            this.label31.Name = "label31";
+            this.label31.Size = new System.Drawing.Size(198, 13);
+            this.label31.TabIndex = 5;
+            this.label31.Text = "Private Azure storage container name";
+            // 
+            // txtStorageContainer
+            // 
+            this.txtStorageContainer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtStorageContainer.Location = new System.Drawing.Point(217, 233);
+            this.txtStorageContainer.Name = "txtStorageContainer";
+            this.txtStorageContainer.Size = new System.Drawing.Size(351, 22);
+            this.txtStorageContainer.TabIndex = 4;
+            // 
+            // lstPackages
+            // 
+            this.lstPackages.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lstPackages.CheckBoxes = true;
+            this.lstPackages.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.packageName,
+            this.packageDescription});
+            this.lstPackages.Location = new System.Drawing.Point(12, 48);
+            this.lstPackages.Name = "lstPackages";
+            this.lstPackages.Size = new System.Drawing.Size(556, 174);
+            this.lstPackages.TabIndex = 2;
+            this.lstPackages.UseCompatibleStateImageBehavior = false;
+            this.lstPackages.View = System.Windows.Forms.View.Details;
+            // 
+            // packageName
+            // 
+            this.packageName.Text = "Package name";
+            this.packageName.Width = 200;
+            // 
+            // packageDescription
+            // 
+            this.packageDescription.Text = "Description";
+            this.packageDescription.Width = 350;
+            // 
+            // label36
+            // 
+            this.label36.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label36.Location = new System.Drawing.Point(9, 9);
+            this.label36.Name = "label36";
+            this.label36.Size = new System.Drawing.Size(567, 32);
+            this.label36.TabIndex = 1;
+            this.label36.Text = "Please, select the packages that you want to upload to Windows Azure Storage and " +
+    "the number of instances that you want to deploy.";
+            // 
+            // pictureBox7
+            // 
+            this.pictureBox7.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pictureBox7.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox7.Image")));
+            this.pictureBox7.Location = new System.Drawing.Point(409, 10);
+            this.pictureBox7.Name = "pictureBox7";
+            this.pictureBox7.Size = new System.Drawing.Size(169, 35);
+            this.pictureBox7.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox7.TabIndex = 3;
+            this.pictureBox7.TabStop = false;
+            // 
+            // label37
+            // 
+            this.label37.AutoSize = true;
+            this.label37.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label37.Location = new System.Drawing.Point(9, 20);
+            this.label37.Name = "label37";
+            this.label37.Size = new System.Drawing.Size(269, 21);
+            this.label37.TabIndex = 2;
+            this.label37.Text = "Accelerator deployment packages";
+            // 
+            // pnl5
+            // 
+            this.pnl5.Controls.Add(this.pnlConfig);
+            this.pnl5.Controls.Add(this.label25);
+            this.pnl5.Location = new System.Drawing.Point(15, 0);
+            this.pnl5.Name = "pnl5";
+            this.pnl5.Size = new System.Drawing.Size(587, 339);
+            this.pnl5.TabIndex = 7;
+            // 
+            // pnlConfig
+            // 
+            this.pnlConfig.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.pnlConfig.BackColor = System.Drawing.SystemColors.Control;
+            this.pnlConfig.Controls.Add(this.txtConfig);
+            this.pnlConfig.Controls.Add(this.label26);
+            this.pnlConfig.Location = new System.Drawing.Point(0, 57);
+            this.pnlConfig.Name = "pnlConfig";
+            this.pnlConfig.Size = new System.Drawing.Size(585, 281);
+            this.pnlConfig.TabIndex = 3;
+            // 
+            // txtConfig
+            // 
+            this.txtConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtConfig.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtConfig.Location = new System.Drawing.Point(18, 63);
+            this.txtConfig.Multiline = true;
+            this.txtConfig.Name = "txtConfig";
+            this.txtConfig.ReadOnly = true;
+            this.txtConfig.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtConfig.Size = new System.Drawing.Size(546, 207);
+            this.txtConfig.TabIndex = 1;
+            this.txtConfig.WordWrap = false;
+            // 
+            // label26
+            // 
+            this.label26.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label26.Location = new System.Drawing.Point(14, 17);
+            this.label26.Name = "label26";
+            this.label26.Size = new System.Drawing.Size(550, 43);
+            this.label26.TabIndex = 0;
+            this.label26.Text = "This is the Summary of Settings in order to deploy DotNetNuke on Windows Azure. P" +
+    "lease, review all the settings in order to ensure that all parameters are correc" +
+    "t.";
+            // 
+            // label25
+            // 
+            this.label25.AutoSize = true;
+            this.label25.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label25.Location = new System.Drawing.Point(14, 16);
+            this.label25.Name = "label25";
+            this.label25.Size = new System.Drawing.Size(173, 21);
+            this.label25.TabIndex = 2;
+            this.label25.Text = "Summary of Settings ";
+            // 
             // pnl3
             // 
             this.pnl3.Controls.Add(this.AzureSettings);
             this.pnl3.Controls.Add(this.pictureBox5);
             this.pnl3.Controls.Add(this.label17);
-            this.pnl3.Location = new System.Drawing.Point(22, 196);
+            this.pnl3.Location = new System.Drawing.Point(22, 16);
             this.pnl3.Name = "pnl3";
-            this.pnl3.Size = new System.Drawing.Size(585, 89);
+            this.pnl3.Size = new System.Drawing.Size(585, 323);
             this.pnl3.TabIndex = 6;
             // 
             // AzureSettings
@@ -566,7 +859,7 @@
             this.AzureSettings.Controls.Add(this.label18);
             this.AzureSettings.Location = new System.Drawing.Point(0, 55);
             this.AzureSettings.Name = "AzureSettings";
-            this.AzureSettings.Size = new System.Drawing.Size(584, 33);
+            this.AzureSettings.Size = new System.Drawing.Size(584, 267);
             this.AzureSettings.TabIndex = 4;
             // 
             // label22
@@ -694,80 +987,6 @@
             this.label17.TabIndex = 2;
             this.label17.Text = "Windows Azure connection settings";
             // 
-            // pnl1
-            // 
-            this.pnl1.Controls.Add(this.chkDontShow);
-            this.pnl1.Controls.Add(this.label2);
-            this.pnl1.Controls.Add(this.label1);
-            this.pnl1.Controls.Add(this.pictureBox3);
-            this.pnl1.Controls.Add(this.pictureBox2);
-            this.pnl1.Controls.Add(this.pictureBox1);
-            this.pnl1.Location = new System.Drawing.Point(12, 12);
-            this.pnl1.Name = "pnl1";
-            this.pnl1.Size = new System.Drawing.Size(417, 83);
-            this.pnl1.TabIndex = 3;
-            // 
-            // chkDontShow
-            // 
-            this.chkDontShow.AutoSize = true;
-            this.chkDontShow.Location = new System.Drawing.Point(234, 256);
-            this.chkDontShow.Name = "chkDontShow";
-            this.chkDontShow.Size = new System.Drawing.Size(208, 17);
-            this.chkDontShow.TabIndex = 18;
-            this.chkDontShow.Text = "Don\'t show this message at startup";
-            this.chkDontShow.UseVisualStyleBackColor = true;
-            // 
-            // label2
-            // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.label2.Location = new System.Drawing.Point(231, 84);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(172, 158);
-            this.label2.TabIndex = 17;
-            this.label2.Text = resources.GetString("label2.Text");
-            // 
-            // label1
-            // 
-            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.label1.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(230, 34);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(173, 44);
-            this.label1.TabIndex = 16;
-            this.label1.Text = "Welcome to the DotNetNuke Azure Accelerator Wizard";
-            // 
-            // pictureBox3
-            // 
-            this.pictureBox3.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox3.Image")));
-            this.pictureBox3.Location = new System.Drawing.Point(13, 185);
-            this.pictureBox3.Name = "pictureBox3";
-            this.pictureBox3.Size = new System.Drawing.Size(200, 58);
-            this.pictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
-            this.pictureBox3.TabIndex = 15;
-            this.pictureBox3.TabStop = false;
-            // 
-            // pictureBox2
-            // 
-            this.pictureBox2.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox2.Image")));
-            this.pictureBox2.Location = new System.Drawing.Point(13, 142);
-            this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(200, 37);
-            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
-            this.pictureBox2.TabIndex = 14;
-            this.pictureBox2.TabStop = false;
-            // 
-            // pictureBox1
-            // 
-            this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
-            this.pictureBox1.Location = new System.Drawing.Point(13, 84);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(200, 52);
-            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
-            this.pictureBox1.TabIndex = 13;
-            this.pictureBox1.TabStop = false;
-            // 
             // btnBack
             // 
             this.btnBack.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -803,64 +1022,6 @@
             this.btnOK.UseVisualStyleBackColor = true;
             this.btnOK.Click += new System.EventHandler(this.btnOK_Click);
             // 
-            // pnl6
-            // 
-            this.pnl6.Controls.Add(this.panel3);
-            this.pnl6.Controls.Add(this.label30);
-            this.pnl6.Location = new System.Drawing.Point(12, 6);
-            this.pnl6.Name = "pnl6";
-            this.pnl6.Size = new System.Drawing.Size(583, 343);
-            this.pnl6.TabIndex = 9;
-            // 
-            // panel3
-            // 
-            this.panel3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.panel3.BackColor = System.Drawing.SystemColors.Control;
-            this.panel3.Controls.Add(this.txtLogFinal);
-            this.panel3.Controls.Add(this.label29);
-            this.panel3.Location = new System.Drawing.Point(0, 57);
-            this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(581, 285);
-            this.panel3.TabIndex = 3;
-            // 
-            // txtLogFinal
-            // 
-            this.txtLogFinal.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtLogFinal.BackColor = System.Drawing.SystemColors.Control;
-            this.txtLogFinal.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtLogFinal.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.txtLogFinal.Location = new System.Drawing.Point(13, 41);
-            this.txtLogFinal.Multiline = true;
-            this.txtLogFinal.Name = "txtLogFinal";
-            this.txtLogFinal.ReadOnly = true;
-            this.txtLogFinal.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtLogFinal.Size = new System.Drawing.Size(553, 229);
-            this.txtLogFinal.TabIndex = 1;
-            // 
-            // label29
-            // 
-            this.label29.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.label29.Location = new System.Drawing.Point(14, 17);
-            this.label29.Name = "label29";
-            this.label29.Size = new System.Drawing.Size(546, 21);
-            this.label29.TabIndex = 0;
-            this.label29.Text = "Check the log window in order to review the process of uploading DotNetNuke to Wi" +
-    "ndows Azure";
-            // 
-            // label30
-            // 
-            this.label30.AutoSize = true;
-            this.label30.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label30.Location = new System.Drawing.Point(14, 16);
-            this.label30.Name = "label30";
-            this.label30.Size = new System.Drawing.Size(73, 21);
-            this.label30.TabIndex = 2;
-            this.label30.Text = "Success!";
-            // 
             // FrmDNNAzureWizard
             // 
             this.AcceptButton = this.btnOK;
@@ -881,33 +1042,39 @@
             ((System.ComponentModel.ISupportInitialize)(this.split)).EndInit();
             this.split.ResumeLayout(false);
             this.pnl.ResumeLayout(false);
-            this.pnl5.ResumeLayout(false);
-            this.pnl5.PerformLayout();
+            this.pnl6.ResumeLayout(false);
+            this.pnl6.PerformLayout();
             this.panel2.ResumeLayout(false);
             this.panel2.PerformLayout();
-            this.pnl4.ResumeLayout(false);
-            this.pnl4.PerformLayout();
-            this.pnlConfig.ResumeLayout(false);
-            this.pnlConfig.PerformLayout();
+            this.pnl1.ResumeLayout(false);
+            this.pnl1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox6)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.pnl7.ResumeLayout(false);
+            this.pnl7.PerformLayout();
+            this.panel3.ResumeLayout(false);
+            this.panel3.PerformLayout();
             this.pnl2.ResumeLayout(false);
             this.pnl2.PerformLayout();
             this.DBSettings.ResumeLayout(false);
             this.DBSettings.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox4)).EndInit();
+            this.pnl4.ResumeLayout(false);
+            this.pnl4.PerformLayout();
+            this.panel4.ResumeLayout(false);
+            this.panel4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox7)).EndInit();
+            this.pnl5.ResumeLayout(false);
+            this.pnl5.PerformLayout();
+            this.pnlConfig.ResumeLayout(false);
+            this.pnlConfig.PerformLayout();
             this.pnl3.ResumeLayout(false);
             this.pnl3.PerformLayout();
             this.AzureSettings.ResumeLayout(false);
             this.AzureSettings.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox5)).EndInit();
-            this.pnl1.ResumeLayout(false);
-            this.pnl1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
-            this.pnl6.ResumeLayout(false);
-            this.pnl6.PerformLayout();
-            this.panel3.ResumeLayout(false);
-            this.panel3.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -968,21 +1135,35 @@
         private System.Windows.Forms.Label label24;
         private System.Windows.Forms.Label label23;
         private System.Windows.Forms.TextBox txtDBRePassword;
-        private System.Windows.Forms.Panel pnl4;
+        private System.Windows.Forms.Panel pnl5;
         private System.Windows.Forms.Label label25;
         private System.Windows.Forms.Panel pnlConfig;
         private System.Windows.Forms.Label label26;
         private System.Windows.Forms.TextBox txtConfig;
-        private System.Windows.Forms.Panel pnl5;
+        private System.Windows.Forms.Panel pnl6;
         private System.Windows.Forms.Panel panel2;
-        private System.Windows.Forms.TextBox txtLOG;
         private System.Windows.Forms.Label label27;
         private System.Windows.Forms.Label label28;
-        private System.Windows.Forms.Panel pnl6;
+        private System.Windows.Forms.Panel pnl7;
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.TextBox txtLogFinal;
         private System.Windows.Forms.Label label29;
-        private System.Windows.Forms.Label label30;
+        private System.Windows.Forms.Label lblSuccess;
+        private System.Windows.Forms.PictureBox pictureBox6;
+        private System.Windows.Forms.Panel pnl4;
+        private System.Windows.Forms.Panel panel4;
+        private System.Windows.Forms.Label label36;
+        private System.Windows.Forms.PictureBox pictureBox7;
+        private System.Windows.Forms.Label label37;
+        private System.Windows.Forms.ListView lstPackages;
+        private System.Windows.Forms.ColumnHeader packageName;
+        private System.Windows.Forms.ColumnHeader packageDescription;
+        private System.Windows.Forms.TextBox txtStorageContainer;
+        private System.Windows.Forms.Label label31;
+        private System.Windows.Forms.TextBox txtLOG;
+        private System.Windows.Forms.ListView lstTasks;
+        private System.Windows.Forms.ColumnHeader TaskDescription;
+        private System.Windows.Forms.ColumnHeader TaskStatus;
 
     }
 }

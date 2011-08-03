@@ -9,7 +9,7 @@
         driveName               Name of the VHD (blob) inside the driveContainer
         driveSize               Size of the drive that will be mounted -->
       <Setting name="driveContainer" value="azure-accelerator-drives" />      
-      <Setting name="driveName" value="dotnetnuke.vhd" />
+      <Setting name="driveName" value="dotnetnuke6.vhd" />
       <Setting name="driveSize" value="256" />
       
       <!-- Sharing settings (note that the WebRole setgins needs exactly the same values)
@@ -27,6 +27,11 @@
       
       <!-- SQL Azure Connection String -->
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
+
+      <!-- DNN Package location -->
+      <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
+      <Setting name="package" value="DotNetNuke_Community_06.00.00_Install_Azure.zip" />
+      
     </ConfigurationSettings>
     <Certificates>
     </Certificates>

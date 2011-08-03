@@ -76,6 +76,15 @@ namespace DNNAzure
                                                     RDPuserName, drive.LocalPath,
                                                     RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
+                    // Check for the creation of the Website contents from Azure storage
+                    Trace.TraceInformation("Check for website content...");
+                    if (!RoleStartupUtils.SetupWebSiteContents(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                            RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                                                            RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
+                                                            RoleEnvironment.GetConfigurationSettingValue("package")))
+                        Trace.TraceError("Website content could not be prepared. Check previous messages.");
+
+
                     // Setup Database Connection string
                     RoleStartupUtils.SetupDBConnectionString(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                     RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"));

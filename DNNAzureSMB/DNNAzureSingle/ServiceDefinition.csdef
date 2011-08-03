@@ -32,6 +32,8 @@
       <Setting name="shareName" />
       <Setting name="localPath" />
       <Setting name="SMBMode" />
+      <Setting name="packageContainer" />
+      <Setting name="package" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="300" />

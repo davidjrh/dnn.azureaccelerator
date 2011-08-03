@@ -15,6 +15,9 @@
       <Setting name="shareName" />
       <Setting name="driveContainer" />
       <Setting name="DatabaseConnectionString" />
+      <Setting name="packageContainer" />
+      <Setting name="packageName" />
+      <Setting name="dnnFolder" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="300" />

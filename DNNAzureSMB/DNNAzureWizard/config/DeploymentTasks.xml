@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<DeploymentTasks>
+  <Task id="Task0" type="SetupVariables">
+    <Description>Setup variables</Description>
+    <Comments>This Task prepares the environment variables for the next Tasks</Comments>
+    <Action>
+      <Variable name="dbUsr" value="@@DBUSER@@" />
+      <Variable name="dbPwd" value="@@DBPASSWORD@@" />
+      <Variable name="dbName" value="@@DBNAME@@" />
+    </Action>
+  </Task>
+  <Task id="Task1" type="CommandLineAction">
+    <Description>Database creation</Description>
+    <Comments>This Task creates the database on SQL Azure</Comments>
+    <Action>
+      <CommandLine>sqlcmd.exe</CommandLine>
+      <Parameters>-U @@DBADMINUSER@@@@@DBSERVER@@ -P @@DBADMINPASSWORD@@ -S @@DBSERVER@@.database.windows.net -d master -i "@@APPPATH@@Sql\CreateDatabase.sql" -r0 -e -o "@@APPPATH@@Logs\@@DBADMINUSER@@.createdatabase.log"</Parameters>
+    </Action>
+  </Task>
+  <Task id="Task2" type="CommandLineAction">
+    <Description>Database creation verification</Description>
+    <Comments>This Task verifies the database creation on SQL Azure</Comments>
+    <Action>
+      <CommandLine>sqlcmd.exe</CommandLine>
+      <Parameters>-U @@DBADMINUSER@@@@@DBSERVER@@ -P @@DBADMINPASSWORD@@ -S @@DBSERVER@@.database.windows.net -d master -i "@@APPPATH@@Sql\VerifyDatabase.sql" -h-1</Parameters>
+    </Action>
+  </Task>
+  <Task id="Task3" type="CommandLineAction">
+    <Description>Database security configuration</Description>
+    <Comments>This Task creates the runtime user for the database</Comments>
+    <Action>
+      <CommandLine>sqlcmd.exe</CommandLine>
+      <Parameters>-U @@DBADMINUSER@@@@@DBSERVER@@ -P @@DBADMINPASSWORD@@ -S @@DBSERVER@@.database.windows.net -d master -i "@@APPPATH@@Sql\CreateUser.sql" -r0 -e -o "@@APPPATH@@Logs\@@DBADMINUSER@@.roles.log"</Parameters>
+    </Action>
+  </Task>
+  <Task id="Task4" type="UploadPackages">
+    <Description>Service package files upload</Description>
+    <Comments>This Task uploads the selected service packages and configuration file to Azure storage</Comments>
+  </Task>
+  <Task id="Task5" type="UploadBlob">
+    <Description>DotNetNuke 6.0 distribution package upload</Description>
+    <Comments>This Task uploads the DotNetNuke 6.0 distribution package to Azure storage</Comments>
+    <Action>
+      <SourceFile>@@APPPATH@@packages\DotNetNuke_Community_06.00.00_Install_Azure.zip</SourceFile>
+      <DestinationBlob>@@PACKAGECONTAINER@@/DotNetNuke_Community_06.00.00_Install_Azure.zip</DestinationBlob>
+      <BlobType>BlockBlob</BlobType>
+    </Action>
+  </Task>
+</DeploymentTasks>

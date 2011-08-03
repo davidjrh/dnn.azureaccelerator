@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -312,5 +313,73 @@ namespace DNNShared
             Trace.TraceInformation("Diagnostics Setup complete");
         }
 
+
+        /// <summary>
+        /// Checks for the existence of the web site contents. If it does not exist, downloads the content package
+        /// from Azure storage and unzip the contents
+        /// </summary>
+        /// <param name="WebSitePath">Web site root path</param>
+        /// <param name="StorageConnectionString">Azure storage connection string for downloading the package</param>
+        /// <param name="packageContainer">Azure storage blob container name where the package resides</param>
+        /// <param name="packageName">Azure storage blob name of the package</param>
+        /// <returns></returns>
+        public static bool SetupWebSiteContents(string WebSitePath, string StorageConnectionString, string packageContainer, string packageName)
+        {
+            try
+            {
+                // Create website folder if not exists
+                if (!Directory.Exists(WebSitePath))
+                {
+                    Trace.TraceInformation("Creating folder '" + WebSitePath + "'...");
+                    Directory.CreateDirectory(WebSitePath);
+                }
+
+                // Delete previous failed attemps of web site creation
+                if (File.Exists(WebSitePath + "\\" + packageName))
+                {
+                    Trace.TraceWarning("Deleting previous failed package deployment '" + WebSitePath + "\\" + packageName + "'...");
+                    File.Delete(WebSitePath + "\\" + packageName);
+                }
+
+                // Check for folder content, and if it's empty, import content from Azure Storage
+                DirectoryInfo wsFolder = new DirectoryInfo(WebSitePath);
+                if (wsFolder.GetFiles().Length == 0 && wsFolder.GetDirectories().Length == 0)
+                {
+                    Trace.TraceInformation("Web site content not initialized. Accessing Azure storage for download...");
+                    CloudStorageAccount account = CloudStorageAccount.Parse(StorageConnectionString);
+                    CloudBlobClient blobClient = account.CreateCloudBlobClient();
+
+                    Trace.TraceInformation("Locating package container: " + packageContainer);
+                    CloudBlobContainer blobContainer = blobClient.GetContainerReference(packageContainer);
+                    blobContainer.FetchAttributes(); // Check for the container existence
+
+                    Trace.TraceInformation("Downloading package '" + packageName + "' to '" + WebSitePath + "\\" + packageName + "'...");
+                    blobContainer.GetBlobReference(packageName).DownloadToFile(WebSitePath + "\\" + packageName);
+
+                    Trace.TraceInformation("Decompressing package...");
+                    string output;
+                    string error;
+                    int exitCode = ExecuteCommand("utils\\unzip.exe", " -q -d " + WebSitePath + " " + WebSitePath + "\\" + packageName, out output, out error, 30000);
+                    if (exitCode != 0)
+                    {
+                        Trace.TraceError("Error while decompresing the package: " + error);
+                        return false;
+                    }
+
+                    Trace.TraceInformation("Deleting package file '" + WebSitePath + "\\" + packageName + "'...");
+                    File.Delete(WebSitePath + "\\" + packageName);
+
+                    Trace.TraceInformation("Web site content successfully deployed.");
+                }
+                else
+                    Trace.TraceWarning("The content already exists. No action taken.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while web site contents setup: " + ex.Message);
+                return false;
+            }
+        }
     }
 }
