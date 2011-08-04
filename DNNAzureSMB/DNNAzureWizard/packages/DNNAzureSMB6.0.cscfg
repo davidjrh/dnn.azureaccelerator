@@ -11,6 +11,7 @@
       <Setting name="driveContainer" value="azure-accelerator-drives" />      
       <Setting name="driveName" value="dotnetnuke6.vhd" />
       <Setting name="driveSize" value="256" />
+      <Setting name="dnnFolder" value="DotNetNuke" />
       
       <!-- Sharing settings (note that the WebRole setgins needs exactly the same values)
         fileshareUserName       Local user account name that will be created for sharing the drive
