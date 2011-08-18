@@ -30,7 +30,7 @@
     <Comments>This Task creates the runtime user for the database</Comments>
     <Action>
       <CommandLine>sqlcmd.exe</CommandLine>
-      <Parameters>-U @@DBADMINUSER@@@@@DBSERVER@@ -P @@DBADMINPASSWORD@@ -S @@DBSERVER@@.database.windows.net -d master -i "@@APPPATH@@Sql\CreateUser.sql" -r0 -e -o "@@APPPATH@@Logs\@@DBADMINUSER@@.roles.log"</Parameters>
+      <Parameters>-U @@DBADMINUSER@@@@@DBSERVER@@ -P @@DBADMINPASSWORD@@ -S @@DBSERVER@@.database.windows.net -d @@DBNAME@@ -i "@@APPPATH@@Sql\CreateUser.sql" -r0 -e -o "@@APPPATH@@Logs\@@DBADMINUSER@@.roles.log"</Parameters>
     </Action>
   </Task>
   <Task id="Task4" type="UploadPackages">

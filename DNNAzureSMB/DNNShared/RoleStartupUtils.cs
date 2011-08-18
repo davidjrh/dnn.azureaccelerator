@@ -36,7 +36,7 @@ namespace DNNShared
             CloudBlobContainer driveContainer = blobClient.GetContainerReference(driveContainerName);
 
             Trace.TraceInformation("Mounting cloud drive - Creating VHD container if not exists");
-            //driveContainer.CreateIfNotExist();
+            driveContainer.CreateIfNotExist();
 
             Trace.TraceInformation("Mounting cloud drive - Local cache initialization");
             LocalResource localCache = RoleEnvironment.GetLocalResource("AzureDriveCache");
