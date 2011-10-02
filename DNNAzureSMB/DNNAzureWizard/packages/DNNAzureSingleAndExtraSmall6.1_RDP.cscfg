@@ -14,8 +14,8 @@
     <ConfigurationSettings>
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
       <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=http;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
-      <Setting name="driveName" value="dotnetnuke6.vhd" />
-      <Setting name="driveSize" value="256" />
+      <Setting name="driveName" value="@@VHDBLOBNAME@@" />
+      <Setting name="driveSize" value="@@VHDBLOBSIZE@@" />
       <Setting name="driveContainer" value="azure-accelerator-drives" />
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
       <Setting name="dnnFolder" value="DotNetNuke" />
@@ -29,8 +29,14 @@
       <Setting name="SMBMode" value="false" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="DotNetNuke_Community_06.00.00_Install_Azure.zip" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="@@RDPENABLED@@" />
     </ConfigurationSettings>
     <Certificates>
+      <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
 </ServiceConfiguration>

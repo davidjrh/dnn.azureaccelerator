@@ -1,0 +1,11 @@
+Version 6.1 - 02 oct 2011
+
+Deployment Wizard
+- Added a new step on the wizard for configuring RDP (Remote Desktop) access to all roles without the need of using Visual Studio 2010.
+- The RDP X509 certificates for RDP access can be created through the assistant.
+- Replaced the control validation UI with and error provider (no more popups)
+- Added strong password validation on the wizard
+- Added container name regular expression validations
+- Added textboxes for VHD blob size and name settings
+- Added pre-built packages for RDP enabled and not RDP enabled deployments
+- Added a new Single and Small package (instances are "Small" sized)

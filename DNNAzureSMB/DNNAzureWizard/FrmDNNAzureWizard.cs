@@ -1,23 +1,48 @@
 ﻿using System;
-using System.IO;
-using System.Xml;
-using System.Diagnostics;
-using System.Configuration;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
+using System.Configuration;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using System.Threading;
-using Microsoft.WindowsAzure.StorageClient;
+using System.Xml;
 using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.StorageClient;
+
 
 namespace DNNAzureWizard
 {
     public partial class FrmDNNAzureWizard : Form
     {
+        /* The following expression to validate a pwd of 6 to 16 characters and contain three of the following 4 items: 
+         * upper case letter, lower case letter, a symbol, a number
+         * An explanation of individual components:
+         *      (?=^[^\s]{6,16}$) - contain between 8 and 16 non-whitespace characters
+         *      (?=.*?\d) - contains 1 numeric
+         *      (?=.*?[A-Z]) - contains 1 uppercase character
+         *      (?=.*?[a-z]) - contains 1 lowercase character
+         *      (?=.*?[^\w\d\s]) - contains 1 symbol
+         */
+        private string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
+
+        private enum WizardTabs
+        {
+            tabHome = 1,
+            tabSQLAzureSettings = 2,
+            tabWindowsAzureSettings = 3,
+            tabRDPAzureSettings = 4,
+            tabPackages = 5,
+            tabSummary = 6,
+            tabUploading = 7,
+            tabFinish = 8
+        }
+
 
         Process p = null;
 
@@ -57,7 +82,7 @@ namespace DNNAzureWizard
             {
                 try
                 {
-                    if (this.ActivePageIndex() == 7)
+                    if (this.ActivePageIndex() == (int) WizardTabs.tabFinish)
                     {
                         btnOK.Text = "Next >";
                         btnCancel.Enabled = true;
@@ -76,7 +101,7 @@ namespace DNNAzureWizard
             {
                 try
                 {
-                    if (this.ActivePageIndex() == 7) // Finish
+                    if (this.ActivePageIndex() == (int) WizardTabs.tabFinish) // Finish
                     {
                         btnCancel_Click(sender, e);
                         return;
@@ -85,7 +110,7 @@ namespace DNNAzureWizard
                     UseWaitCursor = true;
                     if (ValidateStep())
                         MoveSteps(1);
-                    if (this.ActivePageIndex() == 6)
+                    if (this.ActivePageIndex() == (int) WizardTabs.tabUploading)
                     {
                         btnBack.Enabled = false;
                         btnOK.Enabled = false;
@@ -216,7 +241,7 @@ namespace DNNAzureWizard
                     }
                 }
 
-                // Deletes temporary configuration files generated
+                // Deletes temporary generated configuration files 
                 try
                 {
                     System.IO.File.Delete(Environment.CurrentDirectory + "\\ServiceConfiguration.cscfg");
@@ -228,13 +253,16 @@ namespace DNNAzureWizard
                 }
                 catch { };
             }
+
             private void RefreshUI()
             {
                 InitializePages();                
-                ShowPage(1);
+                ShowPage((int) WizardTabs.tabHome);
                 SetupAppSettings();
                 ReloadDeploymentPackages();
+                ReloadX509Certificates();
             }
+
             private static void LogException(Exception ex)
             {
                 MessageBox.Show(ex.Message, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -252,6 +280,7 @@ namespace DNNAzureWizard
                     p.Dock = DockStyle.Fill;
                     p.Visible = false;
                 }
+                chkEnableRDP_CheckedChanged(null, null);
             }
             private int ActivePageIndex()
             {
@@ -268,23 +297,44 @@ namespace DNNAzureWizard
             {
                 switch (this.ActivePageIndex())
                 {
-                    case 1: // Home tab, nothing to validate
+                    case (int) WizardTabs.tabHome: // Home tab, nothing to validate
                         return true;
-                    case 2: // SQL Azure tab
-                        ValidateSQLAzureSettings();
-                        return true;
-                    case 3:
-                        ValidateAzureSettings();
-                        return true;
-                    case 4:
-                        ValidatePackagesSelectionSettings();
+                    case (int) WizardTabs.tabSQLAzureSettings: // SQL Azure tab
+                        return ValidateSQLAzureSettings();                        
+                    case (int) WizardTabs.tabWindowsAzureSettings: // Windows Azure tab
+                        return ValidateAzureSettings();                        
+                    case (int) WizardTabs.tabRDPAzureSettings: // RDP tab
+                        return ValidateRDPSettings();                       
+                    case (int) WizardTabs.tabPackages: // Deployment packages
+                        bool validated= ValidatePackagesSelectionSettings();
                         txtConfig.Text = GetSettingsSummary();
-                        return true;
-                    case 5:
+                        return validated;
+                    case (int) WizardTabs.tabSummary:
                         return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
                     default:
                         return false;
                 }
+            }
+            private bool ValidateRDPSettings()
+            {
+                bool invalidInput = false;
+                if (chkEnableRDP.Checked)
+                {
+                    txtRDPUser_Validating(txtRDPUser, null);
+                    txtRDPPassword_Validating(txtRDPPassword, null);
+                    txtRDPConfirmPassword_Validating(txtRDPConfirmPassword, null);
+                    cboCertificates_Validating(cboCertificates, null);
+
+                    foreach (Control control in this.pnlRDP.Controls)
+                    {
+                        if (this.errProv.GetError(control).Length != 0)
+                        {
+                            invalidInput = true;
+                            break;
+                        }
+                    }
+                }
+                return !invalidInput;
             }
 
             private string GetSettingsSummary()
@@ -294,17 +344,37 @@ namespace DNNAzureWizard
                 summary.AppendLine("DATABASE SETTINGS:");
                 summary.AppendLine("- DB Server Name: " +  txtDBServer.Text.Trim() + ".database.windows.net");
                 summary.AppendLine("- DB Admin user name: " + txtDBAdminUser.Text.Trim());
-                summary.AppendLine("- DB Admin password: <not showed>");
+                summary.AppendLine("- DB Admin password: <not shown>");
                 summary.AppendLine("- DB user name: " + txtDBUser.Text.Trim());
-                summary.AppendLine("- DB password: <not showed>");
+                summary.AppendLine("- DB password: <not shown>");
                 summary.AppendLine("");
                 summary.AppendLine("STORAGE SETTINGS:");
                 summary.AppendLine("- Storage name: " + txtStorageName.Text.Trim());
                 summary.AppendLine("- Storage key: " + txtStorageKey.Text.Trim());
                 summary.AppendLine("- Storage package container: " + txtStorageContainer.Text.Trim());
+                summary.AppendLine("- VHD blob name: " + txtVHDBlobName.Text.Trim());
+                summary.AppendLine("- VHD size: " + txtVHDSize.Text.Trim());
                 summary.AppendLine("");
                 summary.AppendLine("IIS SETTINGS:");
                 summary.AppendLine("- Bindings: " + txtBindings.Text.Trim());
+                summary.AppendLine("");
+                
+                summary.AppendLine("RDP SETTINGS:");
+                summary.AppendLine("- RDP enabled: " + (chkEnableRDP.Checked?"true":"false"));
+                if (chkEnableRDP.Checked)
+                {
+                    summary.AppendLine("- Certificate Friendly Name: " + Certificate.FriendlyName);
+                    summary.AppendLine("- Certificate Issued By: " + Certificate.Issuer);
+                    summary.AppendLine("- Certificate Thumbprint: " + Certificate.Thumbprint);
+                    summary.AppendLine("- User name: " + txtRDPUser.Text);
+                    
+#if DEBUG
+                    summary.AppendLine("- Password: " + EncryptWithCertificate(txtRDPPassword.Text, this.Certificate));
+#else
+                    summary.AppendLine("- Password: <not shown>");
+#endif
+                    summary.AppendLine("- Expires: " + cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
+                }
                 summary.AppendLine("");
                 summary.AppendLine("SELECTED PACKAGES:");
                 foreach (ListViewItem li in lstPackages.Items)
@@ -313,50 +383,60 @@ namespace DNNAzureWizard
                 return summary.ToString(); ;
             }
 
-            private void ValidateSQLAzureSettings()
+            private bool ValidateSQLAzureSettings()
             {
-                if (txtDBServer.Text.Trim() == "")
-                    throw new Exception("You must specify the SQL Azure server name");
-                if (txtDBAdminUser.Text.Trim() == "")
-                    throw new Exception("You must specify a user that can create databases through the master database");
-                if (txtDBAdminPassword.Text.Trim() == "")
-                    throw new Exception("You must specify the admin user password");
-                if (txtDBName.Text.Trim() == "")
-                    throw new Exception("You must specify the name of the database that will be created");
-                if (txtDBUser.Text.Trim() == "")
-                    throw new Exception("You must specify that will be created and used for the database");
-                if (txtDBPassword.Text == "")
-                    throw new Exception("You must specify the password for the new database user");
-                if (txtDBRePassword.Text == "")
-                    throw new Exception("You must confirm the password");
-                if (txtDBPassword.Text != txtDBRePassword.Text)
-                    throw new Exception("The passwords are not identical");
-            }
-
-            private void ValidateAzureSettings()
-            {
-                if (txtStorageName.Text.Trim() == "")
-                    throw new Exception("You must specify the Storage Account name");
-                if (txtStorageKey.Text.Trim() == "")
-                    throw new Exception("You must specify the Storage Account key");
-                if (txtBindings.Text.Trim() == "")
-                    throw new Exception("You must specify at least one host header for the webrole");
-            }
-
-            private void ValidatePackagesSelectionSettings()
-            {
-                bool IsChecked=false;
-                foreach (ListViewItem li in lstPackages.Items)
-                    if (li.Checked)
+                bool invalidInput = false;
+                txtDBServer_Validating(txtDBServer, null);                
+                txtDBAdminUser_Validating(txtDBAdminUser, null);
+                txtDBAdminPassword_Validating(txtDBAdminPassword, null);
+                txtDBName_Validating(txtDBName, null);
+                txtDBUser_Validating(txtDBUser, null);
+                txtDBPassword_Validating(txtDBPassword, null);
+                txtDBRePassword_Validating(txtDBRePassword, null);
+                foreach (Control control in this.DBSettings.Controls)
+                {
+                    if (this.errProv.GetError(control).Length != 0)
                     {
-                        IsChecked = true;
+                        invalidInput = true;
                         break;
                     }
-                if (!IsChecked)
-                    throw new Exception("You must select at least one package to upload to Azure Storage");
+                }
+                return !invalidInput;
+            }
 
-                if (txtStorageContainer.Text.Trim() == "")
-                    throw new Exception("You must specify a blob package container name");
+            private bool ValidateAzureSettings()
+            {
+                bool invalidInput = false;
+                txtStorageName_Validating(txtStorageName, null);
+                txtStorageKey_Validating(txtStorageKey, null);
+                txtBindings_Validating(txtBindings, null);
+                foreach (Control control in this.AzureSettings.Controls)
+                {
+                    if (this.errProv.GetError(control).Length != 0)
+                    {
+                        invalidInput = true;
+                        break;
+                    }
+                }
+                return !invalidInput;
+            }
+
+            private bool ValidatePackagesSelectionSettings()
+            {
+                bool invalidInput = false;
+                lstPackages_Validating(lstPackages, null);
+                txtStorageContainer_Validating(txtStorageContainer, null);
+                txtVHDBlobName_Validating(txtVHDBlobName, null);
+                txtVHDSize_Validating(txtVHDSize, null);
+                foreach (Control control in this.PackageSettings.Controls)
+                {
+                    if (this.errProv.GetError(control).Length != 0)
+                    {
+                        invalidInput = true;
+                        break;
+                    }
+                }
+                return !invalidInput;
             }
 
             private string ReplaceTokens(string CfgStr)
@@ -379,7 +459,35 @@ namespace DNNAzureWizard
 
                 // Replace the tokens - Paths
                 CfgStr = CfgStr.Replace("@@APPPATH@@", Environment.CurrentDirectory + '\\');
-                CfgStr = CfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());                
+                CfgStr = CfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());
+
+                // Replace the tokens - VHD settings
+                CfgStr = CfgStr.Replace("@@VHDBLOBNAME@@", txtVHDBlobName.Text.Trim().ToLower());
+                int driveSize = 0;
+                int.TryParse(txtVHDSize.Text, out driveSize);
+                CfgStr = CfgStr.Replace("@@VHDBLOBSIZE@@", txtVHDSize.Text.Trim().ToLower());    
+            
+                // Replace the tokens - RDP settings
+                if (chkEnableRDP.Checked)
+                {
+                    CfgStr = CfgStr.Replace("@@RDPENABLED@@", "true");
+                    CfgStr = CfgStr.Replace("@@RDPUSERNAME@@", txtRDPUser.Text.Trim());
+                    CfgStr = CfgStr.Replace("@@RDPPASSWORD@@", EncryptWithCertificate(txtRDPPassword.Text, this.Certificate));
+                    CfgStr = CfgStr.Replace("@@RDPEXPIRATIONDATE@@", cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));                    
+                }
+                else
+                {
+                    CfgStr = CfgStr.Replace("@@RDPENABLED@@", "false");
+                    CfgStr = CfgStr.Replace("@@RDPUSERNAME@@", "");
+                    CfgStr = CfgStr.Replace("@@RDPPASSWORD@@", "");
+                    CfgStr = CfgStr.Replace("@@RDPEXPIRATIONDATE@@", System.DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
+                }
+
+                // Replace the tokens - Certificate settings
+                if (chkEnableRDP.Checked && (Certificate != null))
+                    CfgStr = CfgStr.Replace("@@RDPTHUMBPRINT@@", Certificate.Thumbprint);    
+                else
+                    CfgStr = CfgStr.Replace("@@RDPTHUMBPRINT@@", "");                    
 
                 return CfgStr;
 
@@ -596,7 +704,17 @@ namespace DNNAzureWizard
                 txtStorageContainer.Text = ConfigurationManager.AppSettings["AzureStoragePackageContainer"];
                 txtBindings.Text = ConfigurationManager.AppSettings["Bindings"];
 
+                txtVHDBlobName.Text = ConfigurationManager.AppSettings["VHDBlobBName"];
+                txtVHDSize.Text = ConfigurationManager.AppSettings["VHDSizeInMb"];
+
                 uploadBlockSize = Convert.ToInt32(ConfigurationManager.AppSettings["UploadBlockSize"]);
+
+                chkEnableRDP.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["RDPEnabled"]);
+                txtRDPUser.Text = ConfigurationManager.AppSettings["RDPUser"];
+                txtRDPPassword.Text = ConfigurationManager.AppSettings["RDPPassword"];
+                txtRDPConfirmPassword.Text = txtRDPPassword.Text;
+
+                cboRDPExpirationDate.Value = System.DateTime.Now.Date.AddMonths(1);
             }
 
         /// <summary>
@@ -610,10 +728,51 @@ namespace DNNAzureWizard
                     XmlDocument doc = new XmlDocument();
                     doc.Load(filedef.FullName);
 
-                    ListViewItem li = new ListViewItem(new string[] { doc.SelectSingleNode("/ServicePackage/Name").InnerText, doc.SelectSingleNode("/ServicePackage/Description").InnerText });
-                    li.Tag = doc.SelectSingleNode("ServicePackage");
-                    li.Checked = true;
-                    lstPackages.Items.Add(li);
+                    if ((chkEnableRDP.Checked && (Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText))) ||
+                        (!chkEnableRDP.Checked && (!Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText))))
+                    {
+                        ListViewItem li = new ListViewItem(new string[] { doc.SelectSingleNode("/ServicePackage/Name").InnerText, doc.SelectSingleNode("/ServicePackage/Description").InnerText });
+                        li.Tag = doc.SelectSingleNode("ServicePackage");
+                        li.Checked = true;
+                        lstPackages.Items.Add(li);
+                    }
+                }
+            }
+
+        /// <summary>
+        /// Loads the installed certificates into the dropdown list
+        /// </summary>
+            private void ReloadX509Certificates()
+            {
+                cboCertificates.Items.Clear();
+
+                // Open Certificates Store
+                X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+                store.Open(OpenFlags.ReadOnly);
+
+                // Read Certificates
+                X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=DNN Azure Accelerator", false);
+                foreach (X509Certificate cert in certs)
+                    cboCertificates.Items.Add(cert);
+
+                /* certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=" + Environment.UserName, false);
+                foreach (X509Certificate cert in certs)
+                    cboCertificates.Items.Add(cert);
+                certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=Windows Azure Tools", false);                
+                foreach (X509Certificate cert in certs)
+                    cboCertificates.Items.Add(cert);*/
+
+                cboCertificates.Items.Add("<Create new...>");
+            }
+
+            private X509Certificate2 Certificate
+            {
+                get
+                {
+                    if ((cboCertificates.SelectedItem != null) && (cboCertificates.SelectedItem is X509Certificate))
+                        return (X509Certificate2)cboCertificates.SelectedItem;
+                    else
+                        return null;
                 }
             }
 
@@ -625,6 +784,7 @@ namespace DNNAzureWizard
         #region " Background upload worker "
 
             private int uploadBlockSize = 0;
+            
 
             private string GetParsedConfigurationFilePath(string filePath)
             {
@@ -749,6 +909,284 @@ namespace DNNAzureWizard
 
 
         #endregion
+
+            private void chkEnableRDP_CheckedChanged(object sender, EventArgs e)
+            {
+                pnlRDP.Enabled = chkEnableRDP.Checked;
+                foreach (Control ctl in pnlRDP.Controls)
+                {
+                    ctl.Enabled = pnlRDP.Enabled;
+                    errProv.SetError(ctl, null);
+                }
+                if (!chkEnableRDP.Checked)
+                    cboCertificates.SelectedItem = null;
+                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
+
+                // Reload packages
+                ReloadDeploymentPackages();
+            }
+
+            private void cmdViewCertificate_Click(object sender, EventArgs e)
+            {
+                if (Certificate != null)
+                    X509Certificate2UI.DisplayCertificate(Certificate, this.Handle);
+            }
+
+            private void cboCertificates_SelectedIndexChanged(object sender, EventArgs e)
+            {
+                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
+                if (cboCertificates.SelectedIndex == cboCertificates.Items.Count - 1)                     // Launch the create certificate window
+                {
+                    FrmCreateCertificate frm = new FrmCreateCertificate();
+                    if (frm.ShowDialog() == System.Windows.Forms.DialogResult.Cancel)
+                        cboCertificates.SelectedItem = null;
+                    else
+                    {
+                        ReloadX509Certificates();
+                        foreach (Object item in cboCertificates.Items)
+                            if ((item is X509Certificate) && (((X509Certificate2) item).SerialNumber == frm.SerialNumber))
+                            {
+                                cboCertificates.SelectedItem = item;
+                                break;
+                            }                        
+                    }
+                }
+            }
+
+            private static string EncryptWithCertificate(string clearText, X509Certificate2 certificate)
+            {
+                UTF8Encoding encoding = new UTF8Encoding();
+                Byte[] clearTextsByte = encoding.GetBytes(clearText);
+                ContentInfo contentinfo = new ContentInfo(clearTextsByte);
+                EnvelopedCms envelopedCms = new EnvelopedCms(contentinfo);
+                envelopedCms.Encrypt(new CmsRecipient(certificate));
+                return Convert.ToBase64String(envelopedCms.Encode());
+            }
+
+            #region Control validation
+
+            #region RDP settings
+
+            void txtRDPUser_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtRDPUser.Text.Length == 0)
+                {
+                    error = "Please enter a user name";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtRDPPassword_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if ((txtRDPPassword.Text.Length == 0) ||
+                    (txtRDPPassword.Text.Contains(txtRDPUser.Text)) ||
+                    !Regex.Match(txtRDPPassword.Text, PasswordStrengthRegex).Success)
+                {
+                    error = "The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols.";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtRDPConfirmPassword_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtRDPPassword.Text != txtRDPConfirmPassword.Text)
+                {
+                    error = "The passwords don't match.";
+                }
+                errProv.SetError((Control)sender, error);
+                
+            }
+
+            void cboCertificates_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (this.Certificate == null)
+                {
+                    error = "You must select an existing certificate or create a new one";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+            #endregion
+
+        #region SQL Azure settings
+            void txtDBServer_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtDBServer.Text.Length == 0)
+                {
+                    error = "Please enter your database server name (this is <databasename>.database.windows.net)";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtDBAdminUser_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtDBAdminUser.Text.Length == 0)
+                {
+                    error = "Please enter the database admin user name";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtDBAdminPassword_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtDBAdminPassword.Text.Length == 0)
+                {
+                    error = "Please enter the database admin password";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtDBName_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtDBName.Text.Length == 0)
+                {
+                    error = "Please enter the database name for the new database";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+            void txtDBUser_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtDBUser.Text.Length == 0)
+                {
+                    error = "Please enter the database user name for the new database";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+            void txtDBPassword_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if ((txtDBPassword.Text.Length == 0) ||
+                    (txtDBPassword.Text.Contains(txtDBUser.Text)) ||
+                    !Regex.Match(txtDBPassword.Text, PasswordStrengthRegex).Success)
+                {
+                    error = "The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols.";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+            void txtDBRePassword_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtDBRePassword.Text != txtDBPassword.Text)
+                {
+                    error = "The passwords are not identical";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+        #endregion 
+
+        #region Windows Azure Settings
+            void txtStorageName_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtStorageName.Text.Length == 0)
+                {
+                    error = "Please enter your account storage name";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtStorageKey_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtStorageKey.Text.Length == 0)
+                {
+                    error = "Please enter your account storage key";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+            void txtBindings_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtBindings.Text.Length == 0)
+                {
+                    error = "Please enter the bindings for your web application. You may include 'myapp.cloudapp.net' in order to access through the Azure access portal.";
+                }
+                errProv.SetError((Control)sender, error);
+            }                       
+
+        #endregion
+
+        #region Package Settings
+            void txtStorageContainer_Validating(object sender, CancelEventArgs e)
+            {
+                // Container names must be valid DNS names, and must conform to these rules:
+                // * Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
+                // * Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
+                // * All letters in a container name must be lowercase.
+                // * Container names must be from 3 through 63 characters long.
+
+                string error = null;
+                if ((txtStorageContainer.Text.Length == 0) ||
+                    !Regex.IsMatch(txtStorageContainer.Text, @"^[a-z0-9](([a-z0-9\-[^\-])){1,61}[a-z0-9]$"))
+                {
+                    error = "Please a valid container name. Container names muse be valid DNS names and must conform to these rules: ";
+                    error += "Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character; ";
+                    error += "Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names; ";
+                    error += "All letters in a container name must be lowercase; ";
+                    error += "Container names must be from 3 through 63 characters long.";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtVHDBlobName_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtVHDBlobName.Text.Length == 0)
+                {
+                    error = "You must specify a blob name for the VHD";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void txtVHDSize_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                int driveSize = 0;                
+                if ((txtVHDSize.Text.Length == 0) ||
+                    !int.TryParse(txtVHDSize.Text, out driveSize) ||
+                    (driveSize < 128) || (driveSize > 1048576))
+                {
+                    error = "You must specify a valid VHD size (recommended minumum: 512Mb; maximum 1Tb=1048576Mb)";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            void lstPackages_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+
+                bool IsChecked = false;
+                foreach (ListViewItem li in lstPackages.Items)
+                    if (li.Checked)
+                    {
+                        IsChecked = true;
+                        break;
+                    }
+                if (!IsChecked)
+                    error = "You must select at least one package to upload to Azure Storage";
+
+                errProv.SetError((Control)sender, error);
+            }
+
+
+
+
+        #endregion
+
+
+
+
+
+            #endregion
 
     }
 }

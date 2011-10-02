@@ -33,10 +33,12 @@
       <Parameters>-U @@DBADMINUSER@@@@@DBSERVER@@ -P @@DBADMINPASSWORD@@ -S @@DBSERVER@@.database.windows.net -d @@DBNAME@@ -i "@@APPPATH@@Sql\CreateUser.sql" -r0 -e -o "@@APPPATH@@Logs\@@DBADMINUSER@@.roles.log"</Parameters>
     </Action>
   </Task>
+  
   <Task id="Task4" type="UploadPackages">
     <Description>Service package files upload</Description>
     <Comments>This Task uploads the selected service packages and configuration file to Azure storage</Comments>
   </Task>
+  <!--
   <Task id="Task5" type="UploadBlob">
     <Description>DotNetNuke 6.0 distribution package upload</Description>
     <Comments>This Task uploads the DotNetNuke 6.0 distribution package to Azure storage</Comments>
@@ -46,4 +48,5 @@
       <BlobType>BlockBlob</BlobType>
     </Action>
   </Task>
+  -->
 </DeploymentTasks>

@@ -68,6 +68,7 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -77,6 +78,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FrmCreateCertificate.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmCreateCertificate.Designer.cs">
+      <DependentUpon>FrmCreateCertificate.cs</DependentUpon>
+    </Compile>
     <Compile Include="FrmDNNAzureWizard.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -86,6 +93,9 @@
     <Compile Include="ProcessUtility.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="FrmCreateCertificate.resx">
+      <DependentUpon>FrmCreateCertificate.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FrmDNNAzureWizard.resx">
       <DependentUpon>FrmDNNAzureWizard.cs</DependentUpon>
     </EmbeddedResource>
@@ -100,10 +110,22 @@
       <DesignTime>True</DesignTime>
     </Compile>
     <None Include="app.config" />
-    <None Include="packages\DNNAzureSingleAndExtraSmall6.0.cscfg">
+    <None Include="packages\DNNAzureSingleAndSmall6.1_RDP.cscfg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="packages\DNNAzureSMB6.0.cscfg">
+    <None Include="packages\DNNAzureSingleAndSmall6.1.cscfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSMB6.1_RDP.cscfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSingleAndExtraSmall6.1.cscfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSingleAndExtraSmall6.1_RDP.cscfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSMB6.1.cscfg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Properties\Settings.settings">
@@ -119,7 +141,22 @@
   <ItemGroup>
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.dll" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.xml" />
-    <None Include="packages\DNNAzureSMB6.0.xml">
+    <None Include="packages\DNNAzureSingleAndSmall6.1_RDP.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSingleAndSmall6.1.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSMB6.1_RDP.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSingleAndExtraSmall6.1.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="utils\makecert.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSMB6.1.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="logs\PlaceHolder.txt">
@@ -141,7 +178,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Content Include="DotNetNuke.ico" />
-    <None Include="packages\DNNAzureSingleAndExtraSmall6.0.xml">
+    <None Include="packages\DNNAzureSingleAndExtraSmall6.1_RDP.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -167,6 +204,7 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
