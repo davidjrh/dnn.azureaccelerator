@@ -1,4 +1,4 @@
-Version 6.1 - 02 oct 2011
+Version 6.1 - 02 nov 2011
 
 Deployment Wizard
 - Added a new step on the wizard for configuring RDP (Remote Desktop) access to all roles without the need of using Visual Studio 2010.
@@ -9,3 +9,5 @@ Deployment Wizard
 - Added textboxes for VHD blob size and name settings
 - Added pre-built packages for RDP enabled and not RDP enabled deployments
 - Added a new Single and Small package (instances are "Small" sized)
+- Added a new step on the wizard for configuring Virtual Network (Azure Connect) to allow the creation of virtual networks between Azure and on-premise computers
+- Updated the DotNetNuke installation package to the 6.1.0 version (note that the non-core modules are not included)

@@ -37,10 +37,11 @@ namespace DNNAzureWizard
             tabSQLAzureSettings = 2,
             tabWindowsAzureSettings = 3,
             tabRDPAzureSettings = 4,
-            tabPackages = 5,
-            tabSummary = 6,
-            tabUploading = 7,
-            tabFinish = 8
+            tabConnectSettings = 5,
+            tabPackages = 6,
+            tabSummary = 7,
+            tabUploading = 8,
+            tabFinish = 9
         }
 
 
@@ -254,8 +255,27 @@ namespace DNNAzureWizard
                 catch { };
             }
 
+            private FileVersionInfo _VersionInfo = null;
+            private FileVersionInfo VersionInfo
+            {
+                get
+                {
+                    if (_VersionInfo == null)
+                    {
+                        System.Reflection.Assembly oAssembly = System.Reflection.Assembly.GetExecutingAssembly();
+                        _VersionInfo = FileVersionInfo.GetVersionInfo(oAssembly.Location);
+                    }
+                    return _VersionInfo;
+                }
+            }
+
             private void RefreshUI()
             {
+                
+                this.Text += " (" + VersionInfo.ProductVersion + ")";
+#if DEBUG
+                this.Text += " - (Debug)";
+#endif
                 InitializePages();                
                 ShowPage((int) WizardTabs.tabHome);
                 SetupAppSettings();
@@ -265,7 +285,11 @@ namespace DNNAzureWizard
 
             private static void LogException(Exception ex)
             {
-                MessageBox.Show(ex.Message, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string msg = ex.Message;
+#if DEBUG
+                msg += " - Stack trace: " + ex.StackTrace.ToString();
+#endif
+                MessageBox.Show(msg, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             private void ShowPage(int PageNumber)
             {
@@ -281,6 +305,7 @@ namespace DNNAzureWizard
                     p.Visible = false;
                 }
                 chkEnableRDP_CheckedChanged(null, null);
+                chkAzureConnect_CheckedChanged(null, null);
             }
             private int ActivePageIndex()
             {
@@ -305,6 +330,8 @@ namespace DNNAzureWizard
                         return ValidateAzureSettings();                        
                     case (int) WizardTabs.tabRDPAzureSettings: // RDP tab
                         return ValidateRDPSettings();                       
+                    case (int) WizardTabs.tabConnectSettings: // Virtual Network tab
+                        return ValidateConnectSettings();
                     case (int) WizardTabs.tabPackages: // Deployment packages
                         bool validated= ValidatePackagesSelectionSettings();
                         txtConfig.Text = GetSettingsSummary();
@@ -315,6 +342,25 @@ namespace DNNAzureWizard
                         return false;
                 }
             }
+
+            private bool ValidateConnectSettings()
+            {
+                bool invalidInput = false;
+                if (chkAzureConnect.Checked)
+                {
+                    txtConnectActivationToken_Validating(txtConnectActivationToken, null);
+                    foreach (Control control in this.pnlAzureConnect.Controls)
+                    {
+                        if (this.errProv.GetError(control).Length != 0)
+                        {
+                            invalidInput = true;
+                            break;
+                        }
+                    }                    
+                }
+                return !invalidInput;
+            }
+
             private bool ValidateRDPSettings()
             {
                 bool invalidInput = false;
@@ -376,6 +422,15 @@ namespace DNNAzureWizard
                     summary.AppendLine("- Expires: " + cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
                 }
                 summary.AppendLine("");
+
+                summary.AppendLine("VIRTUAL NETWORK SETTINGS:");
+                summary.AppendLine("- Azure Connect enabled: " + (chkAzureConnect.Checked ? "true" : "false"));
+                if (chkAzureConnect.Checked)
+                {
+                    summary.AppendLine("- Activation Token: " + txtConnectActivationToken.Text.Trim());                    
+                }
+                summary.AppendLine("");
+
                 summary.AppendLine("SELECTED PACKAGES:");
                 foreach (ListViewItem li in lstPackages.Items)
                     if (li.Checked)
@@ -483,11 +538,18 @@ namespace DNNAzureWizard
                     CfgStr = CfgStr.Replace("@@RDPEXPIRATIONDATE@@", System.DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
                 }
 
+                // Replace the tokens - Virtual Network settings
+                if (chkAzureConnect.Checked)
+                    CfgStr = CfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", txtConnectActivationToken.Text.Trim());
+                else
+                    CfgStr = CfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", "");
+
                 // Replace the tokens - Certificate settings
                 if (chkEnableRDP.Checked && (Certificate != null))
                     CfgStr = CfgStr.Replace("@@RDPTHUMBPRINT@@", Certificate.Thumbprint);    
                 else
                     CfgStr = CfgStr.Replace("@@RDPTHUMBPRINT@@", "");                    
+
 
                 return CfgStr;
 
@@ -713,6 +775,11 @@ namespace DNNAzureWizard
                 txtRDPUser.Text = ConfigurationManager.AppSettings["RDPUser"];
                 txtRDPPassword.Text = ConfigurationManager.AppSettings["RDPPassword"];
                 txtRDPConfirmPassword.Text = txtRDPPassword.Text;
+                chkEnableRDP_CheckedChanged(null, null);
+
+                chkAzureConnect.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["ConnectEnabled"]);
+                txtConnectActivationToken.Text = ConfigurationManager.AppSettings["ConnectActivationToken"];
+                chkAzureConnect_CheckedChanged(null, null);
 
                 cboRDPExpirationDate.Value = System.DateTime.Now.Date.AddMonths(1);
             }
@@ -727,9 +794,9 @@ namespace DNNAzureWizard
                 {
                     XmlDocument doc = new XmlDocument();
                     doc.Load(filedef.FullName);
+                    bool IsRDPPackage = ((doc.SelectSingleNode("/ServicePackage/RDPEnabled") != null) && Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText));
 
-                    if ((chkEnableRDP.Checked && (Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText))) ||
-                        (!chkEnableRDP.Checked && (!Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText))))
+                    if ((chkEnableRDP.Checked && IsRDPPackage) || (!chkEnableRDP.Checked && !IsRDPPackage))
                     {
                         ListViewItem li = new ListViewItem(new string[] { doc.SelectSingleNode("/ServicePackage/Name").InnerText, doc.SelectSingleNode("/ServicePackage/Description").InnerText });
                         li.Tag = doc.SelectSingleNode("ServicePackage");
@@ -1182,9 +1249,39 @@ namespace DNNAzureWizard
 
         #endregion
 
+            #region Azure Connect Settings
+            private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+            {
+                try
+                {
+                    string ConnectHelpURL = "http://go.microsoft.com/fwlink/?LinkId=203834";
+                    System.Diagnostics.Process.Start(ConnectHelpURL);
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+
+            private void chkAzureConnect_CheckedChanged(object sender, EventArgs e)
+            {
+                txtConnectActivationToken.Enabled = chkAzureConnect.Checked;
+            }
+
+            void txtConnectActivationToken_Validating(object sender, CancelEventArgs e)
+            {
+                string error = null;
+                if (txtConnectActivationToken.Text.Length == 0)
+                {
+                    error = "Please enter a valid Azure Connect Activation token.";
+                }
+                errProv.SetError((Control)sender, error);
+            }    
 
 
 
+
+            #endregion
 
             #endregion
 
