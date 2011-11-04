@@ -93,8 +93,7 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="@@RDPENABLED@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />      
 
       <!-- Azure Connect (virtual network) -->
       <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
