@@ -19,7 +19,7 @@
       <Setting name="localPath" value="X:" />
       <Setting name="SMBMode" value="false" />
       <Setting name="packageContainer" value="dotnetnuke-packages" />
-      <Setting name="package" value="DotNetNuke_Community_06.01.00_Install.zip" />
+      <Setting name="package" value="DotNetNuke_Community_06.01.03_Install.zip" />
     </ConfigurationSettings>
     <Certificates>
     </Certificates>

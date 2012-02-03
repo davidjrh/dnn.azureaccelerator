@@ -13,7 +13,7 @@
       <Setting name="driveContainer" value="azure-accelerator-drives" />
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
       <Setting name="packageContainer" value="dotnetnuke-packages" />
-      <Setting name="package" value="DotNetNuke_Community_06.01.00_Install.zip" />
+      <Setting name="package" value="DotNetNuke_Community_06.01.03_Install.zip" />
       <Setting name="dnnFolder" value="DotNetNuke" />
     </ConfigurationSettings>
     <Certificates>
