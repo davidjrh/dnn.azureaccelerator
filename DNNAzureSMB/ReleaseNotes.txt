@@ -1,3 +1,17 @@
+Version 6.2 - Pending release date
+General
+- Modified the local file sharing user account creation on roles to don't allow account expiration
+- Modified the web roles endpoints to allow traffic on port 443
+- Changed the package unzip operations to use managed code (ICSharpCode.SharpZipLib.dll)
+- Use of "netsh advfirewall firewall" to allow traffic on the SMB server (see http://support.microsoft.com/kb/947709/)
+- Automatic adition of "IsWebFarm" app setting in the web.config file to enable the FileCachingProvider 
+- Automatic download of the latest available CE package from CodePlex on first run (Beta feature). Also you can overwrite
+the "packageUrl" setting to download from any other customized location, like previous Azure Storage container locations or any other.
+- Changed the Azure diagnostic monitor initialization. Now the events are being correctly logged on web roles.
+- Extra packages has been moved to a separated download. The wizard comes with the "Azure Single and Small" package so 
+the DNNAzureAccelerator package only weights 4Mb. 
+
+
 Version 6.1 - 02 nov 2011
 
 Deployment Wizard

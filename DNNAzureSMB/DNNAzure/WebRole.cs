@@ -1,17 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.Diagnostics;
-using Microsoft.WindowsAzure.Diagnostics.Management;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.Web.Administration;
-using System.Configuration;
-using System.Xml;
 using DNNShared;
 
 
@@ -19,11 +10,11 @@ namespace DNNAzure
 {
     public class WebRole : RoleEntryPoint
     {
-        public static string driveLetter = null;
-        public static CloudDrive drive = null;
+        public static string DriveLetter;
+        public static CloudDrive Drive;
 
 
-        public bool SMBMode = false;
+        public bool SMBMode;
         
         // Act as a SMB server - The Instance "0" is the instance that will mount the drive
         public bool IsSMBServer 
@@ -35,7 +26,7 @@ namespace DNNAzure
         {
             
             // Inits the Diagnostic Monitor
-            RoleStartupUtils.InitializeDiagnosticMonitor();            
+            RoleStartupUtils.ConfigureDiagnosticMonitor();            
 
 
             Trace.TraceInformation("DNNAzure initialization");
@@ -47,7 +38,7 @@ namespace DNNAzure
             catch {SMBMode = true;}
 
 
-            if (this.IsSMBServer)
+            if (IsSMBServer)
             {
                 Trace.TraceInformation("Creating DNNAzure instance as a SMB Server");
 
@@ -55,7 +46,7 @@ namespace DNNAzure
                 try
                 {
                     // Mount the drive
-                    drive = RoleStartupUtils.MountCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"), 
+                    Drive = RoleStartupUtils.MountCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"), 
                                                             RoleEnvironment.GetConfigurationSettingValue("driveContainer"), 
                                                             RoleEnvironment.GetConfigurationSettingValue("driveName"), 
                                                             RoleEnvironment.GetConfigurationSettingValue("driveSize"));
@@ -69,24 +60,30 @@ namespace DNNAzure
                         goto Exit;
 
                     // Share it using SMB
-                    string RDPuserName = "";
-                    try { RDPuserName = RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
-                    catch { };                    
-                    RoleStartupUtils.ShareLocalFolder(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"), 
-                                                    RDPuserName, drive.LocalPath,
-                                                    RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                    string rdpUserName = "";
+                    try { rdpUserName = RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
+                    catch
+                    {
+                        Trace.TraceWarning("No RDP user name was specified. Consider enabling RDP for better maintenance options.");
+                    }                  
+                    // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
+                    if (!RoleEnvironment.IsEmulated)
+                        RoleStartupUtils.ShareLocalFolder(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"), 
+                                                        rdpUserName, Drive.LocalPath,
+                                                        RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
                     // Check for the creation of the Website contents from Azure storage
                     Trace.TraceInformation("Check for website content...");
-                    if (!RoleStartupUtils.SetupWebSiteContents(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                    if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
                                                             RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
                                                             RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                                            RoleEnvironment.GetConfigurationSettingValue("package")))
+                                                            RoleEnvironment.GetConfigurationSettingValue("package"),
+                                                            RoleEnvironment.GetConfigurationSettingValue("packageUrl")))
                         Trace.TraceError("Website content could not be prepared. Check previous messages.");
 
 
                     // Setup Database Connection string
-                    RoleStartupUtils.SetupDBConnectionString(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
+                    RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                     RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"));
 
                 }
@@ -140,14 +137,17 @@ namespace DNNAzure
 
 #region Private functions
 
-
         /// <summary>
         /// Creates a DNNWebSite listening for hostHeaders
         /// </summary>
         /// <param name="hostHeaders">Host headers for bindings</param>
-        /// <param name="HomePath">Home path of the DNN portal (on the SMB share)</param>
+        /// <param name="homePath">Home path of the DNN portal (on the SMB share)</param>
+        /// <param name="userName">User name for the application pool identity</param>
+        /// <param name="password">Password for the application pool identity </param>
+        /// <param name="managedRuntimeVersion">Runtime version for the application pool</param>
+        /// <param name="managedPipelineMode">Pipeline mode for the application pool</param>
         /// <returns></returns>
-        public bool CreateDNNWebSite(string hostHeaders, string HomePath, string userName, string password, string managedRuntimeVersion, string managedPipelineMode)
+        public bool CreateDNNWebSite(string hostHeaders, string homePath, string userName, string password, string managedRuntimeVersion, string managedPipelineMode)
         {
             // Create the user account for the Application Pool. 
             Trace.TraceInformation("Creating user account for the Application Pool");
@@ -160,26 +160,26 @@ namespace DNNAzure
             string systemDrive = Environment.SystemDirectory.Substring(0, 2);
             string originalwebSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_Web";
             string webSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_DotNetNuke";
-            string[] Headers = hostHeaders.Split(';');
+            string[] headers = hostHeaders.Split(';');
             string protocol = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].Protocol;
             string port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].IPEndpoint.Port.ToString();
 
-            string bindings = protocol + "://" + string.Join(":" + port + "," + protocol + "://", Headers) + ":" + port;
+            string bindings = protocol + "://" + string.Join(":" + port + "," + protocol + "://", headers) + ":" + port;
             Trace.TraceInformation("Calculated bindings are: " + bindings);
             
             
             // Creates the DNN WebSite 
             try
             {
-                using (ServerManager serverManager = new ServerManager())
+                using (var serverManager = new ServerManager())
                 {
                     var site = serverManager.Sites[webSiteName];
                     if (site == null)
                     {
-                        Trace.TraceInformation("Creating DNNWebSite (SiteName=" + webSiteName + ";protocol=" + protocol + ";Bindings=" + "*:" + port + ":" + Headers[0] + ";HomePath=" + HomePath);
-                        site = serverManager.Sites.Add(webSiteName, protocol, "*:" + port + ":" + Headers[0], HomePath);
-                        for (int i = 1; i < Headers.Length; i++)
-                            site.Bindings.Add("*:" + port + ":" + Headers[i], protocol);
+                        Trace.TraceInformation("Creating DNNWebSite (SiteName=" + webSiteName + ";protocol=" + protocol + ";Bindings=" + "*:" + port + ":" + headers[0] + ";HomePath=" + homePath);
+                        site = serverManager.Sites.Add(webSiteName, protocol, "*:" + port + ":" + headers[0], homePath);
+                        for (int i = 1; i < headers.Length; i++)
+                            site.Bindings.Add("*:" + port + ":" + headers[i], protocol);
                     }
 
                     // Creates an application pool with the identity of the user that connects to the SMB Server                    
@@ -195,10 +195,7 @@ namespace DNNAzure
                         appPool.ProcessModel.Password = password;
 
                         appPool.ManagedRuntimeVersion = managedRuntimeVersion;
-                        if (managedPipelineMode.ToLower() == "integrated")
-                            appPool.ManagedPipelineMode = ManagedPipelineMode.Integrated;
-                        else
-                            appPool.ManagedPipelineMode = ManagedPipelineMode.Classic;
+                        appPool.ManagedPipelineMode = managedPipelineMode.ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;
                     }
 
                     // Sets the application pool
@@ -221,11 +218,9 @@ namespace DNNAzure
 
         public override void OnStop()
         {
-            if (drive != null)
-            {
-                drive.Unmount();
+            if (Drive != null)
+                Drive.Unmount();
                 //TODO Tell to other instance to mount the drive and reconnect the drive an all instances?
-            }
             base.OnStop();
         }
     }

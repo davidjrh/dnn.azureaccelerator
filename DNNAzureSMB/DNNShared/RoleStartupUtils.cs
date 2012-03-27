@@ -1,49 +1,51 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
+using System.Net;
+using System.Xml;
+using DNNShared.Exceptions;
+using ICSharpCode.SharpZipLib.Zip;
+using Microsoft.Win32;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.Diagnostics.Management;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using System.Configuration;
-using System.Xml;
 
 namespace DNNShared
 {
     public class RoleStartupUtils
     {
 
+        #region Cloud Drive operations
         /// <summary>
         /// Mounts the VHD as a local drive
         /// </summary>
         /// <returns>A string with the path of the local mounted drive</returns>
-        public static CloudDrive MountCloudDrive(string StorageConnectionString, string driveContainerName, string driveName, string driveSize)
+        public static CloudDrive MountCloudDrive(string storageConnectionString, string driveContainerName, string driveName, string driveSize)
         {
-            
-            CloudDrive drive = null;
             // Mount the Cloud Drive - Lots of tracing in this part
 
             Trace.TraceInformation("Mounting cloud drive - Begin");
             Trace.TraceInformation("Mounting cloud drive - Accesing acount info");
-            CloudStorageAccount account = CloudStorageAccount.Parse(StorageConnectionString);
-            CloudBlobClient blobClient = account.CreateCloudBlobClient();
+            var account = CloudStorageAccount.Parse(storageConnectionString);
+            var blobClient = account.CreateCloudBlobClient();
 
             Trace.TraceInformation("Mounting cloud drive - Locating VHD container:" + driveContainerName);
-            CloudBlobContainer driveContainer = blobClient.GetContainerReference(driveContainerName);
+            var driveContainer = blobClient.GetContainerReference(driveContainerName);
 
             Trace.TraceInformation("Mounting cloud drive - Creating VHD container if not exists");
             driveContainer.CreateIfNotExist();
 
             Trace.TraceInformation("Mounting cloud drive - Local cache initialization");
-            LocalResource localCache = RoleEnvironment.GetLocalResource("AzureDriveCache");
+            var localCache = RoleEnvironment.GetLocalResource("AzureDriveCache");
             CloudDrive.InitializeCache(localCache.RootPath, localCache.MaximumSizeInMegabytes);
 
             Trace.TraceInformation("Mounting cloud drive - Creating cloud drive");
-            drive = new CloudDrive(driveContainer.GetBlobReference(driveName).Uri, account.Credentials);
+            var drive = new CloudDrive(driveContainer.GetBlobReference(driveName).Uri, account.Credentials);
             try
             {
                 drive.Create(int.Parse(driveSize));
@@ -60,41 +62,9 @@ namespace DNNShared
         }
 
         /// <summary>
-        /// Modifies web.config to setup database connection string
-        /// </summary>
-        /// <param name="webConfigPath">Path to the web config file</param>
-        /// <param name="DatabaseConnectionString">Database connection string</param>
-        public static bool SetupDBConnectionString(string webConfigPath, string DatabaseConnectionString)
-        {
-            bool success = false;
-            try
-            {
-                // Modifiy web.config settings: connection string, appsettings
-                Trace.TraceInformation("Modifying web.config settings to set database connection string");
-                ConfigXmlDocument webconfig = new ConfigXmlDocument();
-                webconfig.Load(webConfigPath);
-
-                XmlNode csNode = webconfig.SelectSingleNode("/configuration/connectionStrings/add[@name='SiteSqlServer']");
-                csNode.Attributes["connectionString"].Value = DatabaseConnectionString;
-
-                XmlNode bcNode = webconfig.SelectSingleNode("/configuration/appSettings/add[@key='SiteSqlServer']");
-                bcNode.Attributes["value"].Value = DatabaseConnectionString;
-
-                webconfig.Save(webConfigPath);
-                Trace.TraceInformation("Web.config modified successfully");
-                success = true;
-            }
-            catch (Exception ex)
-            {
-                // Log and continue - Perhaps the website content is not uploaded yet (first time VHD access, paste contents through RDP, for example)
-                Trace.TraceWarning("Can not setup database connection string. Error: " + ex.Message);
-            }
-            return success;
-        }
-
-        /// <summary>
         /// Maps a Network Drive (SMB Server Share)
         /// </summary>
+        /// <param name="SMBMode">Indicate if the service is running with a specif worker role as SMB server</param>
         /// <param name="localPath">Drive name</param>
         /// <param name="shareName">Share name on the SMB server</param>
         /// <param name="userName">Username for mapping the network drive</param>
@@ -122,6 +92,8 @@ namespace DNNShared
                     server = (from r in RoleEnvironment.Roles["DNNAzure"].Instances
                               where r.Id.EndsWith("_0")
                               select r).FirstOrDefault();
+                if (server == null)
+                    throw new ApplicationException("Can't find an available role where to map the network drive");
 
                 Trace.TraceInformation("Trying to connect the drive to SMB role instance " + server.Id + ")");
 
@@ -147,227 +119,128 @@ namespace DNNShared
                 Trace.TraceInformation("Success: mapped network drive" + machineIP + shareName);
                 return true;
             }
-            else
-                return false;
+            return false;
         }
+        #endregion
 
-
+        #region DotNetNuke setup utilities
         /// <summary>
-        /// Shares a local folder
+        /// Modifies web.config to setup database connection settings and other appSettings
         /// </summary>
-        /// <param name="userName">Username to share the drive with full access permissions</param>
-        /// <param name="RDPuserName">(Optional) Second username to grant full access permissions</param>
-        /// <param name="path">Path to share</param>
-        /// <param name="shareName">Share name</param>
-        /// <returns>Returns 0 if success</returns>
-        public static int ShareLocalFolder(string userName, string RDPuserName, string path, string shareName)
+        /// <param name="webConfigPath">Path to the web config file</param>
+        /// <param name="databaseConnectionString">Database connection string</param>
+        public static bool SetupWebConfig(string webConfigPath, string databaseConnectionString)
         {
-            int exitCode;
-            string error;
-            Trace.TraceInformation("Sharing local folder " + path);
-            string GrantRDPUserName = "";
-            if (RDPuserName != "")
-                GrantRDPUserName = " /Grant:" + RDPuserName + ",full";
-            exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + " /Grant:" + userName + ",full" + GrantRDPUserName, out error, 10000);
-
-            if (exitCode != 0)
-                //Log error and continue since the drive may already be shared
-                Trace.TraceWarning("Error creating fileshare, error msg:" + error, "Warning");
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Enables SMB traffic through the firewall
-        /// </summary>
-        /// <returns>Returns 0 if success</returns>
-        public static int EnableSMBFirewallTraffic()
-        {
-            int exitCode;
-            string error;
-            //Enable SMB traffic through the firewall
-            Trace.TraceInformation("Enable SMB traffic through the firewall");
-            exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);
-            if (exitCode != 0)            
-                Trace.TraceError("Error setting up firewall, error msg:" + error);
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Creates a user account on the local machine
-        /// </summary>
-        /// <param name="userName">Name for the user account</param>
-        /// <param name="password">Password for the user account</param>
-        /// <returns>Returns 0 if success</returns>
-        public static int CreateUserAccount(string userName, string password)
-        {
-            int exitCode;
-            string error;
-
-            //Create the user account    
-            Trace.TraceInformation("Creating user account for sharing");
-            exitCode = ExecuteCommand("net.exe", "user " + userName + " " + password + " /add", out error, 10000);
-            if (exitCode != 0)
+            bool success = false;
+            try
             {
-                //Log error and continue since the user account may already exist
-                Trace.TraceWarning("Error creating user account, error msg:" + error);
+                // Modifiy web.config settings: connection string, appsettings
+                Trace.TraceInformation("Modifying web.config settings to set database connection string");
+                var webconfig = new ConfigXmlDocument();
+                webconfig.Load(webConfigPath);
+
+                var csNode = webconfig.SelectSingleNode("/configuration/connectionStrings/add[@name='SiteSqlServer']");
+                if (csNode != null && csNode.Attributes["connectionString"] != null)
+                    csNode.Attributes["connectionString"].Value = databaseConnectionString;
+
+                var bcNode = webconfig.SelectSingleNode("/configuration/appSettings/add[@key='SiteSqlServer']");
+                if (bcNode != null && bcNode.Attributes["value"] != null)
+                    bcNode.Attributes["value"].Value = databaseConnectionString;
+
+                // Modify web.config settings: setting up "IsWebFarm" setting
+                var wfNode = webconfig.SelectSingleNode("/configuration/appSettings/add[@key='IsWebFarm']");
+                if (wfNode == null)
+                {
+                    wfNode = webconfig.CreateElement("add");
+                    var attkey = webconfig.CreateAttribute("key");
+                    attkey.Value = "IsWebFarm";
+                    wfNode.Attributes.Append(attkey);
+                    var attvalue = webconfig.CreateAttribute("value");
+                    attvalue.Value = "true";
+                    wfNode.Attributes.Append(attvalue);
+                    webconfig.SelectSingleNode("/configuration/appSettings").AppendChild(wfNode);
+                }
+                wfNode.Attributes["value"].Value = "true";
+                    
+                webconfig.Save(webConfigPath);
+                Trace.TraceInformation("Web.config modified successfully");
+                success = true;
             }
-            return exitCode;
+            catch (Exception ex)
+            {
+                // Log and continue - Perhaps the website content is not uploaded yet (first time VHD access, paste contents through RDP, for example)
+                Trace.TraceWarning("Can not setup database connection string. Error: " + ex.Message);
+            }
+            return success;
         }
-
-
-        /// <summary>
-        /// Executes an external .exe command
-        /// </summary>
-        /// <param name="exe">EXE path</param>
-        /// <param name="arguments">Arguments</param>
-        /// <param name="output">Output of the command</param>
-        /// <param name="error">Contents of the error results if fails</param>
-        /// <param name="timeout">Timeout for executing the command in milliseconds</param>
-        /// <returns>Exit code</returns>
-        public static int ExecuteCommand(string exe, string arguments, out string output, out string error, int timeout)
-        {
-            Process p = new Process();
-            int exitCode;
-            p.StartInfo.FileName = exe;
-            p.StartInfo.Arguments = arguments;
-            p.StartInfo.CreateNoWindow = true;
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.RedirectStandardError = true;
-            p.StartInfo.RedirectStandardOutput = true;
-            p.Start();
-            error = p.StandardError.ReadToEnd();
-            output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(timeout);
-            exitCode = p.ExitCode;
-            p.Close();
-
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Executes an external .exe command
-        /// </summary>
-        /// <param name="exe">EXE path</param>
-        /// <param name="arguments">Arguments</param>
-        /// <param name="error">Contents of the error results if fails</param>
-        /// <param name="timeout">Timeout for executing the command in milliseconds</param>
-        /// <returns>Exit code</returns>
-        public static int ExecuteCommand(string exe, string arguments, out string error, int timeout)
-        {
-            string output;
-            return ExecuteCommand(exe, arguments, out output, out error, timeout);
-        }
-
-
-        /// <summary>
-        /// Initializes the DiagnosticMonitor
-        /// </summary>
-        public static void InitializeDiagnosticMonitor()
-        {
-            // See for more info http://blog.bareweb.eu/2011/01/implementing-azure-diagnostics-with-sdk-v1-3/
-
-            // Initialize configuration
-            string wadConnectionString = "Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString";
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue(wadConnectionString));
-
-            RoleInstanceDiagnosticManager roleInstanceDiagnosticManager = storageAccount.CreateRoleInstanceDiagnosticManager(RoleEnvironment.DeploymentId, RoleEnvironment.CurrentRoleInstance.Role.Name, RoleEnvironment.CurrentRoleInstance.Id);
-            DiagnosticMonitorConfiguration config = roleInstanceDiagnosticManager.GetCurrentConfiguration();
-
-            // Setup Windows Azure Logs (Table)
-            config.Logs.ScheduledTransferPeriod = TimeSpan.FromMinutes(1D);
-            config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
-
-            // IIS 7.0 Logs (Blob)
-            config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(1D);
-
-            // Windows Infraestructure Diagnostic Infraestructure Logs (Table)
-            config.DiagnosticInfrastructureLogs.ScheduledTransferLogLevelFilter = LogLevel.Warning;
-            config.DiagnosticInfrastructureLogs.ScheduledTransferPeriod = TimeSpan.FromMinutes(1D);
-
-            // Failed Request Logs (Blob) ==> See web.config settings and http://www.iis.net/ConfigReference/system.webServer/tracing/traceFailedRequests
-            //config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(1D);
-
-            // Windows Events Logs (Table)
-            config.WindowsEventLog.DataSources.Add("System!*"); config.WindowsEventLog.DataSources.Add("Application!*");
-            config.WindowsEventLog.ScheduledTransferPeriod = TimeSpan.FromMinutes(1D);
-
-            // Performance Counters (Table)
-            //PerformanceCounterConfiguration procTimeConfig = new PerformanceCounterConfiguration();procTimeConfig.CounterSpecifier = @"\Processor(*)\% Processor Time";
-            //procTimeConfig.SampleRate = System.TimeSpan.FromSeconds(1.0);
-            //config.PerformanceCounters.DataSources.Add(procTimeConfig);
-
-            // Crash Dumps (Blob)
-            //CrashDumps.EnableCollection(true);
-
-            // Custom error Logs (Table)
-            /*LocalResource localResource = RoleEnvironment.GetLocalResource("LogPath");
-            config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(1.0);
-            DirectoryConfiguration directoryConfiguration = new DirectoryConfiguration();
-            directoryConfiguration.Container = "wad-custom-log-container";
-            directoryConfiguration.DirectoryQuotaInMB = localResource.MaximumSizeInMegabytes;
-            directoryConfiguration.Path = localResource.RootPath;
-            config.Directories.DataSources.Add(directoryConfiguration);*/
-
-            roleInstanceDiagnosticManager.SetCurrentConfiguration(config);
-
-            Trace.TraceInformation("Diagnostics Setup complete");
-        }
-
 
         /// <summary>
         /// Checks for the existence of the web site contents. If it does not exist, downloads the content package
         /// from Azure storage and unzip the contents
         /// </summary>
-        /// <param name="WebSitePath">Web site root path</param>
-        /// <param name="StorageConnectionString">Azure storage connection string for downloading the package</param>
+        /// <param name="webSitePath">Web site root path</param>
+        /// <param name="storageConnectionString">Azure storage connection string for downloading the package</param>
         /// <param name="packageContainer">Azure storage blob container name where the package resides</param>
         /// <param name="packageName">Azure storage blob name of the package</param>
+        /// <param name="packageUrl">Url of an external package. If not empty, will try to download first.</param>
         /// <returns></returns>
-        public static bool SetupWebSiteContents(string WebSitePath, string StorageConnectionString, string packageContainer, string packageName)
+        public static bool SetupWebSiteContents(string webSitePath, string storageConnectionString, string packageContainer, string packageName, string packageUrl)
         {
             try
             {
                 // Create website folder if not exists
-                if (!Directory.Exists(WebSitePath))
+                if (!Directory.Exists(webSitePath))
                 {
-                    Trace.TraceInformation("Creating folder '" + WebSitePath + "'...");
-                    Directory.CreateDirectory(WebSitePath);
+                    Trace.TraceInformation(string.Format("Creating folder '{0}'...", webSitePath));
+                    Directory.CreateDirectory(webSitePath);
                 }
-
+                const string localDNNPackageFilename = "DNNPackage.zip";
+                string packageFile = Path.Combine(Path.GetTempPath(), localDNNPackageFilename);
                 // Delete previous failed attemps of web site creation
-                if (File.Exists(WebSitePath + "\\" + packageName))
+                if (File.Exists(packageFile))
                 {
-                    Trace.TraceWarning("Deleting previous failed package deployment '" + WebSitePath + "\\" + packageName + "'...");
-                    File.Delete(WebSitePath + "\\" + packageName);
+                    Trace.TraceWarning(string.Format("Deleting previous failed package deployment '{0}'...", packageFile));
+                    File.Delete(packageFile);
                 }
 
                 // Check for folder content, and if it's empty, import content from Azure Storage
-                DirectoryInfo wsFolder = new DirectoryInfo(WebSitePath);
+                var wsFolder = new DirectoryInfo(webSitePath);
                 if (wsFolder.GetFiles().Length == 0 && wsFolder.GetDirectories().Length == 0)
                 {
-                    Trace.TraceInformation("Web site content not initialized. Accessing Azure storage for download...");
-                    CloudStorageAccount account = CloudStorageAccount.Parse(StorageConnectionString);
-                    CloudBlobClient blobClient = account.CreateCloudBlobClient();
+                    Trace.TraceInformation("Web site content not initialized. Downloading package...");
 
-                    Trace.TraceInformation("Locating package container: " + packageContainer);
-                    CloudBlobContainer blobContainer = blobClient.GetContainerReference(packageContainer);
-                    blobContainer.FetchAttributes(); // Check for the container existence
+                    // Try to download from Url first
+                    bool downloaded = DownloadLatestDNNCEPackage(packageFile, packageUrl);
 
-                    Trace.TraceInformation("Downloading package '" + packageName + "' to '" + WebSitePath + "\\" + packageName + "'...");
-                    blobContainer.GetBlobReference(packageName).DownloadToFile(WebSitePath + "\\" + packageName);
-
-                    Trace.TraceInformation("Decompressing package...");
-                    string output;
-                    string error;
-                    int exitCode = ExecuteCommand("utils\\unzip.exe", " -q -d " + WebSitePath + " " + WebSitePath + "\\" + packageName, out output, out error, 30000);
-                    if (exitCode != 0)
+                    if (!downloaded)
                     {
-                        Trace.TraceError("Error while decompresing the package: " + error);
+                        Trace.TraceInformation("Downloading package from Azure storage...");
+                        var account = CloudStorageAccount.Parse(storageConnectionString);
+                        var blobClient = account.CreateCloudBlobClient();
+
+                        Trace.TraceInformation("Locating package container: " + packageContainer);
+                        var blobContainer = blobClient.GetContainerReference(packageContainer);
+                        blobContainer.FetchAttributes(); // Check for the container existence
+
+                        Trace.TraceInformation(string.Format("Downloading package '{0}' to '{1}'...", packageName, packageFile));
+                        blobContainer.GetBlobReference(packageName).DownloadToFile(packageFile);                        
+                    }
+
+                    // Unzip downloaded file
+                    Trace.TraceInformation("Decompressing package...");
+                    try
+                    {
+                        UnzipFile(packageFile, webSitePath);
+                    }
+                    catch (CompressOperationException ex)
+                    {
+                        Trace.TraceError("Error while decompresing the package: " + ex.Message);
                         return false;
                     }
 
-                    Trace.TraceInformation("Deleting package file '" + WebSitePath + "\\" + packageName + "'...");
-                    File.Delete(WebSitePath + "\\" + packageName);
+
+                    Trace.TraceInformation(string.Format("Deleting package file '{0}'...", packageFile));
+                    File.Delete(packageFile);
 
                     Trace.TraceInformation("Web site content successfully deployed.");
                 }
@@ -381,5 +254,470 @@ namespace DNNShared
                 return false;
             }
         }
+
+        #endregion
+
+        #region Diagnostic monitor initialization
+
+        /// <summary>
+        /// Initializes the DiagnosticMonitor
+        /// </summary>
+        public static void ConfigureDiagnosticMonitor()
+        {
+            Trace.TraceInformation("Configuring diagnostic monitor...");
+
+            // TODO put these settings on the service configuration file
+            var transferPeriod = TimeSpan.FromMinutes(1);
+            var bufferQuotaInMB = 100;
+
+            // Add Windows Azure Trace Listener
+            Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
+
+            // Enable Collection of Crash Dumps
+            CrashDumps.EnableCollection(true);
+
+            // Get the Default Initial Config
+            var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
+
+            // Windows Azure Logs
+            config.Logs.ScheduledTransferPeriod = transferPeriod;
+            config.Logs.BufferQuotaInMB = bufferQuotaInMB;
+            config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
+
+            // File-based logs
+            config.Directories.ScheduledTransferPeriod = transferPeriod;
+            config.Directories.BufferQuotaInMB = bufferQuotaInMB;
+
+            config.DiagnosticInfrastructureLogs.ScheduledTransferPeriod = transferPeriod;
+            config.DiagnosticInfrastructureLogs.BufferQuotaInMB = bufferQuotaInMB;
+            config.DiagnosticInfrastructureLogs.ScheduledTransferLogLevelFilter = LogLevel.Warning;
+
+            // Windows Event logs
+            config.WindowsEventLog.DataSources.Add("Application!*");
+            config.WindowsEventLog.DataSources.Add("System!*");
+            config.WindowsEventLog.ScheduledTransferPeriod = transferPeriod;
+            config.WindowsEventLog.ScheduledTransferLogLevelFilter = LogLevel.Information;
+            config.WindowsEventLog.BufferQuotaInMB = bufferQuotaInMB;
+
+            // Performance Counters
+            var counters = new List<string> {
+                @"\Processor(_Total)\% Processor Time",
+                @"\Memory\Available MBytes",
+                @"\ASP.NET Applications(__Total__)\Requests Total",
+                @"\ASP.NET Applications(__Total__)\Requests/Sec",
+                @"\ASP.NET\Requests Queued",
+            };
+
+            counters.ForEach(
+                counter => config.PerformanceCounters.DataSources.Add(
+                    new PerformanceCounterConfiguration { CounterSpecifier = counter, SampleRate = TimeSpan.FromSeconds(60) }));
+            config.PerformanceCounters.ScheduledTransferPeriod = transferPeriod;
+            config.PerformanceCounters.BufferQuotaInMB = bufferQuotaInMB;
+
+            DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
+            Trace.TraceInformation("Diagnostics Setup complete");
+        }
+
+        #endregion
+
+        #region Mime types
+        internal static string GetMimeType(FileInfo fileInfo)
+        {
+            var mimeType = "application/octet-stream";
+            var regKey = Registry.ClassesRoot.OpenSubKey(fileInfo.Extension.ToLower());
+            if (regKey != null)
+            {
+                var contentType = regKey.GetValue("Content Type");
+                if (contentType != null) mimeType = contentType.ToString();
+            }
+            return mimeType;
+        }
+
+        internal static string GetMimeType(string path)
+        {
+            var mimeType = "application/octet-stream";
+            var extension = Path.GetExtension(path);
+            if (extension != null)
+            {
+                var regKey = Registry.ClassesRoot.OpenSubKey(extension.ToLower());
+                if (regKey != null)
+                {
+                    var contenType = regKey.GetValue("Content Type");
+                    if (contenType != null) mimeType = contenType.ToString();
+                }
+            }
+            return mimeType;
+        }
+        #endregion
+
+        #region Zip
+
+        #region Public Methods
+
+        /// <summary>
+        /// GZips the file into a zip file
+        /// </summary>
+        /// <param name="sourceFileName">Source file name</param>
+        /// <param name="destinationFile">Target destination .zip file</param>
+        /// <param name="deleteDestinationFile">Overwrites the destination .zip file deleting the previous one</param>
+        /// <param name="password">Password for the zip file</param>
+        public static void ZipFile(string sourceFileName, string destinationFile, bool deleteDestinationFile = false, string password = "")
+        {
+            if (sourceFileName == null) throw new ArgumentNullException("sourceFileName");
+            if (destinationFile == null) throw new ArgumentNullException("destinationFile");
+
+            if (!File.Exists(sourceFileName))
+                throw new FileNotFoundException(string.Format("Source file '{0}' not found", sourceFileName));
+            if (File.Exists(destinationFile))
+            {
+                if (!deleteDestinationFile)
+                    throw new CompressOperationException("Detination file already exists");
+                File.Delete(destinationFile);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
+
+            try
+            {
+                using (var s = new ZipOutputStream(File.Create(destinationFile)))
+                {
+                    s.SetLevel(3); // 0 - store only to 9 - means best compression
+                    s.Password = password;
+
+                    var buffer = new byte[4096];
+
+                    var entry = new ZipEntry(Path.GetFileName(sourceFileName));
+                    entry.DateTime = new FileInfo(sourceFileName).LastWriteTime;
+                    s.PutNextEntry(entry);
+
+                    using (var fs = File.OpenRead(sourceFileName))
+                    {
+                        // Using a fixed size buffer here makes no noticeable difference for output
+                        // but keeps a lid on memory usage.
+                        int sourceBytes;
+                        do
+                        {
+                            sourceBytes = fs.Read(buffer, 0, buffer.Length);
+                            s.Write(buffer, 0, sourceBytes);
+                        } while (sourceBytes > 0);
+                    }
+                    s.Finish();
+                    s.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new CompressOperationException("An exception ocurred while compressing the folder contents", ex);
+            }
+        }
+
+        /// <summary>
+        /// GZips the folder contents into a zip file
+        /// </summary>
+        /// <param name="sourceFolderName">Source folder name</param>
+        /// <param name="destinationFile">Target destination .zip file</param>
+        /// <param name="deleteDestinationFile">Overwrites the destination .zip file deleting the previous one</param>
+        /// <param name="password">Password for the zip file</param>
+        public static void ZipFolder(string sourceFolderName, string destinationFile, bool deleteDestinationFile = false, string password = "")
+        {
+            if (sourceFolderName == null) throw new ArgumentNullException("sourceFolderName");
+            if (destinationFile == null) throw new ArgumentNullException("destinationFile");
+
+            if (!Directory.Exists(sourceFolderName))
+                throw new DirectoryNotFoundException(string.Format("Source folder '{0}' not found", sourceFolderName));
+            if (File.Exists(destinationFile))
+            {
+                if (!deleteDestinationFile)
+                    throw new CompressOperationException("Detination file already exists");
+                File.Delete(destinationFile);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
+
+            try
+            {
+
+                var fastZip = new FastZip
+                {
+                    CreateEmptyDirectories = true,
+                    RestoreAttributesOnExtract = true,
+                    RestoreDateTimeOnExtract = true,
+                    Password = password
+                };
+                fastZip.CreateZip(destinationFile, sourceFolderName, true, "");
+
+            }
+            catch (Exception ex)
+            {
+                throw new CompressOperationException("An exception ocurred while compressing the folder contents", ex);
+            }
+
+        }
+
+        /// <summary>
+        /// Unzips a compressed file into a folder
+        /// </summary>
+        /// <param name="sourceFile">Source compressed .zip file</param>
+        /// <param name="destinationFolder">Destination folder</param>
+        /// <param name="deleteDestination">Deletes the destination folder if exists</param>
+        /// <param name="password">Password for the zip file</param>
+        public static void UnzipFile(string sourceFile, string destinationFolder, bool deleteDestination = false, string password = "")
+        {
+            if (sourceFile == null) throw new ArgumentNullException("sourceFile");
+            if (destinationFolder == null) throw new ArgumentNullException("destinationFolder");
+
+            if (!File.Exists(sourceFile))
+                throw new FileNotFoundException("Can not find the source file", sourceFile);
+
+            if (Directory.Exists(destinationFolder))
+            {
+                if (deleteDestination)
+                    Directory.Delete(destinationFolder, true);
+            }
+
+            Directory.CreateDirectory(destinationFolder);
+
+            try
+            {
+                var fastZip = new FastZip
+                {
+                    CreateEmptyDirectories = true,
+                    RestoreAttributesOnExtract = true,
+                    RestoreDateTimeOnExtract = true,
+                    Password = password
+                };
+                fastZip.ExtractZip(sourceFile, destinationFolder, "");
+            }
+            catch (Exception ex)
+            {
+                throw new CompressOperationException("An exception ocurred while unzipping the file", ex);
+            }
+
+
+        }
+
+        #endregion
+
+        #region Private functions
+
+        private static void AddFolderToZip(string rootFolderName, string folderName, byte[] buffer, ZipOutputStream zipOutput)
+        {
+            // Get all the filenames including subfolders
+            var filenames = Directory.GetFiles(Path.Combine(rootFolderName, folderName));
+
+            // Create the folder zip entry if it is an empty folder
+            if ((folderName != "") && (filenames.Length == 0))
+            {
+                var fentry = new ZipEntry(folderName + "/");
+                fentry.DateTime = new DirectoryInfo(folderName).LastWriteTime;
+                zipOutput.PutNextEntry(fentry);
+            }
+
+            // Add all the subdirectories
+            var subFolders = Directory.GetDirectories(Path.Combine(rootFolderName, folderName));
+            foreach (var subFolder in subFolders)
+                AddFolderToZip(rootFolderName, subFolder.Substring(rootFolderName.Length + 1), buffer, zipOutput);
+
+
+            foreach (var file in filenames)
+            {
+
+                // Using GetFileName makes the result compatible with XP
+                // as the resulting path is not absolute.
+                var entry = new ZipEntry(Path.Combine(folderName, Path.GetFileName(file)));
+
+                // Setup the entry data as required.                        
+
+                // Crc and size are handled by the library for seakable streams
+                // so no need to do them here.
+
+                // Could also use the last write time or similar for the file.
+                entry.DateTime = new FileInfo(file).LastWriteTime;
+
+                //entry. = Path.Combine(sourceFolderName, Path.GetFileName(file));
+                zipOutput.PutNextEntry(entry);
+
+                using (var fs = File.OpenRead(file))
+                {
+                    // Using a fixed size buffer here makes no noticeable difference for output
+                    // but keeps a lid on memory usage.
+                    int sourceBytes;
+                    do
+                    {
+                        sourceBytes = fs.Read(buffer, 0, buffer.Length);
+                        zipOutput.Write(buffer, 0, sourceBytes);
+                    } while (sourceBytes > 0);
+                }
+            }
+        }
+        #endregion
+
+        #endregion 
+
+        #region Non-managed code utilities
+        /// <summary>
+        /// Shares a local folder
+        /// </summary>
+        /// <param name="userName">Username to share the drive with full access permissions</param>
+        /// <param name="RDPuserName">(Optional) Second username to grant full access permissions</param>
+        /// <param name="path">Path to share</param>
+        /// <param name="shareName">Share name</param>
+        /// <returns>Returns 0 if success</returns>
+        public static int ShareLocalFolder(string userName, string RDPuserName, string path, string shareName)
+        {
+            string error;
+            Trace.TraceInformation("Sharing local folder " + path);
+            string grantRDPUserName = "";
+            if (RDPuserName != "")
+                grantRDPUserName = " /Grant:" + RDPuserName + ",full";
+            int exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + " /Grant:" + userName + ",full" + grantRDPUserName, out error, 10000);
+
+            if (exitCode != 0)
+                //Log error and continue since the drive may already be shared
+                Trace.TraceWarning("Error creating fileshare, error msg:" + error, "Warning");
+            return exitCode;
+        }
+
+        /// <summary>
+        /// Enables SMB traffic through the firewall
+        /// </summary>
+        /// <returns>Returns 0 if success</returns>
+        public static int EnableSMBFirewallTraffic()
+        {
+            string error;
+            //Enable SMB traffic through the firewall
+            Trace.TraceInformation("Enable SMB traffic through the firewall");            
+            int exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);
+            // Changed to the new netsh firewall syntax. For more info, see http://support.microsoft.com/kb/947709/. 
+            // TODO Add a startup task with all the File and Printer Sharing rules, one by one. The new advfirewall syntax shown in the command below does not create the rules, only enable them if they exists
+            //int exitCode = ExecuteCommand("netsh.exe", "advfirewall firewall set rule group=\"File and Printer Sharing\" new enable=Yes", out error, 10000);
+            if (exitCode != 0)
+                Trace.TraceError("Error setting up firewall, error msg:" + error);
+            return exitCode;
+        }
+
+        /// <summary>
+        /// Creates an user account on the local machine
+        /// </summary>
+        /// <param name="userName">Name for the user account</param>
+        /// <param name="password">Password for the user account</param>
+        /// <returns>Returns 0 if success</returns>
+        public static int CreateUserAccount(string userName, string password)
+        {
+            string error;
+
+            //Create the user account    
+            Trace.TraceInformation("Creating user account for sharing");
+            int exitCode = ExecuteCommand("net.exe", string.Format("user {0} {1} /expires:never /add", userName, password), out error, 10000);
+            if (exitCode != 0)
+            {
+                //Log error and continue since the user account may already exist
+                Trace.TraceWarning("Error creating user account, error msg:" + error);
+            }
+            return exitCode;
+        }
+
+        /// <summary>
+        /// Deletes an user account on the local machine
+        /// </summary>
+        /// <param name="userName">User name of the account</param>
+        /// <returns>Returns 0 if success</returns>
+        public static int DeleteUserAccount(string userName)
+        {
+            string error;
+
+            //Create the user account    
+            Trace.TraceInformation(string.Format("Deleting user account '{0}'...", userName));
+            int exitCode = ExecuteCommand("net.exe", string.Format("user {0} /delete", userName), out error, 10000);
+            if (exitCode != 0)
+            {
+                //Log error and continue since the user account may already exist
+                Trace.TraceWarning("Error deleting user account, error msg:" + error);
+            }
+            return exitCode;
+        }
+
+        /// <summary>
+        /// Executes an external .exe command
+        /// </summary>
+        /// <param name="exe">EXE path</param>
+        /// <param name="arguments">Arguments</param>
+        /// <param name="output">Output of the command</param>
+        /// <param name="error">Contents of the error results if fails</param>
+        /// <param name="timeout">Timeout for executing the command in milliseconds</param>
+        /// <returns>Exit code</returns>
+        public static int ExecuteCommand(string exe, string arguments, out string output, out string error, int timeout)
+        {
+            var p = new Process
+            {
+                StartInfo =
+                {
+                    FileName = exe,
+                    Arguments = arguments,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                }
+            };
+            p.Start();
+            error = p.StandardError.ReadToEnd();
+            output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(timeout);
+            int exitCode = p.ExitCode;
+            p.Close();
+
+            return exitCode;
+        }
+        /// <summary>
+        /// Executes an external .exe command
+        /// </summary>
+        /// <param name="exe">EXE path</param>
+        /// <param name="arguments">Arguments</param>
+        /// <param name="error">Contents of the error results if fails</param>
+        /// <param name="timeout">Timeout for executing the command in milliseconds</param>
+        /// <returns>Exit code</returns>
+        public static int ExecuteCommand(string exe, string arguments, out string error, int timeout)
+        {
+            string output;
+            return ExecuteCommand(exe, arguments, out output, out error, timeout);
+        }
+        #endregion
+
+        #region CodePlex package download
+
+        public static bool DownloadLatestDNNCEPackage(string destinationFile, string packageUrl = "")
+        {
+            if (string.IsNullOrEmpty(packageUrl))
+                packageUrl = GetPackageUrl();
+
+            try
+            {
+                // Create a new WebClient instance.
+                var myWebClient = new WebClient();
+
+                //TODO Change the DotNetNuke-Appgallery to DotNetNuke-Cloud
+                myWebClient.Headers.Add("User-Agent", "DotNetNuke-Appgallery/1.0.0.0(Microsoft Windows NT 6.1.7600.0)");
+
+                Trace.TraceInformation(string.Format("Downloading file '{0}' from '{1}'...", destinationFile, packageUrl));
+                // Download the Web resource and save it into the current filesystem folder.
+                myWebClient.DownloadFile(packageUrl, destinationFile);
+                Trace.TraceInformation("Successfully downloaded file \"{0}\" from \"{1}\"", destinationFile, packageUrl);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError(string.Format("Error while downloading file '{0}': {1}", packageUrl, ex));
+                return false;
+            }
+        }
+
+        private static string GetPackageUrl()
+        {
+            // TODO Get the Url from a Web Service on DNN web site
+            return "http://dotnetnuke.codeplex.com/Download?DownloadId=351307";
+        }
+
+        #endregion
     }
 }

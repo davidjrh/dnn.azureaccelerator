@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Threading;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
-using System.Configuration;
-using System.Xml;
 using DNNShared;
 
 
@@ -17,8 +11,8 @@ namespace SMBServer
 {
     public class WorkerRole : RoleEntryPoint
     {
-        public static string driveLetter = null;
-        public static CloudDrive drive = null;
+        public static string DriveLetter;
+        public static CloudDrive Drive;
 
         public override void Run()
         {
@@ -28,20 +22,20 @@ namespace SMBServer
             {
                 Thread.Sleep(10000);
             }
-        }
+        }        
 
         public override bool OnStart()
         {
             // Set the maximum number of concurrent connections 
             ServicePointManager.DefaultConnectionLimit = 12;
-
+            
             // Inits the Diagnostic Monitor
-            RoleStartupUtils.InitializeDiagnosticMonitor();            
+            RoleStartupUtils.ConfigureDiagnosticMonitor();            
             
             try
             {
                 // Mount the drive
-                drive = RoleStartupUtils.MountCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                Drive = RoleStartupUtils.MountCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
                                                         RoleEnvironment.GetConfigurationSettingValue("driveContainer"),
                                                         RoleEnvironment.GetConfigurationSettingValue("driveName"),
                                                         RoleEnvironment.GetConfigurationSettingValue("driveSize"));
@@ -55,24 +49,30 @@ namespace SMBServer
                     goto Exit;
 
                 // Share it using SMB (add permissions for RDP user if it's configured)
-                string RDPuserName = "";
-                try { RDPuserName = RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
-                catch { };
-                RoleStartupUtils.ShareLocalFolder(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                                RDPuserName, drive.LocalPath,
-                                                RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                string rdpUserName = "";
+                try { rdpUserName = RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
+                catch
+                {
+                    Trace.TraceWarning("No RDP user name was specified. Consider enabling RDP for better maintenance options.");
+                }
+                // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
+                if (!RoleEnvironment.IsEmulated)
+                    RoleStartupUtils.ShareLocalFolder(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
+                                                    rdpUserName, Drive.LocalPath,
+                                                    RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
                 // Check for the creation of the Website contents from Azure storage
                 Trace.TraceInformation("Check for website content...");
-                if (!RoleStartupUtils.SetupWebSiteContents(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
                                                         RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
                                                         RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("package")))
+                                                        RoleEnvironment.GetConfigurationSettingValue("package"),
+                                                        RoleEnvironment.GetConfigurationSettingValue("packageUrl")))
                     Trace.TraceError("Website content could not be prepared. Check previous messages.");
 
 
                 // Setup Database Connection string
-                RoleStartupUtils.SetupDBConnectionString(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
+                RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                 RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"));
                 
                 Trace.TraceInformation("Exiting SMB Server OnStart");
@@ -90,10 +90,8 @@ namespace SMBServer
 
         public override void OnStop()
         {
-            if (drive != null)
-            {
-                drive.Unmount();
-            }
+            if (Drive != null)
+                Drive.Unmount();
             base.OnStop();
         }
     }

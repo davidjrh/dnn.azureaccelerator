@@ -18,9 +18,10 @@
       <Setting name="packageContainer" />
       <Setting name="package" />
       <Setting name="dnnFolder" />
+      <Setting name="packageUrl" />
     </ConfigurationSettings>
     <LocalResources>
-      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="300" />
+      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
     </LocalResources>
     <Endpoints>
       <InternalEndpoint name="SMB" protocol="tcp" port="445" />
@@ -38,6 +39,7 @@
     </Sites>
     <Endpoints>
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
+      <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*">
+  <Role name="DNNAzure">
+    <Instances count="1" />
+    <ConfigurationSettings>
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="AcceleratorConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="driveName" value="dotnetnuke.vhd" />
+      <Setting name="driveSize" value="256" />
+      <Setting name="driveContainer" value="azure-accelerator-drives" />
+      <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
+      <Setting name="dnnFolder" value="DotNetNuke" />
+      <Setting name="hostHeaders" value="dnnaccelerator.cloudapp.net;mydomain.cloudapp.net" />
+      <Setting name="managedRuntimeVersion" value="v4.0" />
+      <Setting name="managedPipelineMode" value="Integrated" />
+      <Setting name="fileshareUserName" value="fileshareuser" />
+      <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
+      <Setting name="shareName" value="sharerw" />
+      <Setting name="localPath" value="X:" />
+      <Setting name="SMBMode" value="false" />
+      <Setting name="packageContainer" value="dotnetnuke-packages" />
+      <Setting name="package" value="DotNetNuke_Community_06.01.04_Install.zip" />
+      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=351307" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="true" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="dnnadmin" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="MIIBpwYJKoZIhvcNAQcDoIIBmDCCAZQCAQAxggFQMIIBTAIBADA0MCAxHjAcBgNVBAMTFUROTiBBenVyZSBBY2NlbGVyYXRvcgIQUkmc34noCaxOUzuTBGeRlzANBgkqhkiG9w0BAQEFAASCAQARHrdnP7rU35NXABAy36qZx4Y5b9VreUTEO7/rLiu/8A737PsX/6opgCG8ciY5in4CpZ7MtOXV/gLqb07CAVZmJGno5Ev4AcN0umStNdHe1e4/gifayNATCG+5ViFwKsaKp1SdFoS2DYoIga2/Lor6kU6SBNGHC28ky5oaabHndlnHEXnWttklEdRjaOOp/NdUeJqTEYRsR7NQYdXqFL0NZ9K5QVMNQeRgSGSJfwTfJWtU0+w+L65kDrZxizKE3FSN4T1L0QsnYhT4j8DuD+GFRGIFDsfH888088+UdvK5yejHZm4jQXMzORKyLoqzazOCRz1hwxR60436IXpO0i//MDsGCSqGSIb3DQEHATAUBggqhkiG9w0DBwQIFhWqM5mgSIqAGDSzG3+6PCfNL6masi8tR3IctrNwonKBGQ==" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="2013-03-27T23:59:59.0000000+00:00" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="true" />
+    </ConfigurationSettings>
+    <Certificates>
+      <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="0B2D3841A4BC3C6486BDCCB5D14A71BAB34242D8" thumbprintAlgorithm="sha1" />
+    </Certificates>
+  </Role>
+</ServiceConfiguration>

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition">
-  <WebRole name="DNNAzure" vmsize="ExtraSmall">
+  <WebRole name="DNNAzure" vmsize="Small">
     <Runtime executionContext="elevated">
     </Runtime>
     <Sites>
@@ -13,9 +13,12 @@
     <Endpoints>
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
       <InternalEndpoint name="SMB" protocol="tcp" port="445" />
+      <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
+      <Import moduleName="RemoteAccess" />
+      <Import moduleName="RemoteForwarder" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="AcceleratorConnectionString" />
@@ -34,9 +37,10 @@
       <Setting name="SMBMode" />
       <Setting name="packageContainer" />
       <Setting name="package" />
+      <Setting name="packageUrl" />
     </ConfigurationSettings>
     <LocalResources>
-      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="300" />
+      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
     </LocalResources>
   </WebRole>
 </ServiceDefinition>
