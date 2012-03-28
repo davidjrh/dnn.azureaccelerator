@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
 using System.Diagnostics;
 using System.Linq;
@@ -124,6 +125,107 @@ namespace DNNShared
         #endregion
 
         #region DotNetNuke setup utilities
+
+        /// <summary>
+        /// Try to setup the database if not exists
+        /// </summary>
+        /// <param name="dbAdmin">User with admin permissions on the server</param>
+        /// <param name="dbPassword">Password for the admin user</param>
+        /// <param name="dbConnectionString">Connection string of the database to setup</param>
+        /// <returns></returns>
+        public static bool SetupDatabase(string dbAdmin, string dbPassword, string dbConnectionString)
+        {
+            try
+            {
+                // Check for Database existence
+                try
+                {
+                    using (var dbConn = new SqlConnection(dbConnectionString))
+                        dbConn.Open();
+                    Trace.TraceInformation("Database connection success!");
+                    return true;
+                }
+                catch
+                {
+                    Trace.TraceWarning("Can't connect to the database with specified connection string. Trying to create database...");
+                }
+
+                if (string.IsNullOrEmpty(dbAdmin) || string.IsNullOrEmpty(dbPassword))
+                {
+                    Trace.TraceError("Database admin user or password is empty. Can't connect to the server to check for database existence.");
+                    return false;
+                }
+
+                // Connect to the database as admin user
+                var connBuilderOriginal = new SqlConnectionStringBuilder(dbConnectionString);
+                var connBuilder = new SqlConnectionStringBuilder(dbConnectionString) { UserID = dbAdmin, Password = dbPassword, InitialCatalog = "master" };
+
+                try
+                {
+                    using (var dbConn = new SqlConnection(connBuilder.ConnectionString))
+                    {
+                        dbConn.Open();
+
+                        // Check for the database
+                        var cmd = new SqlCommand("SELECT COUNT(NAME) FROM sys.databases WHERE NAME=@dbName", dbConn);
+                        cmd.Parameters.AddWithValue("dbName", connBuilderOriginal.InitialCatalog);
+                        bool dbExists = (int)cmd.ExecuteScalar() != 0;
+
+                        // If not exists, create the database
+                        if (!dbExists)
+                        {
+                            // Create the database
+                            Trace.TraceInformation("The specified database does not exists, creating new database...");
+                            var cmdC1 = new SqlCommand(string.Format("CREATE DATABASE {0}", connBuilderOriginal.InitialCatalog), dbConn);
+                            cmdC1.ExecuteNonQuery();
+
+                            // Check for the principal existence
+                            var cmd2 = new SqlCommand("SELECT COUNT(NAME) FROM sys.database_principals WHERE NAME=@loginName", dbConn);
+                            cmd2.Parameters.AddWithValue("loginName", connBuilderOriginal.UserID);
+                            if ((int)cmd.ExecuteScalar() == 0)
+                            {
+                                var cmdUs = new SqlCommand(string.Format("CREATE LOGIN {0} WITH PASSWORD = '{1}'", connBuilderOriginal.UserID, connBuilderOriginal.Password), dbConn);
+                                cmdUs.ExecuteNonQuery();
+                            }
+
+                            // Setup permisssions connecting to the new database with the admin credentials
+                            connBuilder.InitialCatalog = connBuilderOriginal.InitialCatalog;
+                            using (var dbConnNew = new SqlConnection(connBuilder.ConnectionString))
+                            {
+                                dbConnNew.Open();
+                                var cmdC3 = new SqlCommand(string.Format("CREATE USER {0} FROM LOGIN {1}", connBuilderOriginal.UserID, connBuilderOriginal.UserID), dbConnNew);
+                                cmdC3.ExecuteNonQuery();
+                                var cmdC4 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_owner', '{0}'", connBuilderOriginal.UserID), dbConnNew);
+                                cmdC4.ExecuteNonQuery();
+                                var cmdC5 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_ddladmin', '{0}'", connBuilderOriginal.UserID), dbConnNew);
+                                cmdC5.ExecuteNonQuery();
+                                var cmdC6 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_securityadmin', '{0}'", connBuilderOriginal.UserID), dbConnNew);
+                                cmdC6.ExecuteNonQuery();
+                                var cmdC7 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_datareader', '{0}'", connBuilderOriginal.UserID), dbConnNew);
+                                cmdC7.ExecuteNonQuery();
+                                var cmdC8 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_datawriter', '{0}'", connBuilderOriginal.UserID), dbConnNew);
+                                cmdC8.ExecuteNonQuery();
+
+                                return true;
+                            }
+                        }
+                        Trace.TraceError("The specified database exists, but can't login with the specified credentials.");
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError("Can't connect to the database server as dbAdmin: " + ex);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error on the database setup process: " + ex);
+                return false;
+            }
+        }
+
         /// <summary>
         /// Modifies web.config to setup database connection settings and other appSettings
         /// </summary>
@@ -253,6 +355,21 @@ namespace DNNShared
                 Trace.TraceError("Error while web site contents setup: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Returns the first IPv4 local IP Network Address
+        /// </summary>
+        /// <returns></returns>
+        public static string GetFirstIPv4LocalNetworkAddress()
+        {
+            // Get host name
+            var strHostName = Dns.GetHostName();
+            // Find host by name
+            var iphostentry = Dns.GetHostEntry(strHostName);
+            var localAddress = iphostentry.AddressList.FirstOrDefault(
+                    x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+            return localAddress != null ? localAddress.ToString() : "";
         }
 
         #endregion

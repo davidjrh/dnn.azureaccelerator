@@ -72,8 +72,15 @@ namespace DNNAzure
                                                         rdpUserName, Drive.LocalPath,
                                                         RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
+                    // Check for the database existence
+                    Trace.TraceInformation("Checking for database existence...");
+                    if (!RoleStartupUtils.SetupDatabase(RoleEnvironment.GetConfigurationSettingValue("DBAdminUser"),
+                                                RoleEnvironment.GetConfigurationSettingValue("DBAdminPassword"),
+                                                RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString")))
+                        Trace.TraceError("Error while setting up the database. Check previous messages.");
+
                     // Check for the creation of the Website contents from Azure storage
-                    Trace.TraceInformation("Check for website content...");
+                    Trace.TraceInformation("Checking for website content...");
                     if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
                                                             RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
                                                             RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
@@ -173,11 +180,24 @@ namespace DNNAzure
             {
                 using (var serverManager = new ServerManager())
                 {
+
+                    // Change the default web site binding to allow DNN website to be the default site
+                    var webroleSite = serverManager.Sites[originalwebSiteName];
+                    if (webroleSite != null)
+                    {
+                        webroleSite.Bindings.Clear();
+                        webroleSite.Bindings.Add(string.Format("*:{0}:admin.dnndev.me", port), protocol);
+                    }
+                    
                     var site = serverManager.Sites[webSiteName];
                     if (site == null)
                     {
                         Trace.TraceInformation("Creating DNNWebSite (SiteName=" + webSiteName + ";protocol=" + protocol + ";Bindings=" + "*:" + port + ":" + headers[0] + ";HomePath=" + homePath);
-                        site = serverManager.Sites.Add(webSiteName, protocol, "*:" + port + ":" + headers[0], homePath);
+                        var localIPAddress = RoleStartupUtils.GetFirstIPv4LocalNetworkAddress();
+                        if (localIPAddress == "")
+                            localIPAddress = "*"; 
+                        site = serverManager.Sites.Add(webSiteName, protocol, localIPAddress + ":" + port + ":" + headers[0], homePath);
+
                         for (int i = 1; i < headers.Length; i++)
                             site.Bindings.Add("*:" + port + ":" + headers[i], protocol);
                     }

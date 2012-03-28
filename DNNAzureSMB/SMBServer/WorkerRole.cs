@@ -61,6 +61,13 @@ namespace SMBServer
                                                     rdpUserName, Drive.LocalPath,
                                                     RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
+                // Check for the database existence
+                Trace.TraceInformation("Checking for database existence...");
+                if (!RoleStartupUtils.SetupDatabase(RoleEnvironment.GetConfigurationSettingValue("DBAdminUser"),
+                                            RoleEnvironment.GetConfigurationSettingValue("DBAdminPassword"),
+                                            RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString")))
+                    Trace.TraceError("Error while setting up the database. Check previous messages.");
+
                 // Check for the creation of the Website contents from Azure storage
                 Trace.TraceInformation("Check for website content...");
                 if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),

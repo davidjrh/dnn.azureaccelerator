@@ -16,6 +16,8 @@
       <Setting name="package" value="DotNetNuke_Community_06.01.04_Install.zip" />
       <Setting name="dnnFolder" value="DotNetNuke" />
       <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=351307" />
+      <Setting name="DBAdminUser" value="" />
+      <Setting name="DBAdminPassword" value="" />
     </ConfigurationSettings>
     <Certificates>
     </Certificates>

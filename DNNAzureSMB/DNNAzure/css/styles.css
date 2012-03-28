@@ -1,0 +1,13 @@
+﻿body 
+{
+    font-family: Segoe UI, Arial;
+    font-size: 11pt;
+    color: gray;
+}
+
+h1 {
+    font-family: Segoe UI Light, Arial;
+    color: dodgerblue;
+    font-size: 18pt;
+    font-weight: normal;
+}

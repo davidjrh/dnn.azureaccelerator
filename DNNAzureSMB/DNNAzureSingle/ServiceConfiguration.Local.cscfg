@@ -26,6 +26,8 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="MIIBpwYJKoZIhvcNAQcDoIIBmDCCAZQCAQAxggFQMIIBTAIBADA0MCAxHjAcBgNVBAMTFUROTiBBenVyZSBBY2NlbGVyYXRvcgIQUkmc34noCaxOUzuTBGeRlzANBgkqhkiG9w0BAQEFAASCAQARHrdnP7rU35NXABAy36qZx4Y5b9VreUTEO7/rLiu/8A737PsX/6opgCG8ciY5in4CpZ7MtOXV/gLqb07CAVZmJGno5Ev4AcN0umStNdHe1e4/gifayNATCG+5ViFwKsaKp1SdFoS2DYoIga2/Lor6kU6SBNGHC28ky5oaabHndlnHEXnWttklEdRjaOOp/NdUeJqTEYRsR7NQYdXqFL0NZ9K5QVMNQeRgSGSJfwTfJWtU0+w+L65kDrZxizKE3FSN4T1L0QsnYhT4j8DuD+GFRGIFDsfH888088+UdvK5yejHZm4jQXMzORKyLoqzazOCRz1hwxR60436IXpO0i//MDsGCSqGSIb3DQEHATAUBggqhkiG9w0DBwQIFhWqM5mgSIqAGDSzG3+6PCfNL6masi8tR3IctrNwonKBGQ==" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="2013-03-27T23:59:59.0000000+00:00" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="true" />
+      <Setting name="DBAdminUser" value="" />
+      <Setting name="DBAdminPassword" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="0B2D3841A4BC3C6486BDCCB5D14A71BAB34242D8" thumbprintAlgorithm="sha1" />

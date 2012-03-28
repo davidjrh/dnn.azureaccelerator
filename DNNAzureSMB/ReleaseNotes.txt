@@ -10,6 +10,15 @@ the "packageUrl" setting to download from any other customized location, like pr
 - Changed the Azure diagnostic monitor initialization. Now the events are being correctly logged on web roles.
 - Extra packages has been moved to a separated download. The wizard comes with the "Azure Single and Small" package so 
 the DNNAzureAccelerator package only weights 4Mb. 
+- Changed the default binding. The default website will be the DotNetNuke website instead of the webrole website, what means
+that specifying host headers is no longer mandatory, and enables the possibility of deploying on Staging environment and other 
+operations like Swap VIP
+- Now on role startup, the database and login user will be created if the database does not exist. This will make easier to create
+new DNN service deployments by simply changing the service configuration file without having to do that task manually or through the 
+accelerator wizard.
+- Added new deployment progress page on the webrole website, showing the service deployment status until the site is ready. By default,
+the deployment log stored on Table Storage is not shown on this page, but you can enable it on the service configuration file for
+debugging purposes. You can access these details using remote desktop on any webrole and browsing "http://admin.dnndev.me".
 
 
 Version 6.1 - 02 nov 2011

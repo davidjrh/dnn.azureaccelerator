@@ -19,6 +19,8 @@
       <Setting name="package" />
       <Setting name="dnnFolder" />
       <Setting name="packageUrl" />
+      <Setting name="DBAdminUser" />
+      <Setting name="DBAdminPassword" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
