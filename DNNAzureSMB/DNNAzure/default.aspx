@@ -11,7 +11,7 @@
     <form id="form1" runat="server">
     <div id="#Deploying">
     <h1>Deployment in progress...</h1>
-    <p>This site is currently being deployed on Windows Azure. Please wait until the site has been completly deployed.</p>
+    <p>This site is currently being deployed on Windows Azure. Please wait until the site has been completely deployed.</p>
     </div>
     </form>
 </body>
