@@ -19,6 +19,7 @@
       <Import moduleName="Diagnostics" />
       <Import moduleName="RemoteAccess" />
       <Import moduleName="RemoteForwarder" />
+      <Import moduleName="Connect" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="AcceleratorConnectionString" />

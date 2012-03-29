@@ -3,23 +3,41 @@
   <Role name="SMBServer">
     <Instances count="1" />
     <ConfigurationSettings>
-      <Setting name="AcceleratorConnectionString" value="UseDevelopmentStorage=true" />
-      <Setting name="driveName" value="dotnetnuke.vhd" />
-      <Setting name="driveSize" value="256" />
+      <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=http;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="driveName" value="@@VHDBLOBNAME@@" />
+      <Setting name="driveSize" value="@@VHDBLOBSIZE@@" />
       <Setting name="fileshareUserName" value="fileshareuser" />
       <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
       <Setting name="shareName" value="sharerw" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
       <Setting name="driveContainer" value="azure-accelerator-drives" />
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
-      <Setting name="packageContainer" value="dotnetnuke-packages" />
+      <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="DotNetNuke_Community_06.01.04_Install.zip" />
       <Setting name="dnnFolder" value="DotNetNuke" />
       <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=351307" />
-      <Setting name="DBAdminUser" value="" />
-      <Setting name="DBAdminPassword" value="" />
+      <Setting name="DBAdminUser" value="@@DBADMINUSER@@" />
+      <Setting name="DBAdminPassword" value="@@DBADMINPASSWORD@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Refresh" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.WaitForConnectivity" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Upgrade" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.EnableDomainJoin" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainControllerFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainAccountName" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainPassword" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="@@RDPENABLED@@" />
     </ConfigurationSettings>
     <Certificates>
+      <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
   <Role name="DNNAzure">
@@ -30,12 +48,29 @@
       <Setting name="shareName" value="sharerw" />
       <Setting name="localPath" value="X:" />
       <Setting name="dnnFolder" value="DotNetNuke" />
-      <Setting name="hostHeaders" value="dnnaccelerator.cloudapp.net;mydomain.cloudapp.net" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="hostHeaders" value="@@HOSTHEADERS@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
       <Setting name="managedRuntimeVersion" value="v4.0" />
       <Setting name="managedPipelineMode" value="Integrated" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Refresh" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.WaitForConnectivity" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Upgrade" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.EnableDomainJoin" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainControllerFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainAccountName" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainPassword" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />
     </ConfigurationSettings>
     <Certificates>
+      <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
 </ServiceConfiguration>
