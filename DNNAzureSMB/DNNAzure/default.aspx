@@ -5,7 +5,7 @@
 <head runat="server">
     <title>Deployment in progress... - DotNetNuke Azure Accelerator</title>
     <link href="css/styles.css" rel="stylesheet" type="text/css" />
-    <meta http-equiv="Refresh" content="10;URL=" />
+    <meta http-equiv="Refresh" content="30;URL=" />
 </head>
 <body>
     <form id="form1" runat="server">
