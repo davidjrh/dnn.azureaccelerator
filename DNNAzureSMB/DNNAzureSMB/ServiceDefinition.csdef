@@ -60,6 +60,7 @@
       <Setting name="hostHeaders" />
       <Setting name="managedRuntimeVersion" />
       <Setting name="managedPipelineMode" />
+      <Setting name="ShowDeploymentProgressDetails" />
     </ConfigurationSettings>
   </WebRole>
 </ServiceDefinition>

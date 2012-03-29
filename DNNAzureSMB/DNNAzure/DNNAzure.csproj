@@ -52,11 +52,13 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Data.Services.Client" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Web" />
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\WADLogEntity.cs" />
     <Compile Include="default.aspx.cs">
       <DependentUpon>default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -70,6 +72,9 @@
   <ItemGroup>
     <Content Include="css\styles.css" />
     <Content Include="default.aspx" />
+    <Content Include="images\error.png" />
+    <Content Include="images\info.png" />
+    <Content Include="images\warning.png" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
     </Content>

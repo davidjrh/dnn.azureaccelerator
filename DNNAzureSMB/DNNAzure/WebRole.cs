@@ -28,7 +28,6 @@ namespace DNNAzure
             // Inits the Diagnostic Monitor
             RoleStartupUtils.ConfigureDiagnosticMonitor();            
 
-
             Trace.TraceInformation("DNNAzure initialization");
 
             try

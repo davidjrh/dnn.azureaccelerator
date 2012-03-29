@@ -40,6 +40,7 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
+      <Setting name="ShowDeploymentProgressDetails" value="false" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
