@@ -12,14 +12,19 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml;
+using System.Xml.Linq;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.StorageClient;
+using DotNetNuke.Azure.Accelerator.Management;
 
 
 namespace DNNAzureWizard
 {
     public partial class FrmDNNAzureWizard : Form
     {
+        private const int WizardWidth = 700;
+        private const int WizardHeight = 500;
+
         /* The following expression to validate a pwd of 6 to 16 characters and contain three of the following 4 items: 
          * upper case letter, lower case letter, a symbol, a number
          * An explanation of individual components:
@@ -29,27 +34,40 @@ namespace DNNAzureWizard
          *      (?=.*?[a-z]) - contains 1 lowercase character
          *      (?=.*?[^\w\d\s]) - contains 1 symbol
          */
-        private string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
+        private const string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
 
         private enum WizardTabs
         {
-            tabHome = 1,
-            tabSQLAzureSettings = 2,
-            tabWindowsAzureSettings = 3,
-            tabRDPAzureSettings = 4,
-            tabConnectSettings = 5,
-            tabPackages = 6,
-            tabSummary = 7,
-            tabUploading = 8,
-            tabFinish = 9
+            TabHome = 1,
+            TabDeploymentType = 2,
+            TabSQLAzureSettings = 3,
+            TabWindowsAzureSettings = 4,
+            TabRDPAzureSettings = 5,
+            TabConnectSettings = 6,
+            TabPackages = 7,
+            TabSummary = 8,
+            TabUploading = 9,
+            TabFinish = 10
         }
 
 
-        Process p = null;
+        Process p;
+
+        private PublishSettings PublishSettings { get; set; }
+        private string PublishSettingsFilename
+        {
+            get
+            {
+                return (Path.Combine(Path.GetDirectoryName(Application.ExecutablePath),
+                                     Path.GetFileNameWithoutExtension(Application.ExecutablePath) + ".publishsettings"));
+            }
+        }
 
         public FrmDNNAzureWizard()
         {
             InitializeComponent();
+            Width = WizardWidth;
+            Height = WizardHeight;
         }
 
         #region " Event Handlers "
@@ -83,7 +101,7 @@ namespace DNNAzureWizard
             {
                 try
                 {
-                    if (this.ActivePageIndex() == (int) WizardTabs.tabFinish)
+                    if (ActivePageIndex() == (int) WizardTabs.TabFinish)
                     {
                         btnOK.Text = "Next >";
                         btnCancel.Enabled = true;
@@ -102,7 +120,7 @@ namespace DNNAzureWizard
             {
                 try
                 {
-                    if (this.ActivePageIndex() == (int) WizardTabs.tabFinish) // Finish
+                    if (ActivePageIndex() == (int) WizardTabs.TabFinish) // Finish
                     {
                         btnCancel_Click(sender, e);
                         return;
@@ -111,7 +129,7 @@ namespace DNNAzureWizard
                     UseWaitCursor = true;
                     if (ValidateStep())
                         MoveSteps(1);
-                    if (this.ActivePageIndex() == (int) WizardTabs.tabUploading)
+                    if (ActivePageIndex() == (int) WizardTabs.TabUploading)
                     {
                         btnBack.Enabled = false;
                         btnOK.Enabled = false;
@@ -134,16 +152,16 @@ namespace DNNAzureWizard
 
             private string GetFinalLog()
             {
-                bool Success = true;
-                System.Text.StringBuilder log = new System.Text.StringBuilder("====================== UPLOAD LOG ======================");
+                bool success = true;
+                var log = new StringBuilder("====================== UPLOAD LOG ======================");
                 log.AppendLine("");
                 foreach (ListViewItem li in lstTasks.Items)
                 {
                     log.AppendLine("- " + li.Text + ": " + li.SubItems[1].Text);
                     if (li.SubItems[1].ForeColor != Color.DarkGreen)
-                        Success = false;
+                        success = false;
                 }
-                if (!Success)
+                if (!success)
                 {
                     lblSuccess.Text = "Upload failed!";
                     log.AppendLine("Upload failed!");
@@ -169,7 +187,7 @@ namespace DNNAzureWizard
                     cnStr.Add("Trusted_Connection", "False");
                     cnStr.Add("Encrypt", "True");
 
-                    using (var cn = new System.Data.SqlClient.SqlConnection(cnStr.ConnectionString.ToString()))
+                    using (var cn = new System.Data.SqlClient.SqlConnection(cnStr.ConnectionString))
                     {
                         cn.Open();
                     }
@@ -187,11 +205,10 @@ namespace DNNAzureWizard
             {
                 try
                 {
-                    Microsoft.WindowsAzure.StorageCredentialsAccountAndKey credentials = new Microsoft.WindowsAzure.StorageCredentialsAccountAndKey(txtStorageName.Text, txtStorageKey.Text);
-                    Microsoft.WindowsAzure.CloudStorageAccount storage = new Microsoft.WindowsAzure.CloudStorageAccount(credentials, chkStorageHTTPS.Checked);
-                    Uri blobURI = storage.BlobEndpoint;
-                    var cloudTableClient = new Microsoft.WindowsAzure.StorageClient.CloudBlobClient(storage.BlobEndpoint.AbsoluteUri, credentials);
-                    IEnumerable<Microsoft.WindowsAzure.StorageClient.CloudBlobContainer> containers = cloudTableClient.ListContainers();
+                    var credentials = new StorageCredentialsAccountAndKey(txtStorageName.Text, txtStorageKey.Text);
+                    var storage = new CloudStorageAccount(credentials, chkStorageHTTPS.Checked);
+                    var cloudTableClient = new CloudBlobClient(storage.BlobEndpoint.AbsoluteUri, credentials);
+                    var containers = cloudTableClient.ListContainers();
                     int totalContainers = containers.Count();
                     MessageBox.Show("Test connection successfull", "Test connection successfull", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -217,7 +234,7 @@ namespace DNNAzureWizard
                 try
                 {
                     Application.DoEvents();
-                    txtLOG.AppendText(e.Data + System.Environment.NewLine);
+                    txtLOG.AppendText(e.Data + Environment.NewLine);
                 }
                 catch { }
             }
@@ -243,16 +260,10 @@ namespace DNNAzureWizard
                 }
 
                 // Deletes temporary generated configuration files 
-                try
-                {
-                    System.IO.File.Delete(Environment.CurrentDirectory + "\\ServiceConfiguration.cscfg");
-                }
-                catch { };
-                try
-                {
-                    System.IO.File.Delete(Environment.CurrentDirectory + "\\bin\\ServiceConfiguration.cscfg");
-                }
-                catch { };
+                if (File.Exists(Path.Combine(Environment.CurrentDirectory, "ServiceConfiguration.cscfg")))
+                    File.Delete(Path.Combine(Environment.CurrentDirectory, "ServiceConfiguration.cscfg"));
+                if (File.Exists(Path.Combine(new [] {Environment.CurrentDirectory, "bin", "ServiceConfiguration.cscfg" })))
+                    File.Delete(Environment.CurrentDirectory + "\\bin\\ServiceConfiguration.cscfg");
             }
 
             private FileVersionInfo _VersionInfo = null;
@@ -272,22 +283,33 @@ namespace DNNAzureWizard
             private void RefreshUI()
             {
                 
-                this.Text += " (" + VersionInfo.ProductVersion + ")";
+                Text += " (" + VersionInfo.ProductVersion + ")";
 #if DEBUG
-                this.Text += " - (Debug)";
+                Text += " - (Debug)";
 #endif
                 InitializePages();                
-                ShowPage((int) WizardTabs.tabHome);
+                ShowPage((int) WizardTabs.TabHome);
                 SetupAppSettings();
+                RefreshSubscriptions();
                 ReloadDeploymentPackages();
                 ReloadX509Certificates();
+            }
+            private void RefreshSubscriptions()
+            {
+                cboSubscriptions.Items.Clear();
+                if (!File.Exists(PublishSettingsFilename)) return;
+                PublishSettings = new PublishSettings(XDocument.Load(PublishSettingsFilename));
+                foreach (var subscription in PublishSettings.Subscriptions)
+                    cboSubscriptions.Items.Add(subscription);
+                if (cboSubscriptions.Items.Count > 0)
+                    cboSubscriptions.SelectedIndex = 0;
             }
 
             private static void LogException(Exception ex)
             {
                 string msg = ex.Message;
 #if DEBUG
-                msg += " - Stack trace: " + ex.StackTrace.ToString();
+                msg += " - Stack trace: " + ex.StackTrace;
 #endif
                 MessageBox.Show(msg, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -299,7 +321,7 @@ namespace DNNAzureWizard
             }
             private void InitializePages()
             {
-                foreach (Panel p in this.pnl.Controls)
+                foreach (Panel p in pnl.Controls)
                 {
                     p.Dock = DockStyle.Fill;
                     p.Visible = false;
@@ -309,7 +331,7 @@ namespace DNNAzureWizard
             }
             private int ActivePageIndex()
             {
-                foreach (Panel p in this.pnl.Controls)
+                foreach (Panel p in pnl.Controls)
                     if (p.Visible)
                         return int.Parse(p.Name.Replace("pnl", ""));
                 return 0;
@@ -320,23 +342,25 @@ namespace DNNAzureWizard
             }
             private bool ValidateStep()
             {
-                switch (this.ActivePageIndex())
+                switch (ActivePageIndex())
                 {
-                    case (int) WizardTabs.tabHome: // Home tab, nothing to validate
+                    case (int) WizardTabs.TabHome: // Home tab, nothing to validate
                         return true;
-                    case (int) WizardTabs.tabSQLAzureSettings: // SQL Azure tab
+                    case (int) WizardTabs.TabDeploymentType: // Deployment type selection
+                        return true;
+                    case (int) WizardTabs.TabSQLAzureSettings: // SQL Azure tab
                         return ValidateSQLAzureSettings();                        
-                    case (int) WizardTabs.tabWindowsAzureSettings: // Windows Azure tab
+                    case (int) WizardTabs.TabWindowsAzureSettings: // Windows Azure tab
                         return ValidateAzureSettings();                        
-                    case (int) WizardTabs.tabRDPAzureSettings: // RDP tab
+                    case (int) WizardTabs.TabRDPAzureSettings: // RDP tab
                         return ValidateRDPSettings();                       
-                    case (int) WizardTabs.tabConnectSettings: // Virtual Network tab
+                    case (int) WizardTabs.TabConnectSettings: // Virtual Network tab
                         return ValidateConnectSettings();
-                    case (int) WizardTabs.tabPackages: // Deployment packages
+                    case (int) WizardTabs.TabPackages: // Deployment packages
                         bool validated= ValidatePackagesSelectionSettings();
                         txtConfig.Text = GetSettingsSummary();
                         return validated;
-                    case (int) WizardTabs.tabSummary:
+                    case (int) WizardTabs.TabSummary:
                         return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
                     default:
                         return false;
@@ -349,14 +373,8 @@ namespace DNNAzureWizard
                 if (chkAzureConnect.Checked)
                 {
                     txtConnectActivationToken_Validating(txtConnectActivationToken, null);
-                    foreach (Control control in this.pnlAzureConnect.Controls)
-                    {
-                        if (this.errProv.GetError(control).Length != 0)
-                        {
-                            invalidInput = true;
-                            break;
-                        }
-                    }                    
+                    if (pnlAzureConnect.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
+                        invalidInput = true;
                 }
                 return !invalidInput;
             }
@@ -371,21 +389,15 @@ namespace DNNAzureWizard
                     txtRDPConfirmPassword_Validating(txtRDPConfirmPassword, null);
                     cboCertificates_Validating(cboCertificates, null);
 
-                    foreach (Control control in this.pnlRDP.Controls)
-                    {
-                        if (this.errProv.GetError(control).Length != 0)
-                        {
-                            invalidInput = true;
-                            break;
-                        }
-                    }
+                    if (pnlRDP.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
+                        invalidInput = true;
                 }
                 return !invalidInput;
             }
 
             private string GetSettingsSummary()
             {
-                System.Text.StringBuilder summary = new System.Text.StringBuilder("======================= SUMMARY OF SETTINGS =======================");
+                var summary = new StringBuilder("======================= SUMMARY OF SETTINGS =======================");
                 summary.AppendLine("");
                 summary.AppendLine("DATABASE SETTINGS:");
                 summary.AppendLine("- DB Server Name: " +  txtDBServer.Text.Trim() + ".database.windows.net");
@@ -415,7 +427,7 @@ namespace DNNAzureWizard
                     summary.AppendLine("- User name: " + txtRDPUser.Text);
                     
 #if DEBUG
-                    summary.AppendLine("- Password: " + EncryptWithCertificate(txtRDPPassword.Text, this.Certificate));
+                    summary.AppendLine("- Password: " + EncryptWithCertificate(txtRDPPassword.Text, Certificate));
 #else
                     summary.AppendLine("- Password: <not shown>");
 #endif
@@ -440,7 +452,6 @@ namespace DNNAzureWizard
 
             private bool ValidateSQLAzureSettings()
             {
-                bool invalidInput = false;
                 txtDBServer_Validating(txtDBServer, null);                
                 txtDBAdminUser_Validating(txtDBAdminUser, null);
                 txtDBAdminPassword_Validating(txtDBAdminPassword, null);
@@ -448,117 +459,94 @@ namespace DNNAzureWizard
                 txtDBUser_Validating(txtDBUser, null);
                 txtDBPassword_Validating(txtDBPassword, null);
                 txtDBRePassword_Validating(txtDBRePassword, null);
-                foreach (Control control in this.DBSettings.Controls)
-                {
-                    if (this.errProv.GetError(control).Length != 0)
-                    {
-                        invalidInput = true;
-                        break;
-                    }
-                }
+                bool invalidInput = DBSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
                 return !invalidInput;
             }
 
             private bool ValidateAzureSettings()
             {
-                bool invalidInput = false;
                 txtStorageName_Validating(txtStorageName, null);
                 txtStorageKey_Validating(txtStorageKey, null);
                 txtBindings_Validating(txtBindings, null);
-                foreach (Control control in this.AzureSettings.Controls)
-                {
-                    if (this.errProv.GetError(control).Length != 0)
-                    {
-                        invalidInput = true;
-                        break;
-                    }
-                }
+                bool invalidInput = AzureSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
                 return !invalidInput;
             }
 
             private bool ValidatePackagesSelectionSettings()
             {
-                bool invalidInput = false;
                 lstPackages_Validating(lstPackages, null);
                 txtStorageContainer_Validating(txtStorageContainer, null);
                 txtVHDBlobName_Validating(txtVHDBlobName, null);
                 txtVHDSize_Validating(txtVHDSize, null);
-                foreach (Control control in this.PackageSettings.Controls)
-                {
-                    if (this.errProv.GetError(control).Length != 0)
-                    {
-                        invalidInput = true;
-                        break;
-                    }
-                }
+                bool invalidInput = PackageSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
                 return !invalidInput;
             }
 
-            private string ReplaceTokens(string CfgStr)
+            private string ReplaceTokens(string cfgStr)
             {
                 // Replace the tokens - SQL Azure settings
-                CfgStr = CfgStr.Replace("@@DBSERVER@@", txtDBServer.Text.Trim());
-                CfgStr = CfgStr.Replace("@@DBADMINUSER@@", txtDBAdminUser.Text.Trim());
-                CfgStr = CfgStr.Replace("@@DBADMINPASSWORD@@", txtDBAdminPassword.Text);
-                CfgStr = CfgStr.Replace("@@DBNAME@@", txtDBName.Text.Trim());
-                CfgStr = CfgStr.Replace("@@DBUSER@@", txtDBUser.Text.Trim());
-                CfgStr = CfgStr.Replace("@@DBPASSWORD@@", txtDBPassword.Text);
+                cfgStr = cfgStr.Replace("@@DBSERVER@@", txtDBServer.Text.Trim());
+                cfgStr = cfgStr.Replace("@@DBADMINUSER@@", txtDBAdminUser.Text.Trim());
+                cfgStr = cfgStr.Replace("@@DBADMINPASSWORD@@", txtDBAdminPassword.Text);
+                cfgStr = cfgStr.Replace("@@DBNAME@@", txtDBName.Text.Trim());
+                cfgStr = cfgStr.Replace("@@DBUSER@@", txtDBUser.Text.Trim());
+                cfgStr = cfgStr.Replace("@@DBPASSWORD@@", txtDBPassword.Text);
 
                 // Replace the tokens - Windows Azure settings
-                CfgStr = CfgStr.Replace("@@STORAGEPROTOCOL@@", "http" + (chkStorageHTTPS.Checked ? "s" : ""));
-                CfgStr = CfgStr.Replace("@@STORAGEACCOUNTNAME@@", txtStorageName.Text.Trim());
-                CfgStr = CfgStr.Replace("@@STORAGEKEY@@", txtStorageKey.Text.Trim());
+                cfgStr = cfgStr.Replace("@@STORAGEPROTOCOL@@", "http" + (chkStorageHTTPS.Checked ? "s" : ""));
+                cfgStr = cfgStr.Replace("@@STORAGEACCOUNTNAME@@", txtStorageName.Text.Trim());
+                cfgStr = cfgStr.Replace("@@STORAGEKEY@@", txtStorageKey.Text.Trim());
 
                 // Replace the tokens - IIS settings
-                CfgStr = CfgStr.Replace("@@HOSTHEADERS@@", txtBindings.Text.Trim());
+                cfgStr = cfgStr.Replace("@@HOSTHEADERS@@", txtBindings.Text.Trim());
 
                 // Replace the tokens - Paths
-                CfgStr = CfgStr.Replace("@@APPPATH@@", Environment.CurrentDirectory + '\\');
-                CfgStr = CfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());
+                cfgStr = cfgStr.Replace("@@APPPATH@@", Environment.CurrentDirectory + '\\');
+                cfgStr = cfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());
 
                 // Replace the tokens - VHD settings
-                CfgStr = CfgStr.Replace("@@VHDBLOBNAME@@", txtVHDBlobName.Text.Trim().ToLower());
+                cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", txtVHDBlobName.Text.Trim().ToLower());
                 int driveSize = 0;
                 int.TryParse(txtVHDSize.Text, out driveSize);
-                CfgStr = CfgStr.Replace("@@VHDBLOBSIZE@@", txtVHDSize.Text.Trim().ToLower());    
+                cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", txtVHDSize.Text.Trim().ToLower());    
             
                 // Replace the tokens - RDP settings
                 if (chkEnableRDP.Checked)
                 {
-                    CfgStr = CfgStr.Replace("@@RDPENABLED@@", "true");
-                    CfgStr = CfgStr.Replace("@@RDPUSERNAME@@", txtRDPUser.Text.Trim());
-                    CfgStr = CfgStr.Replace("@@RDPPASSWORD@@", EncryptWithCertificate(txtRDPPassword.Text, this.Certificate));
-                    CfgStr = CfgStr.Replace("@@RDPEXPIRATIONDATE@@", cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));                    
+                    cfgStr = cfgStr.Replace("@@RDPENABLED@@", "true");
+                    cfgStr = cfgStr.Replace("@@RDPUSERNAME@@", txtRDPUser.Text.Trim());
+                    cfgStr = cfgStr.Replace("@@RDPPASSWORD@@", EncryptWithCertificate(txtRDPPassword.Text, Certificate));
+                    cfgStr = cfgStr.Replace("@@RDPEXPIRATIONDATE@@", cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));                    
                 }
                 else
                 {
-                    CfgStr = CfgStr.Replace("@@RDPENABLED@@", "false");
-                    CfgStr = CfgStr.Replace("@@RDPUSERNAME@@", "");
-                    CfgStr = CfgStr.Replace("@@RDPPASSWORD@@", "");
-                    CfgStr = CfgStr.Replace("@@RDPEXPIRATIONDATE@@", System.DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
+                    cfgStr = cfgStr.Replace("@@RDPENABLED@@", "false");
+                    cfgStr = cfgStr.Replace("@@RDPUSERNAME@@", "");
+                    cfgStr = cfgStr.Replace("@@RDPPASSWORD@@", "");
+                    cfgStr = cfgStr.Replace("@@RDPEXPIRATIONDATE@@", DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
                 }
 
                 // Replace the tokens - Virtual Network settings
                 if (chkAzureConnect.Checked)
-                    CfgStr = CfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", txtConnectActivationToken.Text.Trim());
+                    cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", txtConnectActivationToken.Text.Trim());
                 else
-                    CfgStr = CfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", "");
+                    cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", "");
 
                 // Replace the tokens - Certificate settings
                 if (chkEnableRDP.Checked && (Certificate != null))
-                    CfgStr = CfgStr.Replace("@@RDPTHUMBPRINT@@", Certificate.Thumbprint);    
+                    cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", Certificate.Thumbprint);    
                 else
-                    CfgStr = CfgStr.Replace("@@RDPTHUMBPRINT@@", "");                    
+                    cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", "");                    
 
 
-                return CfgStr;
+                return cfgStr;
 
             }
 
             private string ReplaceFileTokens(string FilePath)
             {
                 string CfgStr = "";
-                using (System.IO.TextReader mConfig = System.IO.File.OpenText(FilePath))
+                using (TextReader mConfig = File.OpenText(FilePath))
                     CfgStr = mConfig.ReadToEnd();
                 return ReplaceTokens(CfgStr);
             }
@@ -781,7 +769,7 @@ namespace DNNAzureWizard
                 txtConnectActivationToken.Text = ConfigurationManager.AppSettings["ConnectActivationToken"];
                 chkAzureConnect_CheckedChanged(null, null);
 
-                cboRDPExpirationDate.Value = System.DateTime.Now.Date.AddMonths(1);
+                cboRDPExpirationDate.Value = DateTime.Now.Date.AddMonths(1);
             }
 
         /// <summary>
@@ -790,7 +778,7 @@ namespace DNNAzureWizard
             public void ReloadDeploymentPackages()
             {
                 lstPackages.Items.Clear();
-                foreach (FileInfo filedef in new System.IO.DirectoryInfo(Environment.CurrentDirectory + "\\packages").GetFiles("*.xml"))
+                foreach (FileInfo filedef in new DirectoryInfo(Environment.CurrentDirectory + "\\packages").GetFiles("*.xml"))
                 {
                     XmlDocument doc = new XmlDocument();
                     doc.Load(filedef.FullName);
@@ -798,7 +786,7 @@ namespace DNNAzureWizard
 
                     if ((chkEnableRDP.Checked && IsRDPPackage) || (!chkEnableRDP.Checked && !IsRDPPackage))
                     {
-                        ListViewItem li = new ListViewItem(new string[] { doc.SelectSingleNode("/ServicePackage/Name").InnerText, doc.SelectSingleNode("/ServicePackage/Description").InnerText });
+                        var li = new ListViewItem(new[] { doc.SelectSingleNode("/ServicePackage/Name").InnerText, doc.SelectSingleNode("/ServicePackage/Description").InnerText });
                         li.Tag = doc.SelectSingleNode("ServicePackage");
                         li.Checked = true;
                         lstPackages.Items.Add(li);
@@ -855,9 +843,9 @@ namespace DNNAzureWizard
 
             private string GetParsedConfigurationFilePath(string filePath)
             {
-                string TmpFile = System.IO.Path.GetTempFileName();
-                System.IO.File.WriteAllText(TmpFile, ReplaceFileTokens(filePath));
-                return TmpFile;
+                string tmpFile = Path.GetTempFileName();
+                File.WriteAllText(tmpFile, ReplaceFileTokens(filePath));
+                return tmpFile;
             }
 
 
@@ -873,40 +861,38 @@ namespace DNNAzureWizard
                 string filePath = "";
                 string containerName = "";
                 string blobName = "";
-                XmlNode xNode = (XmlNode)UploadFileItem.Tag;
+                var xNode = (XmlNode)UploadFileItem.Tag;
                 switch (xNode.Name)
                 {
                     case "Task":
                         filePath = ReplaceTokens(xNode.SelectSingleNode("Action/SourceFile").InnerText);
                         string destinationPath = ReplaceTokens(xNode.SelectSingleNode("Action/DestinationBlob").InnerText);
-                        containerName = System.IO.Path.GetDirectoryName(destinationPath);
-                        blobName = System.IO.Path.GetFileName(destinationPath);
+                        containerName = Path.GetDirectoryName(destinationPath);
+                        blobName = Path.GetFileName(destinationPath);
                         break;
                     case "PackageFile":
                         filePath = Environment.CurrentDirectory + "\\packages\\" + xNode.InnerText;
                         containerName = txtStorageContainer.Text.Trim().ToLower();
-                        blobName = System.IO.Path.GetFileName(filePath);
+                        blobName = Path.GetFileName(filePath);
                         break;
                     case "ConfigurationFile":
                         filePath = GetParsedConfigurationFilePath(Environment.CurrentDirectory + "\\packages\\" + xNode.InnerText);
                         containerName = txtStorageContainer.Text.Trim().ToLower();
-                        blobName = System.IO.Path.GetFileName(Environment.CurrentDirectory + "\\packages\\" + xNode.InnerText);
-                        break;
-                    default:
+                        blobName = Path.GetFileName(Environment.CurrentDirectory + "\\packages\\" + xNode.InnerText);
                         break;
                 }
              
 
 
                 UploadFileItem.SubItems[1].Text = "Connecting...";
-                CloudStorageAccount account = new CloudStorageAccount(new StorageCredentialsAccountAndKey(txtStorageName.Text.Trim(), txtStorageKey.Text.Trim()), chkStorageHTTPS.Checked);
-                CloudBlobClient blobClient = new CloudBlobClient(account.BlobEndpoint.AbsoluteUri, account.Credentials);
+                var account = new CloudStorageAccount(new StorageCredentialsAccountAndKey(txtStorageName.Text.Trim(), txtStorageKey.Text.Trim()), chkStorageHTTPS.Checked);
+                var blobClient = new CloudBlobClient(account.BlobEndpoint.AbsoluteUri, account.Credentials);
                 
-                CloudBlobContainer container = blobClient.GetContainerReference(containerName);
+                var container = blobClient.GetContainerReference(containerName);
                 container.CreateIfNotExist();
 
 
-                CloudBlockBlob blob = container.GetBlobReference(blobName).ToBlockBlob;
+                var blob = container.GetBlobReference(blobName).ToBlockBlob;
                 FileStream fileStream = null;
                 try
                 {
@@ -968,8 +954,8 @@ namespace DNNAzureWizard
                         fileStream.Close();
 
                     // Deletes the temporal configuration file
-                    if ((xNode.Name == "ConfigurationFile") && (System.IO.File.Exists(filePath)))
-                        System.IO.File.Delete(filePath);
+                    if ((xNode.Name == "ConfigurationFile") && (File.Exists(filePath)))
+                        File.Delete(filePath);
                 }
                 
             }
@@ -1022,10 +1008,10 @@ namespace DNNAzureWizard
 
             private static string EncryptWithCertificate(string clearText, X509Certificate2 certificate)
             {
-                UTF8Encoding encoding = new UTF8Encoding();
+                var encoding = new UTF8Encoding();
                 Byte[] clearTextsByte = encoding.GetBytes(clearText);
-                ContentInfo contentinfo = new ContentInfo(clearTextsByte);
-                EnvelopedCms envelopedCms = new EnvelopedCms(contentinfo);
+                var contentinfo = new ContentInfo(clearTextsByte);
+                var envelopedCms = new EnvelopedCms(contentinfo);
                 envelopedCms.Encrypt(new CmsRecipient(certificate));
                 return Convert.ToBase64String(envelopedCms.Encode());
             }
@@ -1070,7 +1056,7 @@ namespace DNNAzureWizard
             void cboCertificates_Validating(object sender, CancelEventArgs e)
             {
                 string error = null;
-                if (this.Certificate == null)
+                if (Certificate == null)
                 {
                     error = "You must select an existing certificate or create a new one";
                 }
@@ -1231,14 +1217,8 @@ namespace DNNAzureWizard
             {
                 string error = null;
 
-                bool IsChecked = false;
-                foreach (ListViewItem li in lstPackages.Items)
-                    if (li.Checked)
-                    {
-                        IsChecked = true;
-                        break;
-                    }
-                if (!IsChecked)
+                bool isChecked = lstPackages.Items.Cast<ListViewItem>().Any(li => li.Checked);
+                if (!isChecked)
                     error = "You must select at least one package to upload to Azure Storage";
 
                 errProv.SetError((Control)sender, error);
@@ -1255,7 +1235,7 @@ namespace DNNAzureWizard
                 try
                 {
                     string ConnectHelpURL = "http://go.microsoft.com/fwlink/?LinkId=203834";
-                    System.Diagnostics.Process.Start(ConnectHelpURL);
+                    Process.Start(ConnectHelpURL);
                 }
                 catch (Exception ex)
                 {
@@ -1282,6 +1262,39 @@ namespace DNNAzureWizard
 
 
             #endregion
+
+            #region Subscriptions
+            private void cmdRefreshSubscriptions_Click(object sender, EventArgs e)
+            {
+                try
+                {
+                    var publishSettings = DotNetNuke.Azure.Accelerator.Components.Utils.GetWAPublishingSettings();
+                    if (publishSettings != null)
+                    {
+                        PublishSettings = publishSettings;
+                        PublishSettings.Save(PublishSettingsFilename);
+                        RefreshSubscriptions();
+                    }
+                        
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+            #endregion
+
+            private void linkLabel1_LinkClicked_1(object sender, LinkLabelLinkClickedEventArgs e)
+            {
+                try
+                {
+                    Process.Start("http://www.windowsazure.com/en-us/pricing/free-trial/");
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
 
             #endregion
 

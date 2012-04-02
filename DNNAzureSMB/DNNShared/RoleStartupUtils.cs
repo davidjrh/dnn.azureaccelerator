@@ -803,6 +803,8 @@ namespace DNNShared
 
         public static bool DownloadLatestDNNCEPackage(string destinationFile, string packageUrl = "")
         {
+            if (string.IsNullOrEmpty(destinationFile)) throw new ArgumentNullException("destinationFile");
+
             if (string.IsNullOrEmpty(packageUrl))
                 packageUrl = GetPackageUrl();
 
