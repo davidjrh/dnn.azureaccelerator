@@ -180,7 +180,7 @@ namespace DNNShared
                             // Check for the principal existence
                             var cmd2 = new SqlCommand("SELECT COUNT(NAME) FROM sys.database_principals WHERE NAME=@loginName", dbConn);
                             cmd2.Parameters.AddWithValue("loginName", connBuilderOriginal.UserID);
-                            if ((int)cmd.ExecuteScalar() == 0)
+                            if ((int)cmd2.ExecuteScalar() == 0)
                             {
                                 var cmdUs = new SqlCommand(string.Format("CREATE LOGIN {0} WITH PASSWORD = '{1}'", connBuilderOriginal.UserID, connBuilderOriginal.Password), dbConn);
                                 cmdUs.ExecuteNonQuery();
