@@ -179,7 +179,6 @@ namespace DNNAzure
             {
                 using (var serverManager = new ServerManager())
                 {
-
                     // Change the default web site binding to allow DNN website to be the default site
                     var webroleSite = serverManager.Sites[originalwebSiteName];
                     if (webroleSite != null)
@@ -187,6 +186,11 @@ namespace DNNAzure
                         webroleSite.Bindings.Clear();
                         webroleSite.Bindings.Add(string.Format("*:{0}:admin.dnndev.me", port), protocol);
                     }
+                    serverManager.CommitChanges();
+                }
+
+                using (var serverManager = new ServerManager())
+                {
                     
                     var site = serverManager.Sites[webSiteName];
                     if (site == null)
