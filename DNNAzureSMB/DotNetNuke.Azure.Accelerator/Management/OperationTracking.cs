@@ -16,7 +16,7 @@ using System.ServiceModel.Web;
 
 namespace DotNetNuke.Azure.Accelerator.Management
 {
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class Operation : IExtensibleDataObject
     {
         [DataMember(Name = "ID", Order = 1)]

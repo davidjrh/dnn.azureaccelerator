@@ -21,7 +21,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// List of affinity groups.
     /// </summary>
-    [CollectionDataContract(Name = "AffinityGroups", ItemName = "AffinityGroup", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "AffinityGroups", ItemName = "AffinityGroup", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class AffinityGroupList : List<AffinityGroup>
     {
         public AffinityGroupList()
@@ -37,7 +37,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Affinity Group data contract. 
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class AffinityGroup : IExtensibleDataObject
     {
         [DataMember(Order = 1, EmitDefaultValue = false)]

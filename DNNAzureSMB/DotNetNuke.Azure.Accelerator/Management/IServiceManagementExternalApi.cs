@@ -9,7 +9,12 @@
 // OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE. 
 //---------------------------------------------------------------------------------
 using System;
+using System.IO;
+using System.Runtime.Serialization;
 using System.ServiceModel;
+using System.ServiceModel.Channels;
+using System.ServiceModel.Dispatcher;
+using System.Text;
 
 [assembly: CLSCompliant(true)]
 
@@ -18,8 +23,17 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Provides the Windows Azure Service Management Api. 
     /// </summary>
-    [ServiceContract(Namespace = Constants.ServiceManagementNS)]
+    [ServiceContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public partial interface IServiceManagement
     {
     }
+
+    /// <summary>
+    /// Provides the SQL Azure Service Management Api. 
+    /// </summary>
+    [ServiceContract(Namespace = Constants.SQLAzureServiceManagementNS)]
+    public partial interface IDatabaseManagement
+    {
+    }
+
 }

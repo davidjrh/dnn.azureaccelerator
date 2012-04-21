@@ -13,12 +13,15 @@ namespace DotNetNuke.Azure.Accelerator.Management
 {
     public static class Constants
     {
-        public const string ServiceManagementNS = "http://schemas.microsoft.com/windowsazure";
+        public const string WindowsAzureServiceManagementNS = "http://schemas.microsoft.com/windowsazure";
+        public const string SQLAzureServiceManagementNS = "http://schemas.microsoft.com/sqlazure/2010/12/";
         public const string OperationTrackingIdHeader = "x-ms-request-id";
         public const string VersionHeaderName = "x-ms-version";
         public const string VersionHeaderContent = "2009-10-01";
         public const string VersionHeaderContent20100401 = "2010-04-01";
         public const string VersionHeaderContent20101028 = "2010-10-28";
+        public const string VersionHeaderContent20110611 = "2011-06-01";
+        public const string VersionHeaderContentSQLAzure = "1.0";
         public const string PrincipalHeader = "x-ms-principal-id";
     }
 

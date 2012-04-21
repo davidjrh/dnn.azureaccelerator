@@ -18,7 +18,7 @@ using System.Text;
 
 namespace DotNetNuke.Azure.Accelerator.Management
 {
-    [DataContract(Name = "Swap", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "Swap", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class SwapDeploymentInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -33,7 +33,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// This class represents a deployment in our deployment-related operations.
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class Deployment : IExtensibleDataObject
     {
         [DataMember(Order = 1, EmitDefaultValue = false)]
@@ -75,7 +75,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [CollectionDataContract(Name = "RoleList", ItemName = "Role", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "RoleList", ItemName = "Role", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class RoleList : List<Role>
     {
         public RoleList()
@@ -88,7 +88,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         }
     }
 
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class Role : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -100,7 +100,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [CollectionDataContract(Name = "RoleInstanceList", ItemName = "RoleInstance", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "RoleInstanceList", ItemName = "RoleInstance", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class RoleInstanceList : List<RoleInstance>
     {
         public RoleInstanceList()
@@ -114,7 +114,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     }
 
     // @todo: this should implement IExtensibleDataObject. Can we do this without destroying backwards compatibility???
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class RoleInstance : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -129,7 +129,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Name = "CreateDeployment", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "CreateDeployment", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class CreateDeploymentInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -153,7 +153,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Name = "ChangeConfiguration", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "ChangeConfiguration", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class ChangeConfigurationInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -165,7 +165,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Name = "UpdateDeploymentStatus", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "UpdateDeploymentStatus", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class UpdateDeploymentStatusInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -174,7 +174,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Name = "UpgradeDeployment", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "UpgradeDeployment", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class UpgradeDeploymentInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -198,7 +198,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Name = "WalkUpgradeDomain", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "WalkUpgradeDomain", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class WalkUpgradeDomainInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -207,7 +207,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class UpgradeStatus : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -225,7 +225,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Represents Warnings in Configuration
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class ConfigurationWarning : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -242,7 +242,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         }
     }
 
-    [CollectionDataContract(Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class ConfigurationWarningsList : List<ConfigurationWarning>
     {
         public override string ToString()
@@ -469,92 +469,272 @@ namespace DotNetNuke.Azure.Accelerator.Management
     {
         public static void SwapDeployment(this IServiceManagement proxy, string subscriptionId, string serviceName, SwapDeploymentInput input)
         {
-            proxy.EndSwapDeployment(proxy.BeginSwapDeployment(subscriptionId, serviceName, input, null, null));
+            try
+            {
+                proxy.EndSwapDeployment(proxy.BeginSwapDeployment(subscriptionId, serviceName, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }
         }
 
         public static void CreateOrUpdateDeployment(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, CreateDeploymentInput input)
         {
-            proxy.EndCreateOrUpdateDeployment(proxy.BeginCreateOrUpdateDeployment(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            try
+            {
+                proxy.EndCreateOrUpdateDeployment(proxy.BeginCreateOrUpdateDeployment(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }            
         }
 
         public static void DeleteDeployment(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName)
         {
-            proxy.EndDeleteDeployment(proxy.BeginDeleteDeployment(subscriptionId, serviceName, deploymentName, null, null));
+            try
+            {
+                proxy.EndDeleteDeployment(proxy.BeginDeleteDeployment(subscriptionId, serviceName, deploymentName, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }                  
         }
 
         public static void DeleteDeploymentBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot)
         {
-            proxy.EndDeleteDeploymentBySlot(proxy.BeginDeleteDeploymentBySlot(subscriptionId, serviceName, deploymentSlot, null, null));
+            try
+            {
+                proxy.EndDeleteDeploymentBySlot(proxy.BeginDeleteDeploymentBySlot(subscriptionId, serviceName, deploymentSlot, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }               
         }
 
         public static Deployment GetDeployment(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName)
         {
-            return proxy.EndGetDeployment(proxy.BeginGetDeployment(subscriptionId, serviceName, deploymentName, null, null));
+            try
+            {
+                return proxy.EndGetDeployment(proxy.BeginGetDeployment(subscriptionId, serviceName, deploymentName, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }               
         }
 
         public static Deployment GetDeploymentBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot)
         {
-            return proxy.EndGetDeploymentBySlot(proxy.BeginGetDeploymentBySlot(subscriptionId, serviceName, deploymentSlot, null, null));
+            try
+            {
+                return proxy.EndGetDeploymentBySlot(proxy.BeginGetDeploymentBySlot(subscriptionId, serviceName, deploymentSlot, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }               
         }
 
         public static void UpdateDeploymentStatus(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName, UpdateDeploymentStatusInput input)
         {
-            proxy.EndUpdateDeploymentStatus(proxy.BeginUpdateDeploymentStatus(subscriptionId, serviceName, deploymentName, input, null, null));
+            try
+            {
+                proxy.EndUpdateDeploymentStatus(proxy.BeginUpdateDeploymentStatus(subscriptionId, serviceName, deploymentName, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }              
         }
 
         public static void UpdateDeploymentStatusBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, UpdateDeploymentStatusInput input)
         {
-            proxy.EndUpdateDeploymentStatusBySlot(proxy.BeginUpdateDeploymentStatusBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            try
+            {
+                proxy.EndUpdateDeploymentStatusBySlot(proxy.BeginUpdateDeploymentStatusBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void ChangeConfiguration(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName, ChangeConfigurationInput input)
         {
-            proxy.EndChangeConfiguration(proxy.BeginChangeConfiguration(subscriptionId, serviceName, deploymentName, input, null, null));
+            try
+            {
+                proxy.EndChangeConfiguration(proxy.BeginChangeConfiguration(subscriptionId, serviceName, deploymentName, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }              
         }
 
         public static void ChangeConfigurationBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, ChangeConfigurationInput input)
         {
-            proxy.EndChangeConfigurationBySlot(proxy.BeginChangeConfigurationBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            try
+            {
+                proxy.EndChangeConfigurationBySlot(proxy.BeginChangeConfigurationBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void UpgradeDeployment(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName, UpgradeDeploymentInput input)
         {
-            proxy.EndUpgradeDeployment(proxy.BeginUpgradeDeployment(subscriptionId, serviceName, deploymentName, input, null, null));
+            try
+            {
+                proxy.EndUpgradeDeployment(proxy.BeginUpgradeDeployment(subscriptionId, serviceName, deploymentName, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void UpgradeDeploymentBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, UpgradeDeploymentInput input)
         {
-            proxy.EndUpgradeDeploymentBySlot(proxy.BeginUpgradeDeploymentBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            try
+            {
+                proxy.EndUpgradeDeploymentBySlot(proxy.BeginUpgradeDeploymentBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void WalkUpgradeDomain(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName, WalkUpgradeDomainInput input)
         {
-            proxy.EndWalkUpgradeDomain(proxy.BeginWalkUpgradeDomain(subscriptionId, serviceName, deploymentName, input, null, null));
+            try
+            {
+                proxy.EndWalkUpgradeDomain(proxy.BeginWalkUpgradeDomain(subscriptionId, serviceName, deploymentName, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void WalkUpgradeDomainBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, WalkUpgradeDomainInput input)
         {
-            proxy.EndWalkUpgradeDomainBySlot(proxy.BeginWalkUpgradeDomainBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            try
+            {
+                proxy.EndWalkUpgradeDomainBySlot(proxy.BeginWalkUpgradeDomainBySlot(subscriptionId, serviceName, deploymentSlot, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void RebootDeploymentRoleInstance(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName, string roleInstanceName)
         {
-            proxy.EndRebootDeploymentRoleInstance(proxy.BeginRebootDeploymentRoleInstance(subscriptionId, serviceName, deploymentName, roleInstanceName, null, null));
+            try
+            {
+                proxy.EndRebootDeploymentRoleInstance(proxy.BeginRebootDeploymentRoleInstance(subscriptionId, serviceName, deploymentName, roleInstanceName, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void ReimageDeploymentRoleInstance(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentName, string roleInstanceName)
         {
-            proxy.EndReimageDeploymentRoleInstance(proxy.BeginReimageDeploymentRoleInstance(subscriptionId, serviceName, deploymentName, roleInstanceName, null, null));
+            try
+            {
+                proxy.EndReimageDeploymentRoleInstance(proxy.BeginReimageDeploymentRoleInstance(subscriptionId, serviceName, deploymentName, roleInstanceName, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }             
         }
 
         public static void RebootDeploymentRoleInstanceBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, string roleInstanceName)
         {
-            proxy.EndRebootDeploymentRoleInstanceBySlot(proxy.BeginRebootDeploymentRoleInstanceBySlot(subscriptionId, serviceName, deploymentSlot, roleInstanceName, null, null));
+            try
+            {
+                proxy.EndRebootDeploymentRoleInstanceBySlot(proxy.BeginRebootDeploymentRoleInstanceBySlot(subscriptionId, serviceName, deploymentSlot, roleInstanceName, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }            
         }
 
         public static void ReimageDeploymentRoleInstanceBySlot(this IServiceManagement proxy, string subscriptionId, string serviceName, string deploymentSlot, string roleInstanceName)
         {
-            proxy.EndReimageDeploymentRoleInstanceBySlot(proxy.BeginReimageDeploymentRoleInstanceBySlot(subscriptionId, serviceName, deploymentSlot, roleInstanceName, null, null));
+            try
+            {
+                proxy.EndReimageDeploymentRoleInstanceBySlot(proxy.BeginReimageDeploymentRoleInstanceBySlot(subscriptionId, serviceName, deploymentSlot, roleInstanceName, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }            
         }
     }
 }

@@ -21,7 +21,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// The desired permission for generating a shared access signature. 
     /// This enum is used in the prepare image upload operation.
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public enum ImageSharedAccessSignaturePermission
     {
         [EnumMember]
@@ -33,7 +33,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// The status of an image upload.
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public enum ImageStatus
     {
         [EnumMember]
@@ -45,7 +45,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Input for the prepare image upload operation.
     /// </summary>
-    [DataContract(Name = "PrepareMachineImage", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "PrepareMachineImage", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class  PrepareImageUploadInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -84,7 +84,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Input for the set image properties operation.
     /// </summary>
-    [DataContract(Name="SetMachineImageProperties", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name="SetMachineImageProperties", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class SetMachineImagePropertiesInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -99,7 +99,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Input for the set parent image operation.
     /// </summary>
-    [DataContract(Name="ParentMachineImage", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name="ParentMachineImage", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class SetParentImageInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -112,7 +112,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Reference to an image that can be used for upload and download.
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class MachineImageReference : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -124,7 +124,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// List of images.
     /// </summary>
-    [CollectionDataContract(Name="MachineImages",ItemName = "MachineImage",Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name="MachineImages",ItemName = "MachineImage",Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class MachineImageList : List<MachineImage>
     {
     }
@@ -132,7 +132,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// Information associated with an image. 
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class MachineImage : IExtensibleDataObject
     {
         [DataMember(Order = 1)]

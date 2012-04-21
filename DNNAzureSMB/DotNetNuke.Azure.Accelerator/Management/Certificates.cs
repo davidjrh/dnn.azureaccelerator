@@ -8,7 +8,7 @@ using System.ServiceModel.Web;
 
 namespace DotNetNuke.Azure.Accelerator.Management
 {
-    [CollectionDataContract(Name = "Certificates", ItemName = "Certificate", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "Certificates", ItemName = "Certificate", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class CertificateList : List<Certificate>
     {
         public CertificateList()
@@ -21,7 +21,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         }
     }
 
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class Certificate : IExtensibleDataObject
     {
         [DataMember(Order = 1, EmitDefaultValue = false)]
@@ -39,7 +39,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class CertificateFile : IExtensibleDataObject
     {
         [DataMember(Order = 1)]

@@ -13,7 +13,7 @@ using System.Runtime.Serialization;
 
 namespace DotNetNuke.Azure.Accelerator.Management
 {
-    [DataContract(Name = "Error", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "Error", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class ServiceManagementError : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -27,6 +27,41 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public ExtensionDataObject ExtensionData { get; set; }
     }
+
+    [DataContract(Name = "Error", Namespace = Constants.SQLAzureServiceManagementNS)]
+    public class DatabaseManagementError : IExtensibleDataObject
+    {
+        [DataMember(Order = 1)]
+        public string Code { get; set; }
+
+        [DataMember(Order = 2)]
+        public string Message { get; set; }
+
+        [DataMember(Order = 3, EmitDefaultValue = false)]
+        public ConfigurationWarningsList ConfigurationWarnings { get; set; }
+
+        public ExtensionDataObject ExtensionData { get; set; }
+    }
+
+    public class SQLAzureException : System.Exception
+    {
+        public string Code { get; set; }
+
+        public SQLAzureException(string message) : base(message)
+        {
+        }
+    }
+
+    public class WindowsAzureException : System.Exception
+    {
+        public string Code { get; set; }
+
+        public WindowsAzureException(string message)
+            : base(message)
+        {
+        }
+    }
+
 
     public static class ErrorCode
     {
@@ -45,6 +80,5 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public const string TooManyRequests = "TooManyRequests";
         public const string ConflictError = "ConflictError";
         public const string ConfiguraitonError = "ConfigurationError";
-
     }
 }

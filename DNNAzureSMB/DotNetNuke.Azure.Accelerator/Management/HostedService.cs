@@ -21,7 +21,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// A list of hosted services
     /// </summary>
-    [CollectionDataContract(Name = "HostedServices", ItemName = "HostedService", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "HostedServices", ItemName = "HostedService", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class HostedServiceList : List<HostedService>
     {
         public HostedServiceList()
@@ -37,7 +37,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// A hosted service
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class HostedService : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -58,7 +58,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// A list of deployments contained in the hosted service
     /// </summary>
-    [CollectionDataContract(Name = "Deployments", ItemName = "Deployment", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "Deployments", ItemName = "Deployment", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class DeploymentList : List<Deployment>
     {
         public DeploymentList()
@@ -74,7 +74,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// A hosted service
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class HostedServiceProperties : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -95,7 +95,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// List of locations
     /// </summary>
-    [CollectionDataContract(Name = "Locations", ItemName = "Location", Namespace = Constants.ServiceManagementNS)]
+    [CollectionDataContract(Name = "Locations", ItemName = "Location", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class LocationList : List<Location>
     {
         public LocationList()
@@ -111,7 +111,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// A location constraint
     /// </summary>
-    [DataContract(Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class Location : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -123,7 +123,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// CreateHostedService contract
     /// </summary>
-    [DataContract(Name = "CreateHostedService", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "CreateHostedService", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class CreateHostedServiceInput : IExtensibleDataObject
     {
         [DataMember(Order = 1)]
@@ -148,7 +148,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
     /// <summary>
     /// UpdateHostedService contract
     /// </summary>
-    [DataContract(Name = "UpdateHostedService", Namespace = Constants.ServiceManagementNS)]
+    [DataContract(Name = "UpdateHostedService", Namespace = Constants.WindowsAzureServiceManagementNS)]
     public class UpdateHostedServiceInput : IExtensibleDataObject
     {
         [DataMember(Order = 1, EmitDefaultValue = false)]

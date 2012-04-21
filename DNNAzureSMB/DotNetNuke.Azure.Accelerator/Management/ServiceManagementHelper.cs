@@ -25,9 +25,11 @@ namespace DotNetNuke.Azure.Accelerator.Management
 {
     public static class ServiceManagementHelper
     {
+
+        #region Windows Azure Service Management
         public static IServiceManagement CreateServiceManagementChannel(X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>();
+            var factory = new WebChannelFactory<IServiceManagement>();
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -37,7 +39,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public static IServiceManagement CreateServiceManagementChannel(Binding binding, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(binding);
+            var factory = new WebChannelFactory<IServiceManagement>(binding);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -47,7 +49,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public static IServiceManagement CreateServiceManagementChannel(ServiceEndpoint endpoint, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(endpoint);
+            var factory = new WebChannelFactory<IServiceManagement>(endpoint);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -57,7 +59,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public static IServiceManagement CreateServiceManagementChannel(string endpointConfigurationName, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(endpointConfigurationName);
+            var factory = new WebChannelFactory<IServiceManagement>(endpointConfigurationName);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -65,9 +67,10 @@ namespace DotNetNuke.Azure.Accelerator.Management
             return channel;
         }
 
+
         public static IServiceManagement CreateServiceManagementChannel(Type channelType, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(channelType);
+            var factory = new WebChannelFactory<IServiceManagement>(channelType);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -77,7 +80,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public static IServiceManagement CreateServiceManagementChannel(Uri remoteUri, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(remoteUri);
+            var factory = new WebChannelFactory<IServiceManagement>(remoteUri);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -87,7 +90,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public static IServiceManagement CreateServiceManagementChannel(Binding binding, Uri remoteUri, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(binding, remoteUri);
+            var factory = new WebChannelFactory<IServiceManagement>(binding, remoteUri);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -97,7 +100,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
 
         public static IServiceManagement CreateServiceManagementChannel(string endpointConfigurationName, Uri remoteUri, X509Certificate2 cert)
         {
-            WebChannelFactory<IServiceManagement> factory = new WebChannelFactory<IServiceManagement>(endpointConfigurationName, remoteUri);
+            var factory = new WebChannelFactory<IServiceManagement>(endpointConfigurationName, remoteUri);
             factory.Endpoint.Behaviors.Add(new ClientOutputMessageInspector());
             factory.Credentials.ClientCertificate.Certificate = cert;
 
@@ -105,7 +108,32 @@ namespace DotNetNuke.Azure.Accelerator.Management
             return channel;
         }
 
+        #endregion 
+
+        #region SQL Azure Database Management
+
+        public static IDatabaseManagement CreateDatabaseManagementChannel(string endpointConfigurationName, X509Certificate2 cert)
+        {
+            var factory = new WebChannelFactory<IDatabaseManagement>(endpointConfigurationName);
+            factory.Endpoint.Behaviors.Add(new DatabaseClientOutputMessageInspector());
+            factory.Credentials.ClientCertificate.Certificate = cert;
+
+            var channel = factory.CreateChannel();
+            return channel;
+        }
+
+        #endregion
+
+        #region Exception handling
+
         public static bool TryGetExceptionDetails(CommunicationException exception, out ServiceManagementError errorDetails)
+        {
+            HttpStatusCode httpStatusCode;
+            string operationId;
+            return TryGetExceptionDetails(exception, out errorDetails, out httpStatusCode, out operationId);
+        }
+
+        public static bool TryGetExceptionDetails(CommunicationException exception, out DatabaseManagementError errorDetails)
         {
             HttpStatusCode httpStatusCode;
             string operationId;
@@ -115,6 +143,65 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public static bool TryGetExceptionDetails(CommunicationException exception, out ServiceManagementError errorDetails, out HttpStatusCode httpStatusCode, out string operationId)
         {
             errorDetails = null;
+            
+            if (TryGetExceptionDetails(exception, out httpStatusCode, out operationId))
+            {
+                using (var s = ((WebException) exception.InnerException).Response.GetResponseStream())
+                {
+                    if (s == null || s.Length == 0)
+                    {
+                        return false;
+                    }
+
+                    try
+                    {
+                        using (var reader = XmlDictionaryReader.CreateTextReader(s, new XmlDictionaryReaderQuotas()))
+                        {
+                            var ser = new DataContractSerializer(typeof (ServiceManagementError));
+                            errorDetails = (ServiceManagementError) ser.ReadObject(reader, true);
+                        }
+                    }
+                    catch (SerializationException)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        public static bool TryGetExceptionDetails(CommunicationException exception, out DatabaseManagementError errorDetails, out HttpStatusCode httpStatusCode, out string operationId)
+        {
+            errorDetails = null;
+
+            if (TryGetExceptionDetails(exception, out httpStatusCode, out operationId))
+            {
+                using (var s = ((WebException)exception.InnerException).Response.GetResponseStream())
+                {
+                    if (s == null || s.Length == 0)
+                    {
+                        return false;
+                    }
+
+                    try
+                    {
+                        using (var reader = XmlDictionaryReader.CreateTextReader(s, new XmlDictionaryReaderQuotas()))
+                        {
+                            var ser = new DataContractSerializer(typeof(DatabaseManagementError));
+                            errorDetails = (DatabaseManagementError)ser.ReadObject(reader, true);
+                        }
+                    }
+                    catch (SerializationException)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private static bool TryGetExceptionDetails(CommunicationException exception, out HttpStatusCode httpStatusCode, out string operationId)
+        {
             httpStatusCode = 0;
             operationId = null;
 
@@ -129,52 +216,27 @@ namespace DotNetNuke.Azure.Accelerator.Management
                 return true;
             }
 
-            WebException wex = exception.InnerException as WebException;
+            var wex = exception.InnerException as WebException;
 
             if (wex == null)
-            {
                 return false;
-            }
 
-            HttpWebResponse response = wex.Response as HttpWebResponse;
+            var response = wex.Response as HttpWebResponse;
             if (response == null)
-            {
                 return false;
-            }
-            
+
             httpStatusCode = response.StatusCode;
             if (httpStatusCode == HttpStatusCode.Forbidden)
-            {
                 return true;
-            }
 
             if (response.Headers != null)
-            {
                 operationId = response.Headers[Constants.OperationTrackingIdHeader];
-            }
-
-            using(var s = response.GetResponseStream())
-            {
-                if (s.Length == 0)
-                {
-                    return false;
-                }
-
-                try
-                {
-                    using (XmlDictionaryReader reader = XmlDictionaryReader.CreateTextReader(s, new XmlDictionaryReaderQuotas()))
-                    {
-                        DataContractSerializer ser = new DataContractSerializer(typeof(ServiceManagementError));
-                        errorDetails = (ServiceManagementError)ser.ReadObject(reader, true);
-                    }
-                }
-                catch (SerializationException)
-                {
-                    return false;
-                }
-            }
             return true;
         }
+
+        #endregion
+
+
 
         public static string EncodeToBase64String(string original)
         {
@@ -191,13 +253,45 @@ namespace DotNetNuke.Azure.Accelerator.Management
     {
         #region IClientMessageInspector Members
 
-        public void AfterReceiveReply(ref System.ServiceModel.Channels.Message reply, object correlationState) { }
-        public object BeforeSendRequest(ref System.ServiceModel.Channels.Message request, IClientChannel channel)
+        public void AfterReceiveReply(ref Message reply, object correlationState) { }
+        public object BeforeSendRequest(ref Message request, IClientChannel channel)
+        {
+            var property = (HttpRequestMessageProperty)request.Properties[HttpRequestMessageProperty.Name];
+            if (property.Headers[Constants.VersionHeaderName] == null)
+                property.Headers.Add(Constants.VersionHeaderName, Constants.VersionHeaderContent20110611);
+            return null;
+        }
+
+        #endregion
+
+        #region IEndpointBehavior Members
+
+        public void AddBindingParameters(ServiceEndpoint endpoint, BindingParameterCollection bindingParameters) { }
+
+        public void ApplyClientBehavior(ServiceEndpoint endpoint, ClientRuntime clientRuntime)
+        {
+            clientRuntime.MessageInspectors.Add(this);
+        }
+
+        public void ApplyDispatchBehavior(ServiceEndpoint endpoint, EndpointDispatcher endpointDispatcher) { }
+
+        public void Validate(ServiceEndpoint endpoint) { }
+
+        #endregion
+
+    }
+
+    public class DatabaseClientOutputMessageInspector : IClientMessageInspector, IEndpointBehavior
+    {
+        #region IClientMessageInspector Members
+
+        public void AfterReceiveReply(ref Message reply, object correlationState) { }
+        public object BeforeSendRequest(ref Message request, IClientChannel channel)
         {
             var property = (HttpRequestMessageProperty)request.Properties[HttpRequestMessageProperty.Name];
             if (property.Headers[Constants.VersionHeaderName] == null)
             {
-                property.Headers.Add(Constants.VersionHeaderName, Constants.VersionHeaderContent20101028);
+                property.Headers.Add(Constants.VersionHeaderName, Constants.VersionHeaderContentSQLAzure);
             }
             return null;
         }
