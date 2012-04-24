@@ -21,7 +21,8 @@ using DotNetNuke.Azure.Accelerator.Management;
 
 
 namespace DNNAzureWizard
-{
+{    
+
     public partial class FrmDNNAzureWizard : Form
     {
         private const int WizardWidth = 700;
@@ -57,8 +58,7 @@ namespace DNNAzureWizard
 
 
         Process _p;
-
-
+        private string CertificatePassword;
 
         public FrmDNNAzureWizard()
         {
@@ -154,6 +154,7 @@ namespace DNNAzureWizard
                         if (ActivePageIndex() == (int)WizardTabs.TabHostedServices)
                         {
                             RefreshServices();
+                            
                         }
                         if (ActivePageIndex() == (int)WizardTabs.TabSQLAzureSettings)
                         {
@@ -162,13 +163,27 @@ namespace DNNAzureWizard
                             if (optSubscription.Checked)
                                 ThreadPool.QueueUserWorkItem(o => RefreshDatabaseServers());
                         }
+                        if (ActivePageIndex() == (int) WizardTabs.TabPackages)
+                        {
+                            chkAutoInstall.Enabled = optSubscription.Checked;
+                            if (!chkAutoInstall.Enabled)
+                                chkAutoInstall.Checked = false;
+                        }
                         if (ActivePageIndex() == (int)WizardTabs.TabUploading)
                         {
                             btnBack.Enabled = false;
                             btnOK.Enabled = false;
-                            UploadToWindowsAzure();
-                            txtLogFinal.Text = GetFinalLog();
-                            MoveSteps(1);
+                            if (optSubscription.Checked)
+                            {
+                                UploadToWindowsAzure();
+                                txtLogFinal.Text = GetFinalLog();
+                                MoveSteps(1);
+                            }
+                            else
+                            {
+                                MoveSteps(1);
+                                ExportServicePackage(CertificatePassword);
+                            }
                             btnOK.Text = "Finish";
                             btnCancel.Enabled = false;
                         }
@@ -183,6 +198,64 @@ namespace DNNAzureWizard
                 btnOK.Enabled = true;
                 UseWaitCursor = false;
             }
+
+        private void ExportServicePackage(string certificatePassword)
+        {
+            // Get source files
+            string sourceConfigurationFile = "";
+            string sourcePackageFile = "";
+            var pNode = (XmlNode)lstPackages.SelectedItems[0].Tag;
+            var selectSingleNode = pNode.SelectSingleNode("ConfigurationFile");
+            if (selectSingleNode != null)
+            {
+                sourceConfigurationFile = Path.Combine(new[] { Environment.CurrentDirectory, "packages", selectSingleNode.InnerText });
+                var singleNode = pNode.SelectSingleNode("PackageFile");
+                if (singleNode != null)
+                    sourcePackageFile = Path.Combine(new string[] { Environment.CurrentDirectory, "packages", singleNode.InnerText });
+            }
+
+            txtLogFinal.Text = "EXPORT SERVICE PACKAGE";
+            if (!Directory.Exists(dlgFolder.SelectedPath))
+                Directory.CreateDirectory(dlgFolder.SelectedPath);
+            var serviceFile = Path.Combine(dlgFolder.SelectedPath, Path.GetFileName(sourceConfigurationFile));
+            var packageFile = Path.Combine(dlgFolder.SelectedPath, Path.GetFileName(sourcePackageFile));
+            var certificateFile = Path.Combine(dlgFolder.SelectedPath, "DotNetNuke.pfx");
+
+            // Delete previous exports
+            txtLogFinal.Text += "\nDeleting previous files...";
+            if (File.Exists(serviceFile))
+                File.Delete(serviceFile);
+            if (File.Exists(packageFile))
+                File.Delete(packageFile);
+            if (File.Exists(certificateFile))
+                File.Delete(certificateFile);
+
+            txtLogFinal.Text += "\nExporting service files...";
+            sourceConfigurationFile = GetParsedConfigurationFilePath(sourceConfigurationFile);
+            File.Copy(sourceConfigurationFile, serviceFile);
+            File.Copy(sourcePackageFile, packageFile);
+
+            if (certificatePassword != string.Empty && Certificate != null)
+            {
+                txtLogFinal.Text += "\nExporting certificate file...";
+                byte[] certDataExport = Certificate.Export(X509ContentType.Pfx, certificatePassword);
+                File.WriteAllBytes(certificateFile, certDataExport);
+            }
+
+            var startInfo = new ProcessStartInfo("explorer");
+            startInfo.UseShellExecute = false;
+            startInfo.Arguments = dlgFolder.SelectedPath;
+            
+            try
+            {
+                Process.Start(startInfo);
+            }
+            catch 
+            {                
+            }
+            txtLogFinal.Text = "\nSuccess!";
+
+        }
 
         private void RefreshServices()
         {
@@ -401,7 +474,20 @@ namespace DNNAzureWizard
                         txtConfig.Text = GetSettingsSummary();
                         return validated;
                     case (int) WizardTabs.TabSummary:
-                        return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
+                        if (optSubscription.Checked)
+                        {
+                            return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);    
+                        }
+                        CertificatePassword = "";
+                        if (chkEnableRDP.Checked)
+                        {
+                            var frm = new FrmCertificatePassword();
+                            if (frm.ShowDialog() != DialogResult.OK)
+                                return false;
+                            CertificatePassword = frm.Password;
+                        }                        
+                        return dlgFolder.ShowDialog() == DialogResult.OK;
+                        
                     default:
                         return false;
                 }
@@ -466,23 +552,27 @@ namespace DNNAzureWizard
             private string GetSettingsSummary()
             {
                 var summary = new StringBuilder("======================= SUMMARY OF SETTINGS =======================");
+                if (optSubscription.Checked)
+                {
+                    summary.AppendLine("");
+                    summary.AppendLine("HOSTED SERVICE SETTINGS:");
+                    summary.AppendLine("- Hosted service name: " + cboHostingService.Text);
+                    summary.AppendLine("- Environment: " + cboEnvironment.Text);                    
+                }
+                summary.AppendLine("");
+                summary.AppendLine("STORAGE ACCOUNT SETTINGS:");
+                summary.AppendLine("- Storage name: " + (optSubscription.Checked ? cboStorage.Text :  txtStorageName.Text.Trim()));
+                summary.AppendLine("- Storage key: " + txtStorageKey.Text.Trim());
+                summary.AppendLine("- Storage package container: " + txtStorageContainer.Text.Trim());
+                summary.AppendLine("- VHD blob name: " + (optSubscription.Checked ? txtVHDName.Text : txtVHDBlobName.Text.Trim()));
+                summary.AppendLine("- VHD size: " +  (optSubscription.Checked ? txtVHDDriveSize.Text : txtVHDSize.Text.Trim()));
                 summary.AppendLine("");
                 summary.AppendLine("DATABASE SETTINGS:");
-                summary.AppendLine("- DB Server Name: " +  (txtDBServer.Visible? txtDBServer.Text: cboDatabase.Text) + ".database.windows.net");
+                summary.AppendLine("- DB Server Name: " + (txtDBServer.Visible ? txtDBServer.Text : cboDatabase.Text) + ".database.windows.net");
                 summary.AppendLine("- DB Admin user name: " + txtDBAdminUser.Text.Trim());
                 summary.AppendLine("- DB Admin password: <not shown>");
                 summary.AppendLine("- DB user name: " + txtDBUser.Text.Trim());
                 summary.AppendLine("- DB password: <not shown>");
-                summary.AppendLine("");
-                summary.AppendLine("STORAGE SETTINGS:");
-                summary.AppendLine("- Storage name: " + txtStorageName.Text.Trim());
-                summary.AppendLine("- Storage key: " + txtStorageKey.Text.Trim());
-                summary.AppendLine("- Storage package container: " + txtStorageContainer.Text.Trim());
-                summary.AppendLine("- VHD blob name: " + txtVHDBlobName.Text.Trim());
-                summary.AppendLine("- VHD size: " + txtVHDSize.Text.Trim());
-                summary.AppendLine("");
-                summary.AppendLine("IIS SETTINGS:");
-                summary.AppendLine("- Bindings: " + txtBindings.Text.Trim());
                 summary.AppendLine("");
                 
                 summary.AppendLine("RDP SETTINGS:");
@@ -511,10 +601,14 @@ namespace DNNAzureWizard
                 }
                 summary.AppendLine("");
 
-                summary.AppendLine("SELECTED PACKAGES:");
+                summary.AppendLine("SELECTED PACKAGE:");
                 foreach (ListViewItem li in lstPackages.Items)
-                    if (li.Checked)
+                    if (li.Selected)
                         summary.AppendLine("- " + li.Text);
+                if (optSubscription.Checked)
+                {
+                    summary.AppendLine("- Auto-install DotNetNuke with defaults: " + (chkAutoInstall.Checked ? "true" : "false"));                    
+                }
                 return summary.ToString();
             }
 
@@ -646,7 +740,7 @@ namespace DNNAzureWizard
                     {
                         foreach (ListViewItem p in lstPackages.Items)
                         {
-                            if (p.Checked)
+                            if (p.Selected)
                             {
                                 var pNode = (XmlNode) p.Tag;
                                 var selectSingleNode = pNode.SelectSingleNode("ConfigurationFile");
@@ -847,9 +941,12 @@ namespace DNNAzureWizard
                 ChkStorageHttpsCheckedChanged(null, null);
                 txtStorageContainer.Text = ConfigurationManager.AppSettings["AzureStoragePackageContainer"];
                 txtBindings.Text = ConfigurationManager.AppSettings["Bindings"];
-
+                txtPackagesContainer.Text = txtStorageContainer.Text;
+                
                 txtVHDBlobName.Text = ConfigurationManager.AppSettings["VHDBlobBName"];
+                txtVHDName.Text = txtVHDBlobName.Text;
                 txtVHDSize.Text = ConfigurationManager.AppSettings["VHDSizeInMb"];
+                txtVHDDriveSize.Text = txtVHDSize.Text;
 
                 _uploadBlockSize = Convert.ToInt32(ConfigurationManager.AppSettings["UploadBlockSize"]);
 
@@ -863,7 +960,7 @@ namespace DNNAzureWizard
                 txtConnectActivationToken.Text = ConfigurationManager.AppSettings["ConnectActivationToken"];
                 ChkAzureConnectCheckedChanged(null, null);
 
-                cboRDPExpirationDate.Value = DateTime.Now.Date.AddMonths(1);
+                cboRDPExpirationDate.Value = DateTime.Now.Date.AddYears(1);
             }
 
         /// <summary>
@@ -887,7 +984,7 @@ namespace DNNAzureWizard
                             if (singleNode != null)
                             {
                                 var li = new ListViewItem(new[] {selectSingleNode.InnerText, singleNode.InnerText})
-                                             {Tag = doc.SelectSingleNode("ServicePackage"), Checked = true};
+                                             {Tag = doc.SelectSingleNode("ServicePackage")};
                                 lstPackages.Items.Add(li);
                             }
                         }
@@ -901,24 +998,27 @@ namespace DNNAzureWizard
             private void ReloadX509Certificates()
             {
                 cboCertificates.Items.Clear();
+                if (optSubscription.Checked 
+                    && PublishSettings != null 
+                    && PublishSettings.Certificate != null)
+                {
+                    cboCertificates.Items.Add(PublishSettings.Certificate);
+                }
 
                 // Open Certificates Store
                 var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
                 store.Open(OpenFlags.ReadOnly);
-
-                // Read Certificates
+                
+                // Read Store Certificates
                 X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=DNN Azure Accelerator", false);
                 foreach (X509Certificate2 cert in certs)
+                {
                     cboCertificates.Items.Add(cert);
-
-                /* certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=" + Environment.UserName, false);
-                foreach (X509Certificate cert in certs)
-                    cboCertificates.Items.Add(cert);
-                certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=Windows Azure Tools", false);                
-                foreach (X509Certificate cert in certs)
-                    cboCertificates.Items.Add(cert);*/
-
+                }
+                                    
                 cboCertificates.Items.Add(CreateNewLabel);
+                if (cboCertificates.Items.Count > 1)
+                    cboCertificates.SelectedIndex = 0;
             }
 
             private X509Certificate2 Certificate
@@ -1317,9 +1417,9 @@ namespace DNNAzureWizard
             {
                 string error = null;
 
-                bool isChecked = lstPackages.Items.Cast<ListViewItem>().Any(li => li.Checked);
-                if (!isChecked)
-                    error = "You must select at least one package to upload to Azure Storage";
+                bool isSelected = lstPackages.Items.Cast<ListViewItem>().Any(li => li.Selected);
+                if (!isSelected)
+                    error = "You must select a package for the deployment";
 
                 errProv.SetError((Control)sender, error);
             }
@@ -1698,6 +1798,7 @@ namespace DNNAzureWizard
         {
             try
             {
+                txtStorageKey.Text = "";
                 if (cboStorage.Text == RefreshLabel)
                 {
                     RefreshStorageAccounts();
@@ -1713,8 +1814,28 @@ namespace DNNAzureWizard
                     cboStorage.SelectedValue = frm.ServiceName;
                     return;
                 }
-                //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
-
+                if (cboStorage.Text != "")
+                {
+                    try
+                    {
+                        if (cboStorage.Tag != null)
+                        {
+                            var storageAccounts = (List<StorageService>) cboStorage.Tag;
+                            var storageAccount = storageAccounts.FirstOrDefault(x => x.ServiceName == cboStorage.Text);
+                            if (storageAccount != null)
+                            {
+                                var storageKeys = ServiceManager.GetStorageKeys(Subscription.SubscriptionId,
+                                                                                storageAccount.ServiceName);
+                                txtStorageKey.Text = storageKeys.StorageServiceKeys.Primary;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        txtStorageKey.Text = "";
+                        LogException(ex);
+                    }                     
+                }
             }
             catch (Exception ex)
             {
@@ -1781,6 +1902,18 @@ namespace DNNAzureWizard
                 }
                 //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
 
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void optSubscription_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                ReloadX509Certificates();
             }
             catch (Exception ex)
             {
