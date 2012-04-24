@@ -234,7 +234,17 @@ namespace DotNetNuke.Azure.Accelerator.Management
         
         public static void CreateHostedService(this IServiceManagement proxy, string subscriptionId, CreateHostedServiceInput input)
         {
-            proxy.EndCreateHostedService(proxy.BeginCreateHostedService(subscriptionId, input, null, null));
+            try
+            {
+                proxy.EndCreateHostedService(proxy.BeginCreateHostedService(subscriptionId, input, null, null));
+            }
+            catch (CommunicationException cex)
+            {
+                ServiceManagementError error;
+                if (ServiceManagementHelper.TryGetExceptionDetails(cex, out error))
+                    throw new WindowsAzureException(error.Message) { Code = error.Code };
+                throw;
+            }            
         }
         
         public static void UpdateHostedService(this IServiceManagement proxy, string subscriptionId, string serviceName, UpdateHostedServiceInput input)

@@ -68,7 +68,9 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -78,6 +80,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FrmNewDatabaseServer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmNewDatabaseServer.Designer.cs">
+      <DependentUpon>FrmNewDatabaseServer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmNewContainer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmNewContainer.Designer.cs">
+      <DependentUpon>FrmNewContainer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmNewStorageAccount.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmNewStorageAccount.Designer.cs">
+      <DependentUpon>FrmNewStorageAccount.cs</DependentUpon>
+    </Compile>
     <Compile Include="FrmCreateCertificate.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -90,14 +110,32 @@
     <Compile Include="FrmDNNAzureWizard.Designer.cs">
       <DependentUpon>FrmDNNAzureWizard.cs</DependentUpon>
     </Compile>
+    <Compile Include="FrmNewHostedService.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmNewHostedService.Designer.cs">
+      <DependentUpon>FrmNewHostedService.cs</DependentUpon>
+    </Compile>
     <Compile Include="ProcessUtility.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="FrmNewDatabaseServer.resx">
+      <DependentUpon>FrmNewDatabaseServer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmNewContainer.resx">
+      <DependentUpon>FrmNewContainer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmNewStorageAccount.resx">
+      <DependentUpon>FrmNewStorageAccount.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FrmCreateCertificate.resx">
       <DependentUpon>FrmCreateCertificate.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="FrmDNNAzureWizard.resx">
       <DependentUpon>FrmDNNAzureWizard.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmNewHostedService.resx">
+      <DependentUpon>FrmNewHostedService.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -141,6 +179,7 @@
   <ItemGroup>
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.dll" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.xml" />
+    <None Include="Resources\icon-warning.gif" />
     <None Include="packages\DNNAzureSingleAndSmall6.1_RDP.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -143,28 +143,27 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public static bool TryGetExceptionDetails(CommunicationException exception, out ServiceManagementError errorDetails, out HttpStatusCode httpStatusCode, out string operationId)
         {
             errorDetails = null;
-            
+          
             if (TryGetExceptionDetails(exception, out httpStatusCode, out operationId))
             {
-                using (var s = ((WebException) exception.InnerException).Response.GetResponseStream())
-                {
-                    if (s == null || s.Length == 0)
+                try
+                {      
+                    using (var s = ((WebException) exception.InnerException).Response.GetResponseStream())
                     {
-                        return false;
-                    }
-
-                    try
-                    {
+                        if (s == null || s.Length == 0)
+                        {
+                            return false;
+                        }
                         using (var reader = XmlDictionaryReader.CreateTextReader(s, new XmlDictionaryReaderQuotas()))
                         {
                             var ser = new DataContractSerializer(typeof (ServiceManagementError));
                             errorDetails = (ServiceManagementError) ser.ReadObject(reader, true);
                         }
                     }
-                    catch (SerializationException)
-                    {
-                        return false;
-                    }
+                }
+                catch
+                {
+                    return false;
                 }
             }
             return true;

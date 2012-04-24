@@ -1,15 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Security.Cryptography.Xml;
 
 
 namespace DNNAzureWizard
@@ -25,21 +17,21 @@ namespace DNNAzureWizard
         public string SerialNumber { get { return _serialNumber; } set { _serialNumber = value; } }
 
 
-        private void cmdCancel_Click(object sender, EventArgs e)
+        private void CmdCancelClick(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
-        private void txtFriendlyName_TextChanged(object sender, EventArgs e)
+        private void TxtFriendlyNameTextChanged(object sender, EventArgs e)
         {
             cmdOK.Enabled = txtFriendlyName.Text.Trim() != "";
         }
 
-        private void cmdOK_Click(object sender, EventArgs e)
+        private void CmdOkClick(object sender, EventArgs e)
         {
             try
             {
-                string x509Name = "CN=DNN Azure Accelerator";                
+                const string x509Name = "CN=DNN Azure Accelerator";                
 
                 string outputCertificateFile = txtFriendlyName.Text.Trim() + ".cer";
 
@@ -47,29 +39,31 @@ namespace DNNAzureWizard
                 string param = "-r -pe -a sha1 -ss My -sky exchange -len 2048 -n \"" + x509Name + "\" " + outputCertificateFile;
 
                 // Run the makecert command.
-                string output = "";
-                string error = "";
+                string output;
+                string error;
                 bool success = (ExecuteCommand(filename, param, out output, out error, 30) == 0);
                 if (success)
                 {
                     // Sets the friendly name
-                    X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+                    var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
                     store.Open(OpenFlags.ReadWrite);
 
                     // Read the serial number
-                    X509Certificate2 cert = new X509Certificate2(System.IO.Path.Combine(Environment.CurrentDirectory, outputCertificateFile));
+                    var cert = new X509Certificate2(System.IO.Path.Combine(Environment.CurrentDirectory, outputCertificateFile));
                     SerialNumber = cert.SerialNumber;
+                    if (SerialNumber == null)
+                        throw new ApplicationException("Certificate error");
                     
                     // Sets the friendly name
-                    X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySerialNumber, cert.SerialNumber, false);
+                    X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySerialNumber, SerialNumber, false);
                     if (certs.Count > 0) 
                         certs[0].FriendlyName = txtFriendlyName.Text.Trim();                        
                     else
                         throw new Exception("Failed to import the certificate");
 
 
-                    this.DialogResult = System.Windows.Forms.DialogResult.OK;
-                    this.Close();
+                    DialogResult = DialogResult.OK;
+                    Close();
                 }
                 else
                     throw new Exception(error);                   
@@ -91,19 +85,23 @@ namespace DNNAzureWizard
         /// <returns>Exit code</returns>
         public static int ExecuteCommand(string exe, string arguments, out string output, out string error, int timeout)
         {
-            Process p = new Process();
-            int exitCode;
-            p.StartInfo.FileName = exe;
-            p.StartInfo.Arguments = arguments;
-            p.StartInfo.CreateNoWindow = true;
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.RedirectStandardError = true;
-            p.StartInfo.RedirectStandardOutput = true;
+            var p = new Process
+                        {
+                            StartInfo =
+                                {
+                                    FileName = exe,
+                                    Arguments = arguments,
+                                    CreateNoWindow = true,
+                                    UseShellExecute = false,
+                                    RedirectStandardError = true,
+                                    RedirectStandardOutput = true
+                                }
+                        };
             p.Start();
             error = p.StandardError.ReadToEnd();
             output = p.StandardOutput.ReadToEnd();
             p.WaitForExit(timeout);
-            exitCode = p.ExitCode;
+            int exitCode = p.ExitCode;
             p.Close();
 
             return exitCode;

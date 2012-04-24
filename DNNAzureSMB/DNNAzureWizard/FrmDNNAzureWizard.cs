@@ -4,12 +4,14 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
@@ -24,6 +26,8 @@ namespace DNNAzureWizard
     {
         private const int WizardWidth = 700;
         private const int WizardHeight = 500;
+        private const string CreateNewLabel = "<Create New...>";
+        private const string RefreshLabel = "<Refresh...>";
 
         /* The following expression to validate a pwd of 6 to 16 characters and contain three of the following 4 items: 
          * upper case letter, lower case letter, a symbol, a number
@@ -34,45 +38,39 @@ namespace DNNAzureWizard
          *      (?=.*?[a-z]) - contains 1 lowercase character
          *      (?=.*?[^\w\d\s]) - contains 1 symbol
          */
-        private const string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
+        internal const string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
 
         private enum WizardTabs
         {
             TabHome = 1,
             TabDeploymentType = 2,
-            TabSQLAzureSettings = 3,
+            TabHostedServices = 3,
             TabWindowsAzureSettings = 4,
-            TabRDPAzureSettings = 5,
-            TabConnectSettings = 6,
-            TabPackages = 7,
-            TabSummary = 8,
-            TabUploading = 9,
-            TabFinish = 10
+            TabSQLAzureSettings = 5,
+            TabRDPAzureSettings = 6,
+            TabConnectSettings = 7,
+            TabPackages = 8,
+            TabSummary = 9,
+            TabUploading = 10,
+            TabFinish = 11
         }
 
 
-        Process p;
+        Process _p;
 
-        private PublishSettings PublishSettings { get; set; }
-        private string PublishSettingsFilename
-        {
-            get
-            {
-                return (Path.Combine(Path.GetDirectoryName(Application.ExecutablePath),
-                                     Path.GetFileNameWithoutExtension(Application.ExecutablePath) + ".publishsettings"));
-            }
-        }
+
 
         public FrmDNNAzureWizard()
         {
             InitializeComponent();
+            CheckForIllegalCrossThreadCalls = false;
             Width = WizardWidth;
             Height = WizardHeight;
         }
 
         #region " Event Handlers "
 
-            private void FrmDNNAzureWizard_Load(object sender, EventArgs e)
+            private void FrmDNNAzureWizardLoad(object sender, EventArgs e)
             {
                 try
                 {
@@ -84,7 +82,7 @@ namespace DNNAzureWizard
                 }
             }
 
-            private void btnCancel_Click(object sender, EventArgs e)
+            private void BtnCancelClick(object sender, EventArgs e)
             {
                 try
                 {
@@ -97,18 +95,30 @@ namespace DNNAzureWizard
                 }
             }
 
-            private void btnBack_Click(object sender, EventArgs e)
+            private void BtnBackClick(object sender, EventArgs e)
             {
                 try
                 {
-                    if (ActivePageIndex() == (int) WizardTabs.TabFinish)
+                    switch (ActivePageIndex())
                     {
-                        btnOK.Text = "Next >";
-                        btnCancel.Enabled = true;
-                        MoveSteps(-2);
+                        case (int) WizardTabs.TabFinish:
+                            btnOK.Text = "Next >";
+                            btnCancel.Enabled = true;
+                            MoveSteps(-2);
+                            break;
+                        case (int) WizardTabs.TabSQLAzureSettings:
+                            if (optSubscription.Checked)
+                                MoveSteps(-2);
+                            else
+                                MoveSteps(-1);
+                            break;
+                        case (int) WizardTabs.TabWindowsAzureSettings:
+                            MoveSteps(-2);
+                            break;
+                        default:
+                            MoveSteps(-1);
+                            break;
                     }
-                    else
-                        MoveSteps(-1);
                 }
                 catch (Exception ex)
                 {
@@ -116,28 +126,52 @@ namespace DNNAzureWizard
                 }
             }
 
-            private void btnOK_Click(object sender, EventArgs e)
+            private void BtnOkClick(object sender, EventArgs e)
             {
                 try
                 {
                     if (ActivePageIndex() == (int) WizardTabs.TabFinish) // Finish
                     {
-                        btnCancel_Click(sender, e);
+                        BtnCancelClick(sender, e);
                         return;
                     }
 
                     UseWaitCursor = true;
                     if (ValidateStep())
-                        MoveSteps(1);
-                    if (ActivePageIndex() == (int) WizardTabs.TabUploading)
                     {
-                        btnBack.Enabled = false;
-                        btnOK.Enabled = false;
-                        UploadToWindowsAzure();
-                        txtLogFinal.Text = GetFinalLog();
-                        MoveSteps(1);
-                        btnOK.Text = "Finish";
-                        btnCancel.Enabled = false;
+                        switch (ActivePageIndex())
+                        {
+                            case (int)WizardTabs.TabDeploymentType:
+                                MoveSteps(!optSubscription.Checked ? 2 : 1);
+                                break;
+                            case (int)WizardTabs.TabHostedServices:
+                                MoveSteps(2);
+                                break;
+                            default:
+                                MoveSteps(1);
+                                break;
+                        }
+                        if (ActivePageIndex() == (int)WizardTabs.TabHostedServices)
+                        {
+                            RefreshServices();
+                        }
+                        if (ActivePageIndex() == (int)WizardTabs.TabSQLAzureSettings)
+                        {
+                            txtDBServer.Visible = !optSubscription.Checked;
+                            cboDatabase.Visible = optSubscription.Checked;
+                            if (optSubscription.Checked)
+                                ThreadPool.QueueUserWorkItem(o => RefreshDatabaseServers());
+                        }
+                        if (ActivePageIndex() == (int)WizardTabs.TabUploading)
+                        {
+                            btnBack.Enabled = false;
+                            btnOK.Enabled = false;
+                            UploadToWindowsAzure();
+                            txtLogFinal.Text = GetFinalLog();
+                            MoveSteps(1);
+                            btnOK.Text = "Finish";
+                            btnCancel.Enabled = false;
+                        }
                     }
 
                 }
@@ -150,7 +184,13 @@ namespace DNNAzureWizard
                 UseWaitCursor = false;
             }
 
-            private string GetFinalLog()
+        private void RefreshServices()
+        {
+            ThreadPool.QueueUserWorkItem(o => RefreshHostedServices());
+            ThreadPool.QueueUserWorkItem(o => RefreshStorageAccounts());
+        }
+
+        private string GetFinalLog()
             {
                 bool success = true;
                 var log = new StringBuilder("====================== UPLOAD LOG ======================");
@@ -175,17 +215,19 @@ namespace DNNAzureWizard
                 return log.ToString();
             }
 
-            private void btnTestDB_Click(object sender, EventArgs e)
+            private void BtnTestDBClick(object sender, EventArgs e)
             {
                 try
                 {
-                    var cnStr = new System.Data.SqlClient.SqlConnectionStringBuilder();
-                    cnStr.Add("Data Source", txtDBServer.Text + ".database.windows.net");
-                    cnStr.Add("Initial Catalog", "master");
-                    cnStr.Add("User ID", txtDBAdminUser.Text);
-                    cnStr.Add("Password", txtDBAdminPassword.Text);
-                    cnStr.Add("Trusted_Connection", "False");
-                    cnStr.Add("Encrypt", "True");
+                    var cnStr = new System.Data.SqlClient.SqlConnectionStringBuilder
+                                    {
+                                        {"Data Source", (txtDBServer.Visible ? txtDBServer.Text: cboDatabase.Text) + ".database.windows.net"},
+                                        {"Initial Catalog", "master"},
+                                        {"User ID", txtDBAdminUser.Text},
+                                        {"Password", txtDBAdminPassword.Text},
+                                        {"Trusted_Connection", "False"},
+                                        {"Encrypt", "True"}
+                                    };
 
                     using (var cn = new System.Data.SqlClient.SqlConnection(cnStr.ConnectionString))
                     {
@@ -201,7 +243,7 @@ namespace DNNAzureWizard
                 }
             }
 
-            private void btnTestStorage_Click(object sender, EventArgs e)
+            private void BtnTestStorageClick(object sender, EventArgs e)
             {
                 try
                 {
@@ -219,24 +261,14 @@ namespace DNNAzureWizard
                 }
             }
 
-            private void txtStorageName_TextChanged(object sender, EventArgs e)
+            private void TxtStorageNameTextChanged(object sender, EventArgs e)
             {
                 lblStTest.Text = string.Format("Test credentials to http{0}://{1}.blob.windows.core.net", (chkStorageHTTPS.Checked ? "s" : ""), txtStorageName.Text);
             }
 
-            private void chkStorageHTTPS_CheckedChanged(object sender, EventArgs e)
+            private void ChkStorageHttpsCheckedChanged(object sender, EventArgs e)
             {
                 lblStTest.Text = string.Format("Test credentials to http{0}://{1}.blob.windows.core.net", (chkStorageHTTPS.Checked ? "s" : ""), txtStorageName.Text);
-            }
-
-            void p_OutputDataReceived(object sender, DataReceivedEventArgs e)
-            {
-                try
-                {
-                    Application.DoEvents();
-                    txtLOG.AppendText(e.Data + Environment.NewLine);
-                }
-                catch { }
             }
 
         #endregion
@@ -246,14 +278,14 @@ namespace DNNAzureWizard
             {
 
                 // Is the upload process running? If yes and after user confirmation, kill all the process tree before exit
-                if (p != null)
+                if (_p != null)
                 {
-                    if (!p.HasExited && (MessageBox.Show("The upload process is still running. Are you sure that you want to cancel?", "Cancel upload", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes))
+                    if (!_p.HasExited && (MessageBox.Show("The upload process is still running. Are you sure that you want to cancel?", "Cancel upload", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes))
                     {
                         try
                         {
-                            ProcessUtility.KillTree(p.Id);
-                            p = null;
+                            ProcessUtility.KillTree(_p.Id);
+                            _p = null;
                         }
                         catch { }
                     }
@@ -266,17 +298,17 @@ namespace DNNAzureWizard
                     File.Delete(Environment.CurrentDirectory + "\\bin\\ServiceConfiguration.cscfg");
             }
 
-            private FileVersionInfo _VersionInfo = null;
+            private FileVersionInfo _versionInfo;
             private FileVersionInfo VersionInfo
             {
                 get
                 {
-                    if (_VersionInfo == null)
+                    if (_versionInfo == null)
                     {
                         System.Reflection.Assembly oAssembly = System.Reflection.Assembly.GetExecutingAssembly();
-                        _VersionInfo = FileVersionInfo.GetVersionInfo(oAssembly.Location);
+                        _versionInfo = FileVersionInfo.GetVersionInfo(oAssembly.Location);
                     }
-                    return _VersionInfo;
+                    return _versionInfo;
                 }
             }
 
@@ -297,12 +329,17 @@ namespace DNNAzureWizard
             private void RefreshSubscriptions()
             {
                 cboSubscriptions.Items.Clear();
-                if (!File.Exists(PublishSettingsFilename)) return;
-                PublishSettings = new PublishSettings(XDocument.Load(PublishSettingsFilename));
-                foreach (var subscription in PublishSettings.Subscriptions)
-                    cboSubscriptions.Items.Add(subscription);
-                if (cboSubscriptions.Items.Count > 0)
-                    cboSubscriptions.SelectedIndex = 0;
+                if (File.Exists(PublishSettingsFilename))
+                {
+                    PublishSettings = new PublishSettings(XDocument.Load(PublishSettingsFilename));
+                    foreach (var subscription in PublishSettings.Subscriptions)
+                        cboSubscriptions.Items.Add(subscription);
+
+                }
+                if (cboSubscriptions.Items.Count == 0)
+                    cboSubscriptions.Items.Add("");
+                cboSubscriptions.Items.Add(RefreshLabel);
+                cboSubscriptions.SelectedIndex = 0;
             }
 
             private static void LogException(Exception ex)
@@ -313,11 +350,11 @@ namespace DNNAzureWizard
 #endif
                 MessageBox.Show(msg, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            private void ShowPage(int PageNumber)
+            private void ShowPage(int pageNumber)
             {
-                foreach (Panel p in this.pnl.Controls)
-                    p.Visible = p.Name == "pnl" + PageNumber;
-                btnBack.Enabled = PageNumber > 1;
+                foreach (Panel p in pnl.Controls)
+                    p.Visible = p.Name == "pnl" + pageNumber;
+                btnBack.Enabled = pageNumber > 1;
             }
             private void InitializePages()
             {
@@ -326,19 +363,20 @@ namespace DNNAzureWizard
                     p.Dock = DockStyle.Fill;
                     p.Visible = false;
                 }
-                chkEnableRDP_CheckedChanged(null, null);
-                chkAzureConnect_CheckedChanged(null, null);
+                ChkEnableRDPCheckedChanged(null, null);
+                ChkAzureConnectCheckedChanged(null, null);
+                cboEnvironment.SelectedIndex = 0;
             }
             private int ActivePageIndex()
             {
-                foreach (Panel p in pnl.Controls)
-                    if (p.Visible)
-                        return int.Parse(p.Name.Replace("pnl", ""));
-                return 0;
+                return (from Panel p in pnl.Controls 
+                        where p.Visible 
+                        select int.Parse(p.Name.Replace("pnl", ""))).FirstOrDefault();
             }
-            private void MoveSteps(int Steps)
+
+        private void MoveSteps(int steps)
             {
-                ShowPage(ActivePageIndex() + Steps);
+                ShowPage(ActivePageIndex() + steps);
             }
             private bool ValidateStep()
             {
@@ -347,7 +385,9 @@ namespace DNNAzureWizard
                     case (int) WizardTabs.TabHome: // Home tab, nothing to validate
                         return true;
                     case (int) WizardTabs.TabDeploymentType: // Deployment type selection
-                        return true;
+                        return ValidateDeploymentType();
+                    case (int) WizardTabs.TabHostedServices: // Hosted services
+                        return ValidateHostingServices();
                     case (int) WizardTabs.TabSQLAzureSettings: // SQL Azure tab
                         return ValidateSQLAzureSettings();                        
                     case (int) WizardTabs.TabWindowsAzureSettings: // Windows Azure tab
@@ -367,12 +407,40 @@ namespace DNNAzureWizard
                 }
             }
 
-            private bool ValidateConnectSettings()
+        private bool ValidateHostingServices()
+        {
+            bool invalidInput = false;
+
+            CboHostingServiceOnValidating(cboHostingService, null);
+            CboStorageOnValidating(cboStorage, null);
+            TxtPackagesContainerOnValidating(txtPackagesContainer, null);
+            TxtVhdNameOnValidating(txtVHDName, null);
+            TxtVhdDriveSizeOnValidating(txtVHDDriveSize, null);
+
+            if (pnlHostingServices.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
+                invalidInput = true;
+            return !invalidInput;
+        }
+
+
+
+        private bool ValidateDeploymentType()
+        {
+            bool invalidInput = false;
+            if (optSubscription.Checked)
+            {
+                CboSubscriptionsSelectedIndexChanged(cboSubscriptions, null);
+                invalidInput = errProv.GetError(cboSubscriptions).Length != 0;
+            }
+            return !invalidInput;
+        }
+
+        private bool ValidateConnectSettings()
             {
                 bool invalidInput = false;
                 if (chkAzureConnect.Checked)
                 {
-                    txtConnectActivationToken_Validating(txtConnectActivationToken, null);
+                    TxtConnectActivationTokenValidating(txtConnectActivationToken, null);
                     if (pnlAzureConnect.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
                         invalidInput = true;
                 }
@@ -384,10 +452,10 @@ namespace DNNAzureWizard
                 bool invalidInput = false;
                 if (chkEnableRDP.Checked)
                 {
-                    txtRDPUser_Validating(txtRDPUser, null);
-                    txtRDPPassword_Validating(txtRDPPassword, null);
-                    txtRDPConfirmPassword_Validating(txtRDPConfirmPassword, null);
-                    cboCertificates_Validating(cboCertificates, null);
+                    TxtRDPUserValidating(txtRDPUser, null);
+                    TxtRDPPasswordValidating(txtRDPPassword, null);
+                    TxtRDPConfirmPasswordValidating(txtRDPConfirmPassword, null);
+                    CboCertificatesValidating(cboCertificates, null);
 
                     if (pnlRDP.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
                         invalidInput = true;
@@ -400,7 +468,7 @@ namespace DNNAzureWizard
                 var summary = new StringBuilder("======================= SUMMARY OF SETTINGS =======================");
                 summary.AppendLine("");
                 summary.AppendLine("DATABASE SETTINGS:");
-                summary.AppendLine("- DB Server Name: " +  txtDBServer.Text.Trim() + ".database.windows.net");
+                summary.AppendLine("- DB Server Name: " +  (txtDBServer.Visible? txtDBServer.Text: cboDatabase.Text) + ".database.windows.net");
                 summary.AppendLine("- DB Admin user name: " + txtDBAdminUser.Text.Trim());
                 summary.AppendLine("- DB Admin password: <not shown>");
                 summary.AppendLine("- DB user name: " + txtDBUser.Text.Trim());
@@ -447,37 +515,48 @@ namespace DNNAzureWizard
                 foreach (ListViewItem li in lstPackages.Items)
                     if (li.Checked)
                         summary.AppendLine("- " + li.Text);
-                return summary.ToString(); ;
+                return summary.ToString();
             }
 
             private bool ValidateSQLAzureSettings()
             {
-                txtDBServer_Validating(txtDBServer, null);                
-                txtDBAdminUser_Validating(txtDBAdminUser, null);
-                txtDBAdminPassword_Validating(txtDBAdminPassword, null);
-                txtDBName_Validating(txtDBName, null);
-                txtDBUser_Validating(txtDBUser, null);
-                txtDBPassword_Validating(txtDBPassword, null);
-                txtDBRePassword_Validating(txtDBRePassword, null);
+                TxtDBServerValidating(txtDBServer, null);             
+                CboDatabaseOnValidating(cboDatabase, null);
+                TxtDBAdminUserValidating(txtDBAdminUser, null);
+                TxtDBAdminPasswordValidating(txtDBAdminPassword, null);
+                TxtDBNameValidating(txtDBName, null);
+                TxtDBUserValidating(txtDBUser, null);
+                TxtDBPasswordValidating(txtDBPassword, null);
+                TxtDBRePasswordValidating(txtDBRePassword, null);
                 bool invalidInput = DBSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
                 return !invalidInput;
             }
 
+            private void CboDatabaseOnValidating(object sender, CancelEventArgs cancelEventArgs)
+            {
+                string error = null;
+                if (cboDatabase.Visible && (cboDatabase.Text == string.Empty || cboDatabase.Text.Contains(".")))
+                {
+                    error = "Please enter your database server name (this is <databasename>.database.windows.net)";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
             private bool ValidateAzureSettings()
             {
-                txtStorageName_Validating(txtStorageName, null);
-                txtStorageKey_Validating(txtStorageKey, null);
-                txtBindings_Validating(txtBindings, null);
+                TxtStorageNameValidating(txtStorageName, null);
+                TxtStorageKeyValidating(txtStorageKey, null);
+                TxtBindingsValidating(txtBindings, null);
+                TxtStorageContainerValidating(txtStorageContainer, null);
+                TxtVhdBlobNameValidating(txtVHDBlobName, null);
+                TxtVhdSizeValidating(txtVHDSize, null);
                 bool invalidInput = AzureSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
                 return !invalidInput;
             }
 
             private bool ValidatePackagesSelectionSettings()
             {
-                lstPackages_Validating(lstPackages, null);
-                txtStorageContainer_Validating(txtStorageContainer, null);
-                txtVHDBlobName_Validating(txtVHDBlobName, null);
-                txtVHDSize_Validating(txtVHDSize, null);
+                LstPackagesValidating(lstPackages, null);
                 bool invalidInput = PackageSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
                 return !invalidInput;
             }
@@ -506,7 +585,7 @@ namespace DNNAzureWizard
 
                 // Replace the tokens - VHD settings
                 cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", txtVHDBlobName.Text.Trim().ToLower());
-                int driveSize = 0;
+                int driveSize;
                 int.TryParse(txtVHDSize.Text, out driveSize);
                 cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", txtVHDSize.Text.Trim().ToLower());    
             
@@ -527,10 +606,7 @@ namespace DNNAzureWizard
                 }
 
                 // Replace the tokens - Virtual Network settings
-                if (chkAzureConnect.Checked)
-                    cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", txtConnectActivationToken.Text.Trim());
-                else
-                    cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", "");
+                cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", chkAzureConnect.Checked ? txtConnectActivationToken.Text.Trim() : "");
 
                 // Replace the tokens - Certificate settings
                 if (chkEnableRDP.Checked && (Certificate != null))
@@ -543,18 +619,14 @@ namespace DNNAzureWizard
 
             }
 
-            private string ReplaceFileTokens(string FilePath)
+            private string ReplaceFileTokens(string filePath)
             {
-                string CfgStr = "";
-                using (TextReader mConfig = File.OpenText(FilePath))
-                    CfgStr = mConfig.ReadToEnd();
-                return ReplaceTokens(CfgStr);
+                string cfgStr;
+                using (TextReader mConfig = File.OpenText(filePath))
+                    cfgStr = mConfig.ReadToEnd();
+                return ReplaceTokens(cfgStr);
             }
             
-            private string ProcessConfigFile(string configfilename)
-            {
-                return ReplaceFileTokens(Environment.CurrentDirectory + "\\config\\" + configfilename);
-            }
 
 
         /// <summary>
@@ -563,36 +635,46 @@ namespace DNNAzureWizard
             private void PrepareTasks()
             {
                 lstTasks.Items.Clear();                
-                XmlDocument xtasks = new XmlDocument();
+                var xtasks = new XmlDocument();
                 xtasks.Load(Environment.CurrentDirectory + "\\config\\DeploymentTasks.xml");
 
-                foreach (XmlNode task in xtasks.SelectNodes("/DeploymentTasks/Task"))
+            var xmlNodeList = xtasks.SelectNodes("/DeploymentTasks/Task");
+            if (xmlNodeList != null)
+                foreach (XmlNode task in xmlNodeList)
                 {
-                    if (task.Attributes["type"].InnerText == "UploadPackages")
+                    if (task.Attributes != null && task.Attributes["type"].InnerText == "UploadPackages")
                     {
                         foreach (ListViewItem p in lstPackages.Items)
                         {
                             if (p.Checked)
                             {
-                                XmlNode pNode = (XmlNode) p.Tag;
-                                ListViewItem li = new ListViewItem(new string[] { "Upload service configuration file '" + pNode.SelectSingleNode("ConfigurationFile").InnerText + "'", "Pending" });
-                                li.Tag = pNode.SelectSingleNode("ConfigurationFile");
-                                li.UseItemStyleForSubItems = false;
-                                lstTasks.Items.Add(li);
-                                li = new ListViewItem(new string[] { "Upload service package file '" + pNode.SelectSingleNode("PackageFile").InnerText + "'", "Pending" });
-                                li.Tag = pNode.SelectSingleNode("PackageFile");
-                                li.UseItemStyleForSubItems = false;
-                                lstTasks.Items.Add(li);
-
+                                var pNode = (XmlNode) p.Tag;
+                                var selectSingleNode = pNode.SelectSingleNode("ConfigurationFile");
+                                if (selectSingleNode != null)
+                                {
+                                    var li = new ListViewItem(new [] { "Upload service configuration file '" + selectSingleNode.InnerText + "'", "Pending" });
+                                    li.Tag = selectSingleNode;
+                                    li.UseItemStyleForSubItems = false;
+                                    lstTasks.Items.Add(li);
+                                    var singleNode = pNode.SelectSingleNode("PackageFile");
+                                    if (singleNode != null)
+                                        li = new ListViewItem(new [] { "Upload service package file '" + singleNode.InnerText + "'", "Pending" });
+                                    li.Tag = pNode.SelectSingleNode("PackageFile");
+                                    li.UseItemStyleForSubItems = false;
+                                    lstTasks.Items.Add(li);
+                                }
                             }
                         }
                     }
                     else
                     {
-                        ListViewItem li = new ListViewItem(new string[] { task.SelectSingleNode("Description").InnerText, "Pending" });
-                        li.Tag = task;
-                        li.UseItemStyleForSubItems = false;
-                        lstTasks.Items.Add(li);
+                        var selectSingleNode = task.SelectSingleNode("Description");
+                        if (selectSingleNode != null)
+                        {
+                            var li = new ListViewItem(new[] {selectSingleNode.InnerText, "Pending"})
+                                         {Tag = task, UseItemStyleForSubItems = false};
+                            lstTasks.Items.Add(li);
+                        }
                     }
                 }
             }
@@ -602,38 +684,44 @@ namespace DNNAzureWizard
         /// </summary>
         /// <param name="vars"></param>
             private void SetupEnvironmentVariables(XmlNode vars)
-            {
-                foreach (XmlNode var in vars.SelectNodes("Action/Variable"))
-                    Environment.SetEnvironmentVariable(var.Attributes["name"].InnerText, ReplaceTokens(var.Attributes["value"].InnerText), EnvironmentVariableTarget.Process);
+        {
+            var xmlNodeList = vars.SelectNodes("Action/Variable");
+            if (xmlNodeList != null)
+                foreach (XmlNode var in xmlNodeList)
+                    if (var.Attributes != null)
+                        Environment.SetEnvironmentVariable(var.Attributes["name"].InnerText, ReplaceTokens(var.Attributes["value"].InnerText), EnvironmentVariableTarget.Process);
+        }
 
-            }
-            private void RemoveEnvironmentVariables(XmlNode vars)
+        private void RemoveEnvironmentVariables(XmlNode vars)
             {
                 try
                 {
-                    foreach (XmlNode var in vars.SelectNodes("Action/Variable"))
-                        Environment.SetEnvironmentVariable(var.Attributes["name"].InnerText, "", EnvironmentVariableTarget.Process);
+                    var xmlNodeList = vars.SelectNodes("Action/Variable");
+                    if (xmlNodeList != null)
+                        foreach (XmlNode var in xmlNodeList)
+                            if (var.Attributes != null)
+                                Environment.SetEnvironmentVariable(var.Attributes["name"].InnerText, "", EnvironmentVariableTarget.Process);
                 }
-                catch { };
+                catch { }
             }
 
 
             private void ProcessTasks()
             {
-                XmlNode EnvironmentVariables = null;
+                XmlNode environmentVariables = null;
                 foreach (ListViewItem task in lstTasks.Items)
                 {
                     try
                     {
-                        XmlNode xTag = (XmlNode)task.Tag;
-                        if (xTag.Name == "Task")
+                        var xTag = (XmlNode)task.Tag;
+                        if (xTag.Name == "Task" && xTag.Attributes != null)
                         {
                             switch (xTag.Attributes["type"].InnerText)
                             {
                                 case "SetupVariables":
                                     task.SubItems[1].Text = "Running...";
                                     Application.DoEvents();
-                                    EnvironmentVariables = xTag;
+                                    environmentVariables = xTag;
                                     SetupEnvironmentVariables(xTag);
                                     task.SubItems[1].Text = "Completed";
                                     task.SubItems[1].ForeColor = Color.DarkGreen;
@@ -642,9 +730,17 @@ namespace DNNAzureWizard
                                     task.SubItems[1].Text = "Running...";
                                     Application.DoEvents();
                                     CheckForIllegalCrossThreadCalls = false;
-                                    string CommandLine = ReplaceTokens(xTag.SelectSingleNode("Action/CommandLine").InnerText);
-                                    string Parameters = ReplaceTokens(xTag.SelectSingleNode("Action/Parameters").InnerText);
-                                    ExecuteCommand(CommandLine, Parameters);
+                                    var selectSingleNode = xTag.SelectSingleNode("Action/CommandLine");
+                                    if (selectSingleNode != null)
+                                    {
+                                        string commandLine = ReplaceTokens(selectSingleNode.InnerText);
+                                        var singleNode = xTag.SelectSingleNode("Action/Parameters");
+                                        if (singleNode != null)
+                                        {
+                                            string parameters = ReplaceTokens(singleNode.InnerText);
+                                            ExecuteCommand(commandLine, parameters);
+                                        }
+                                    }
                                     task.SubItems[1].Text = "Completed";
                                     task.SubItems[1].ForeColor = Color.DarkGreen;
                                     break;
@@ -654,8 +750,6 @@ namespace DNNAzureWizard
                                     UploadItemToAzure(task);
                                     task.SubItems[1].Text = "Completed";
                                     task.SubItems[1].ForeColor = Color.DarkGreen;
-                                    break;
-                                default:
                                     break;
                             }
                         }
@@ -675,8 +769,8 @@ namespace DNNAzureWizard
                     }
                     Application.DoEvents();
                 }
-                if (EnvironmentVariables != null)
-                    RemoveEnvironmentVariables(EnvironmentVariables);
+                if (environmentVariables != null)
+                    RemoveEnvironmentVariables(environmentVariables);
             }
 
             /// <summary>
@@ -707,24 +801,24 @@ namespace DNNAzureWizard
             /// <param name="arguments">Arguments</param>
             public void ExecuteCommand(string exe, string arguments)
             {                
-                p = new Process();
+                _p = new Process();
                 
-                p.StartInfo.FileName = exe;
-                p.StartInfo.Arguments = arguments;
-                p.StartInfo.CreateNoWindow = true;
-                p.StartInfo.UseShellExecute = false;
-                p.StartInfo.RedirectStandardError = true;
-                p.StartInfo.RedirectStandardOutput = true;
+                _p.StartInfo.FileName = exe;
+                _p.StartInfo.Arguments = arguments;
+                _p.StartInfo.CreateNoWindow = true;
+                _p.StartInfo.UseShellExecute = false;
+                _p.StartInfo.RedirectStandardError = true;
+                _p.StartInfo.RedirectStandardOutput = true;
                 
-                p.Start();
-                p.WaitForExit();
+                _p.Start();
+                _p.WaitForExit();
 
-                int exitCode = p.ExitCode;
-                string errorDesc = p.StandardError.ReadToEnd();
-                string outputDesc = p.StandardOutput.ReadToEnd();
+                int exitCode = _p.ExitCode;
+                string errorDesc = _p.StandardError.ReadToEnd();
+                string outputDesc = _p.StandardOutput.ReadToEnd();
                 
-                p.Close();
-                p = null;
+                _p.Close();
+                _p = null;
 
                 if (exitCode != 0)
                     if (errorDesc == "")
@@ -750,24 +844,24 @@ namespace DNNAzureWizard
                 txtStorageName.Text = ConfigurationManager.AppSettings["AzureStorageName"];
                 txtStorageKey.Text = ConfigurationManager.AppSettings["AzureStorageKey"];
                 chkStorageHTTPS.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["AzureStorageHTTPS"]);
-                chkStorageHTTPS_CheckedChanged(null, null);
+                ChkStorageHttpsCheckedChanged(null, null);
                 txtStorageContainer.Text = ConfigurationManager.AppSettings["AzureStoragePackageContainer"];
                 txtBindings.Text = ConfigurationManager.AppSettings["Bindings"];
 
                 txtVHDBlobName.Text = ConfigurationManager.AppSettings["VHDBlobBName"];
                 txtVHDSize.Text = ConfigurationManager.AppSettings["VHDSizeInMb"];
 
-                uploadBlockSize = Convert.ToInt32(ConfigurationManager.AppSettings["UploadBlockSize"]);
+                _uploadBlockSize = Convert.ToInt32(ConfigurationManager.AppSettings["UploadBlockSize"]);
 
                 chkEnableRDP.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["RDPEnabled"]);
                 txtRDPUser.Text = ConfigurationManager.AppSettings["RDPUser"];
                 txtRDPPassword.Text = ConfigurationManager.AppSettings["RDPPassword"];
                 txtRDPConfirmPassword.Text = txtRDPPassword.Text;
-                chkEnableRDP_CheckedChanged(null, null);
+                ChkEnableRDPCheckedChanged(null, null);
 
                 chkAzureConnect.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["ConnectEnabled"]);
                 txtConnectActivationToken.Text = ConfigurationManager.AppSettings["ConnectActivationToken"];
-                chkAzureConnect_CheckedChanged(null, null);
+                ChkAzureConnectCheckedChanged(null, null);
 
                 cboRDPExpirationDate.Value = DateTime.Now.Date.AddMonths(1);
             }
@@ -780,16 +874,23 @@ namespace DNNAzureWizard
                 lstPackages.Items.Clear();
                 foreach (FileInfo filedef in new DirectoryInfo(Environment.CurrentDirectory + "\\packages").GetFiles("*.xml"))
                 {
-                    XmlDocument doc = new XmlDocument();
+                    var doc = new XmlDocument();
                     doc.Load(filedef.FullName);
-                    bool IsRDPPackage = ((doc.SelectSingleNode("/ServicePackage/RDPEnabled") != null) && Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText));
+                    bool isRDPPackage = ((doc.SelectSingleNode("/ServicePackage/RDPEnabled") != null) && Convert.ToBoolean(doc.SelectSingleNode("/ServicePackage/RDPEnabled").InnerText));
 
-                    if ((chkEnableRDP.Checked && IsRDPPackage) || (!chkEnableRDP.Checked && !IsRDPPackage))
+                    if ((chkEnableRDP.Checked && isRDPPackage) || (!chkEnableRDP.Checked && !isRDPPackage))
                     {
-                        var li = new ListViewItem(new[] { doc.SelectSingleNode("/ServicePackage/Name").InnerText, doc.SelectSingleNode("/ServicePackage/Description").InnerText });
-                        li.Tag = doc.SelectSingleNode("ServicePackage");
-                        li.Checked = true;
-                        lstPackages.Items.Add(li);
+                        var selectSingleNode = doc.SelectSingleNode("/ServicePackage/Name");
+                        if (selectSingleNode != null)
+                        {
+                            var singleNode = doc.SelectSingleNode("/ServicePackage/Description");
+                            if (singleNode != null)
+                            {
+                                var li = new ListViewItem(new[] {selectSingleNode.InnerText, singleNode.InnerText})
+                                             {Tag = doc.SelectSingleNode("ServicePackage"), Checked = true};
+                                lstPackages.Items.Add(li);
+                            }
+                        }
                     }
                 }
             }
@@ -802,12 +903,12 @@ namespace DNNAzureWizard
                 cboCertificates.Items.Clear();
 
                 // Open Certificates Store
-                X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+                var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
                 store.Open(OpenFlags.ReadOnly);
 
                 // Read Certificates
                 X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=DNN Azure Accelerator", false);
-                foreach (X509Certificate cert in certs)
+                foreach (X509Certificate2 cert in certs)
                     cboCertificates.Items.Add(cert);
 
                 /* certs = store.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, "CN=" + Environment.UserName, false);
@@ -817,7 +918,7 @@ namespace DNNAzureWizard
                 foreach (X509Certificate cert in certs)
                     cboCertificates.Items.Add(cert);*/
 
-                cboCertificates.Items.Add("<Create new...>");
+                cboCertificates.Items.Add(CreateNewLabel);
             }
 
             private X509Certificate2 Certificate
@@ -826,8 +927,7 @@ namespace DNNAzureWizard
                 {
                     if ((cboCertificates.SelectedItem != null) && (cboCertificates.SelectedItem is X509Certificate))
                         return (X509Certificate2)cboCertificates.SelectedItem;
-                    else
-                        return null;
+                    return null;
                 }
             }
 
@@ -838,7 +938,7 @@ namespace DNNAzureWizard
 
         #region " Background upload worker "
 
-            private int uploadBlockSize = 0;
+            private int _uploadBlockSize;
             
 
             private string GetParsedConfigurationFilePath(string filePath)
@@ -855,7 +955,7 @@ namespace DNNAzureWizard
             /// <param name="UploadFileItem">Task list view item</param>
             private void UploadItemToAzure(ListViewItem UploadFileItem)
             {
-                int totalBytesRead = 0;
+                int totalBytesRead;
                 long totalFileSize = 0;
 
                 string filePath = "";
@@ -906,11 +1006,11 @@ namespace DNNAzureWizard
                     int bytesRead = 0;
                     totalBytesRead = 0;
                     int i = 0;
-                    byte[] buffer = new byte[uploadBlockSize];
+                    byte[] buffer = new byte[_uploadBlockSize];
                     // Keep a list of block IDs.
-                    List<string> blockIDList = new List<string>();
+                    var blockIDList = new List<string>();
                     // Read the first block.
-                    bytesRead = fileStream.Read(buffer, 0, uploadBlockSize);
+                    bytesRead = fileStream.Read(buffer, 0, _uploadBlockSize);
                     while (bytesRead > 0)
                     {
                         using (MemoryStream ms = new MemoryStream(buffer, 0, bytesRead))
@@ -929,15 +1029,15 @@ namespace DNNAzureWizard
                         }
                         totalBytesRead += bytesRead;
                         i++;
-                        double dIndex = (double)(totalBytesRead);
-                        double dTotal = (double)fileStream.Length;
-                        double dProgressPercentage = (dIndex / dTotal);
-                        int iProgressPercentage = (int)(dProgressPercentage * 100);
+                        var dIndex = (double)(totalBytesRead);
+                        var dTotal = (double)fileStream.Length;
+                        var dProgressPercentage = (dIndex / dTotal);
+                        var iProgressPercentage = (int)(dProgressPercentage * 100);
 
-                        UploadFileItem.SubItems[1].Text = "Uploading..." + iProgressPercentage.ToString() + "%";
+                        UploadFileItem.SubItems[1].Text = "Uploading..." + iProgressPercentage.ToString(CultureInfo.InvariantCulture) + "%";
                         Application.DoEvents();
 
-                        bytesRead = fileStream.Read(buffer, 0, uploadBlockSize);
+                        bytesRead = fileStream.Read(buffer, 0, _uploadBlockSize);
                     }
                     blob.PutBlockList(blockIDList);
                     UploadFileItem.SubItems[1].Text = "Completed";
@@ -963,7 +1063,7 @@ namespace DNNAzureWizard
 
         #endregion
 
-            private void chkEnableRDP_CheckedChanged(object sender, EventArgs e)
+            private void ChkEnableRDPCheckedChanged(object sender, EventArgs e)
             {
                 pnlRDP.Enabled = chkEnableRDP.Checked;
                 foreach (Control ctl in pnlRDP.Controls)
@@ -979,19 +1079,19 @@ namespace DNNAzureWizard
                 ReloadDeploymentPackages();
             }
 
-            private void cmdViewCertificate_Click(object sender, EventArgs e)
+            private void CmdViewCertificateClick(object sender, EventArgs e)
             {
                 if (Certificate != null)
                     X509Certificate2UI.DisplayCertificate(Certificate, this.Handle);
             }
 
-            private void cboCertificates_SelectedIndexChanged(object sender, EventArgs e)
+            private void CboCertificatesSelectedIndexChanged(object sender, EventArgs e)
             {
                 cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
                 if (cboCertificates.SelectedIndex == cboCertificates.Items.Count - 1)                     // Launch the create certificate window
                 {
-                    FrmCreateCertificate frm = new FrmCreateCertificate();
-                    if (frm.ShowDialog() == System.Windows.Forms.DialogResult.Cancel)
+                    var frm = new FrmCreateCertificate();
+                    if (frm.ShowDialog() == DialogResult.Cancel)
                         cboCertificates.SelectedItem = null;
                     else
                     {
@@ -1020,7 +1120,7 @@ namespace DNNAzureWizard
 
             #region RDP settings
 
-            void txtRDPUser_Validating(object sender, CancelEventArgs e)
+            void TxtRDPUserValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtRDPUser.Text.Length == 0)
@@ -1030,7 +1130,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtRDPPassword_Validating(object sender, CancelEventArgs e)
+            void TxtRDPPasswordValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if ((txtRDPPassword.Text.Length == 0) ||
@@ -1042,7 +1142,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtRDPConfirmPassword_Validating(object sender, CancelEventArgs e)
+            void TxtRDPConfirmPasswordValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtRDPPassword.Text != txtRDPConfirmPassword.Text)
@@ -1053,7 +1153,7 @@ namespace DNNAzureWizard
                 
             }
 
-            void cboCertificates_Validating(object sender, CancelEventArgs e)
+            void CboCertificatesValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (Certificate == null)
@@ -1065,17 +1165,17 @@ namespace DNNAzureWizard
             #endregion
 
         #region SQL Azure settings
-            void txtDBServer_Validating(object sender, CancelEventArgs e)
+            void TxtDBServerValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
-                if (txtDBServer.Text.Length == 0)
+                if (txtDBServer.Visible && txtDBServer.Text.Length == 0)
                 {
                     error = "Please enter your database server name (this is <databasename>.database.windows.net)";
                 }
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtDBAdminUser_Validating(object sender, CancelEventArgs e)
+            void TxtDBAdminUserValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtDBAdminUser.Text.Length == 0)
@@ -1085,7 +1185,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtDBAdminPassword_Validating(object sender, CancelEventArgs e)
+            void TxtDBAdminPasswordValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtDBAdminPassword.Text.Length == 0)
@@ -1095,7 +1195,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtDBName_Validating(object sender, CancelEventArgs e)
+            void TxtDBNameValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtDBName.Text.Length == 0)
@@ -1104,7 +1204,7 @@ namespace DNNAzureWizard
                 }
                 errProv.SetError((Control)sender, error);
             }
-            void txtDBUser_Validating(object sender, CancelEventArgs e)
+            void TxtDBUserValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtDBUser.Text.Length == 0)
@@ -1113,7 +1213,7 @@ namespace DNNAzureWizard
                 }
                 errProv.SetError((Control)sender, error);
             }
-            void txtDBPassword_Validating(object sender, CancelEventArgs e)
+            void TxtDBPasswordValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if ((txtDBPassword.Text.Length == 0) ||
@@ -1124,7 +1224,7 @@ namespace DNNAzureWizard
                 }
                 errProv.SetError((Control)sender, error);
             }
-            void txtDBRePassword_Validating(object sender, CancelEventArgs e)
+            void TxtDBRePasswordValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtDBRePassword.Text != txtDBPassword.Text)
@@ -1137,7 +1237,7 @@ namespace DNNAzureWizard
         #endregion 
 
         #region Windows Azure Settings
-            void txtStorageName_Validating(object sender, CancelEventArgs e)
+            void TxtStorageNameValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtStorageName.Text.Length == 0)
@@ -1147,7 +1247,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtStorageKey_Validating(object sender, CancelEventArgs e)
+            void TxtStorageKeyValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtStorageKey.Text.Length == 0)
@@ -1156,12 +1256,12 @@ namespace DNNAzureWizard
                 }
                 errProv.SetError((Control)sender, error);
             }
-            void txtBindings_Validating(object sender, CancelEventArgs e)
+            void TxtBindingsValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtBindings.Text.Length == 0)
                 {
-                    error = "Please enter the bindings for your web application. You may include 'myapp.cloudapp.net' in order to access through the Azure access portal.";
+                   // error = "Please enter the bindings for your web application. You may include 'myapp.cloudapp.net' in order to access through the Azure access portal.";
                 }
                 errProv.SetError((Control)sender, error);
             }                       
@@ -1169,7 +1269,7 @@ namespace DNNAzureWizard
         #endregion
 
         #region Package Settings
-            void txtStorageContainer_Validating(object sender, CancelEventArgs e)
+            void TxtStorageContainerValidating(object sender, CancelEventArgs e)
             {
                 // Container names must be valid DNS names, and must conform to these rules:
                 // * Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
@@ -1190,7 +1290,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtVHDBlobName_Validating(object sender, CancelEventArgs e)
+            void TxtVhdBlobNameValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtVHDBlobName.Text.Length == 0)
@@ -1200,10 +1300,10 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void txtVHDSize_Validating(object sender, CancelEventArgs e)
+            void TxtVhdSizeValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
-                int driveSize = 0;                
+                int driveSize;                
                 if ((txtVHDSize.Text.Length == 0) ||
                     !int.TryParse(txtVHDSize.Text, out driveSize) ||
                     (driveSize < 128) || (driveSize > 1048576))
@@ -1213,7 +1313,7 @@ namespace DNNAzureWizard
                 errProv.SetError((Control)sender, error);
             }
 
-            void lstPackages_Validating(object sender, CancelEventArgs e)
+            void LstPackagesValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
 
@@ -1230,12 +1330,12 @@ namespace DNNAzureWizard
         #endregion
 
             #region Azure Connect Settings
-            private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+            private void LinkLabel1LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
             {
                 try
                 {
-                    string ConnectHelpURL = "http://go.microsoft.com/fwlink/?LinkId=203834";
-                    Process.Start(ConnectHelpURL);
+                    const string connectHelpURL = "http://go.microsoft.com/fwlink/?LinkId=203834";
+                    Process.Start(connectHelpURL);
                 }
                 catch (Exception ex)
                 {
@@ -1243,12 +1343,12 @@ namespace DNNAzureWizard
                 }
             }
 
-            private void chkAzureConnect_CheckedChanged(object sender, EventArgs e)
+            private void ChkAzureConnectCheckedChanged(object sender, EventArgs e)
             {
                 txtConnectActivationToken.Enabled = chkAzureConnect.Checked;
             }
 
-            void txtConnectActivationToken_Validating(object sender, CancelEventArgs e)
+            void TxtConnectActivationTokenValidating(object sender, CancelEventArgs e)
             {
                 string error = null;
                 if (txtConnectActivationToken.Text.Length == 0)
@@ -1264,18 +1364,39 @@ namespace DNNAzureWizard
             #endregion
 
             #region Subscriptions
-            private void cmdRefreshSubscriptions_Click(object sender, EventArgs e)
+
+            private void CboSubscriptionsSelectedIndexChanged(object sender, EventArgs e)
             {
                 try
                 {
-                    var publishSettings = DotNetNuke.Azure.Accelerator.Components.Utils.GetWAPublishingSettings();
-                    if (publishSettings != null)
+                    if (cboSubscriptions.Text == RefreshLabel)
                     {
-                        PublishSettings = publishSettings;
-                        PublishSettings.Save(PublishSettingsFilename);
-                        RefreshSubscriptions();
+                        cboSubscriptions.SelectedIndex = 0;
+                        var publishSettings = DotNetNuke.Azure.Accelerator.Components.Utils.GetWAPublishingSettings();
+                        if (publishSettings != null)
+                        {
+                            PublishSettings = publishSettings;
+                            PublishSettings.Save(PublishSettingsFilename);
+                            RefreshSubscriptions();
+                        }                        
                     }
-                        
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+
+            private void CboSubscriptionsValidating(object sender, CancelEventArgs e)
+            {
+                try
+                {
+                    string error = null;
+                    if (cboSubscriptions.Text == string.Empty)
+                    {
+                        error = "You must select an existing subscription";
+                    }
+                    errProv.SetError((Control)sender, error);
                 }
                 catch (Exception ex)
                 {
@@ -1284,7 +1405,7 @@ namespace DNNAzureWizard
             }
             #endregion
 
-            private void linkLabel1_LinkClicked_1(object sender, LinkLabelLinkClickedEventArgs e)
+            private void LinkLabel1LinkClicked1(object sender, LinkLabelLinkClickedEventArgs e)
             {
                 try
                 {
@@ -1297,6 +1418,404 @@ namespace DNNAzureWizard
             }
 
             #endregion
+
+        #region Azure Mangement API calls
+
+            private IServiceManagement _serviceManager;
+            internal IServiceManagement ServiceManager
+            {
+                get
+                {
+                    return _serviceManager ??
+                           (_serviceManager =
+                            ServiceManagementHelper.CreateServiceManagementChannel("WindowsAzureEndPoint", PublishSettings.Certificate));
+                }
+                set { _serviceManager = value; }
+            }
+
+            private IDatabaseManagement _databaseManager;
+            internal IDatabaseManagement DatabaseManager
+            {
+                get
+                {
+                    return _databaseManager ??
+                           (_databaseManager =
+                            ServiceManagementHelper.CreateDatabaseManagementChannel("SQLAzureEndPoint", PublishSettings.Certificate));
+                }
+                set { _databaseManager = value; }
+            }
+
+            private PublishSettings PublishSettings { get; set; }
+            internal string PublishSettingsFilename
+            {
+                get
+                {
+                    return (Path.Combine(Path.GetDirectoryName(Application.ExecutablePath),
+                                         Path.GetFileNameWithoutExtension(Application.ExecutablePath) + ".publishsettings"));
+                }
+            }
+        internal Subscription Subscription
+        {
+            get { return (Subscription) cboSubscriptions.SelectedItem; }
+        }
+
+        private void RefreshHostedServices()
+        {
+            
+            cboHostingService.Items.Clear();
+            cboHostingService.Items.Add("Loading...");
+            cboHostingService.SelectedIndex = 0;
+            cboHostingService.Enabled = false;
+            Cursor = Cursors.WaitCursor;
+            Application.DoEvents();
+            try
+            {
+                var hostedServices = ServiceManager.ListHostedServices(Subscription.SubscriptionId);                
+                cboHostingService.Tag = hostedServices;
+                cboHostingService.Items.Clear();
+                foreach (var hostedService in hostedServices)
+                {
+                    cboHostingService.Items.Add(hostedService.ServiceName);
+                }            
+            }
+            catch (Exception ex)
+            {
+                cboHostingService.Tag = null;
+                LogException(ex);
+            }
+            finally
+            {
+                cboHostingService.Enabled = true;
+                if (cboHostingService.Items.Count == 0)
+                    cboHostingService.Items.Add("");
+
+                cboHostingService.SelectedIndex = 0;
+                cboHostingService.Items.Add(CreateNewLabel);
+                cboHostingService.Items.Add(RefreshLabel);
+                Cursor = Cursors.Default;
+            }
+            Application.DoEvents();
+
+        }
+
+        private void RefreshStorageAccounts()
+        {
+
+            cboStorage.Items.Clear();
+            cboStorage.Items.Add("Loading...");
+            cboStorage.SelectedIndex = 0;
+            cboStorage.Enabled = false;            
+            Cursor = Cursors.WaitCursor;
+            Application.DoEvents();
+            try
+            {
+                var storageAccounts = ServiceManager.ListStorageServices(Subscription.SubscriptionId);
+                cboStorage.Tag = storageAccounts;
+                cboStorage.Items.Clear();
+                foreach (var storageAccount in storageAccounts)
+                {
+                    cboStorage.Items.Add(storageAccount.ServiceName);
+                }
+            }
+            catch (Exception ex)
+            {
+                cboStorage.Tag = null;
+                LogException(ex);
+            }
+            finally
+            {
+                cboStorage.Enabled = true;
+                if (cboStorage.Items.Count == 0)
+                    cboStorage.Items.Add("");
+
+                cboStorage.SelectedIndex = 0;
+                cboStorage.Items.Add(CreateNewLabel);
+                cboStorage.Items.Add(RefreshLabel);
+                Cursor = Cursors.Default;
+            }
+            Application.DoEvents();
+        }
+
+        private void RefreshDatabaseServers()
+        {
+
+            cboDatabase.Items.Clear();
+            cboDatabase.Items.Add("Loading...");
+            cboDatabase.SelectedIndex = 0;
+            cboDatabase.Enabled = false;
+            Cursor = Cursors.WaitCursor;
+            Application.DoEvents();
+            try
+            {
+                var databaseServers = DatabaseManager.ListDatabaseServers(Subscription.SubscriptionId);
+                cboDatabase.Tag = databaseServers;
+                cboDatabase.Items.Clear();
+                foreach (var databaseServer in databaseServers)
+                {
+                    cboDatabase.Items.Add(databaseServer.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                cboDatabase.Tag = null;
+                LogException(ex);
+            }
+            finally
+            {
+                cboDatabase.Enabled = true;
+                if (cboDatabase.Items.Count == 0)
+                    cboDatabase.Items.Add("");
+
+                cboDatabase.SelectedIndex = 0;
+                cboDatabase.Items.Add(CreateNewLabel);
+                cboDatabase.Items.Add(RefreshLabel);
+                Cursor = Cursors.Default;
+            }
+            Application.DoEvents();
+        }
+
+        //private void RefreshContainers()
+        //{
+        //    cboContainers.Items.Clear();
+        //    cboContainers.Items.Add("Loading...");
+        //    cboContainers.SelectedIndex = 0;
+        //    cboContainers.Enabled = false;
+        //    Cursor = Cursors.WaitCursor;
+        //    Application.DoEvents();
+        //    try
+        //    {
+        //        if (cboStorage.Tag != null)
+        //        {
+        //            var storageAccounts = (List<StorageService>) cboStorage.Tag;
+        //            var storageAccount = storageAccounts.FirstOrDefault(x => x.ServiceName == cboStorage.Text);
+        //            if (storageAccount != null)
+        //            {
+        //                var storageKeys = ServiceManager.GetStorageKeys(Subscription.SubscriptionId,
+        //                                                                storageAccount.ServiceName);
+        //                var primaryKey = storageKeys.StorageServiceKeys.Primary;
+        //                var credentials = new StorageCredentialsAccountAndKey(storageAccount.ServiceName, primaryKey);
+        //                var storage = new CloudStorageAccount(credentials, true);
+        //                var blobClient = new CloudBlobClient(storage.BlobEndpoint.AbsoluteUri, credentials);
+        //                var containers = blobClient.ListContainers();
+                        
+        //                cboContainers.Items.Clear();
+        //                // Only add private containers
+        //                bool defaultContainerExists = false;
+        //                foreach (var container in containers.Where(container => container.GetPermissions().PublicAccess == BlobContainerPublicAccessType.Off))
+        //                {
+        //                    if (container.Name == "dotnetnuke-packages")
+        //                        defaultContainerExists = true;
+        //                    cboContainers.Items.Add(container.Name);
+        //                }
+        //                if (!defaultContainerExists)
+        //                {
+        //                    var container = blobClient.GetContainerReference("dotnetnuke-packages");
+        //                    container.CreateIfNotExist();
+        //                    container.SetPermissions(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
+        //                    cboContainers.Items.Add("dotnetnuke-packages");
+        //                }
+        //            }
+        //            else
+        //            {
+        //                cboContainers.Items.Clear();
+        //            }
+        //        }
+        //        else
+        //            cboContainers.Items.Clear();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        cboContainers.Tag = null;
+        //        LogException(ex);
+        //    }
+        //    finally
+        //    {
+        //        cboContainers.Enabled = true;
+        //        if (cboContainers.Items.Count == 0)
+        //            cboContainers.Items.Add("");
+        //        try
+        //        {
+        //            cboContainers.Text = "dotnetnuke-packages";
+        //        }
+        //        catch
+        //        {
+        //            cboContainers.SelectedIndex = 0;
+        //        }
+                
+        //        cboContainers.Items.Add(CreateNewLabel);
+        //        cboContainers.Items.Add(RefreshLabel);
+        //        Cursor = Cursors.Default;
+        //    }
+        //    Application.DoEvents();            
+        //}
+
+        #endregion
+
+        private void CboHostingServiceSelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (cboHostingService.Text == RefreshLabel)
+                    RefreshHostedServices();
+                if (cboHostingService.Text == CreateNewLabel)
+                {
+                    cboHostingService.Text = "";
+                    var frm = new FrmNewHostedService {Wizard = this};
+                    if (frm.ShowDialog() == DialogResult.OK)
+                        RefreshHostedServices();
+                    cboHostingService.SelectedValue = frm.ServiceName;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void CboHostingServiceOnValidating(object sender, CancelEventArgs cancelEventArgs)
+        {
+            string error = null;
+            if (cboHostingService.Text == string.Empty || cboHostingService.Text.Contains("."))
+            {
+                error = "Please select or create a hosting service";
+            }
+            errProv.SetError((Control)sender, error);
+        }
+
+        private void CboStorageOnValidating(object sender, CancelEventArgs cancelEventArgs)
+        {
+            string error = null;
+            if (cboStorage.Text == string.Empty || cboStorage.Text.Contains("."))
+            {
+                error = "Please select or create a storage account";
+            }
+            errProv.SetError((Control)sender, error);            
+        }
+
+
+        private void CboStorageSelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (cboStorage.Text == RefreshLabel)
+                {
+                    RefreshStorageAccounts();
+                    return;
+                }
+                    
+                if (cboStorage.Text == CreateNewLabel)
+                {
+                    cboStorage.Text = "";
+                    var frm = new FrmNewStorageAccount { Wizard = this };
+                    if (frm.ShowDialog() == DialogResult.OK)
+                        RefreshStorageAccounts();
+                    cboStorage.SelectedValue = frm.ServiceName;
+                    return;
+                }
+                //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
+
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void TxtPackagesContainerOnValidating(object sender, CancelEventArgs cancelEventArgs)
+        {
+            string error = null;
+
+           if (!Regex.IsMatch(txtPackagesContainer.Text, @"^[a-z0-9](([a-z0-9\-[^\-])){1,61}[a-z0-9]$"))
+                error = "Invalid container name. Container names must be valid DNS names, and must conform to these rules: \n - Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.\n- Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.\n- All letters in a container name must be lowercase.\n- Container names must be from 3 through 63 characters long.";
+            errProv.SetError((Control)sender, error);                   
+        }
+
+        private void TxtVhdNameOnValidating(object sender, CancelEventArgs cancelEventArgs)
+        {
+            string error = null;
+            if (txtVHDName.Text.Length == 0)
+            {
+                error = "You must specify a blob name for the VHD";
+            }
+            errProv.SetError((Control)sender, error);
+        }
+
+        private void TxtVhdDriveSizeOnValidating(object sender, CancelEventArgs cancelEventArgs)
+        {
+            string error = null;
+            int driveSize;
+            if ((txtVHDDriveSize.Text.Length == 0) ||
+                !int.TryParse(txtVHDDriveSize.Text, out driveSize) ||
+                (driveSize < 128) || (driveSize > 1048576))
+            {
+                error = "You must specify a valid VHD size (recommended minumum: 512Mb; maximum 1Tb=1048576Mb)";
+            }
+            errProv.SetError((Control)sender, error);
+        }
+
+        private void CboDatabaseSelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (cboDatabase.Text == RefreshLabel)
+                {
+                    RefreshDatabaseServers();
+                    return;
+                }
+
+                if (cboDatabase.Text == CreateNewLabel)
+                {
+                    cboDatabase.Text = "";
+                    var frm = new FrmNewDatabaseServer { Wizard = this };
+                    if (frm.ShowDialog() == DialogResult.OK)
+                    {
+                        RefreshDatabaseServers();
+                        cboDatabase.SelectedValue = frm.ServerName;
+                        txtDBAdminUser.Text = frm.AdminUser;
+                        txtDBAdminPassword.Text = frm.AdminPassword;
+                    }
+                        
+                    
+                    return;
+                }
+                //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
+
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+
+
+
+        //private void cboContainers_SelectedIndexChanged(object sender, EventArgs e)
+        //{
+        //    try
+        //    {
+        //        if (cboContainers.Text == RefreshLabel)
+        //        {
+        //            ThreadPool.QueueUserWorkItem(o => RefreshContainers());
+        //            return;
+        //        }
+
+        //        if (cboContainers.Text == CreateNewLabel)
+        //        {
+        //            cboStorage.Text = "";
+        //            var frm = new FrmNewContainer { Wizard = this };
+        //            if (frm.ShowDialog() == DialogResult.OK)
+        //                RefreshContainers();
+        //            cboStorage.SelectedValue = frm.ContainerName;
+        //            return;
+        //        }                
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogException(ex);
+        //    }
+        //}
 
     }
 }

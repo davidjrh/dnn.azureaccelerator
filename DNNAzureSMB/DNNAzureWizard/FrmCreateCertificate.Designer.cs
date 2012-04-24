@@ -51,7 +51,7 @@
             this.txtFriendlyName.Name = "txtFriendlyName";
             this.txtFriendlyName.Size = new System.Drawing.Size(356, 23);
             this.txtFriendlyName.TabIndex = 1;
-            this.txtFriendlyName.TextChanged += new System.EventHandler(this.txtFriendlyName_TextChanged);
+            this.txtFriendlyName.TextChanged += new System.EventHandler(this.TxtFriendlyNameTextChanged);
             // 
             // cmdCancel
             // 
@@ -62,7 +62,7 @@
             this.cmdCancel.TabIndex = 2;
             this.cmdCancel.Text = "Cancel";
             this.cmdCancel.UseVisualStyleBackColor = true;
-            this.cmdCancel.Click += new System.EventHandler(this.cmdCancel_Click);
+            this.cmdCancel.Click += new System.EventHandler(this.CmdCancelClick);
             // 
             // cmdOK
             // 
@@ -74,7 +74,7 @@
             this.cmdOK.TabIndex = 3;
             this.cmdOK.Text = "OK";
             this.cmdOK.UseVisualStyleBackColor = true;
-            this.cmdOK.Click += new System.EventHandler(this.cmdOK_Click);
+            this.cmdOK.Click += new System.EventHandler(this.CmdOkClick);
             // 
             // FrmCreateCertificate
             // 
