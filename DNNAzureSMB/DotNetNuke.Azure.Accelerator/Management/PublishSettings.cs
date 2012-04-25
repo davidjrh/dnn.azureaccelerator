@@ -44,7 +44,7 @@ namespace DotNetNuke.Azure.Accelerator.Management
                                       });
             var publishProfile = _document.Descendants("PublishProfile").Single();
             if (publishProfile != null)
-                Certificate = new X509Certificate2(Convert.FromBase64String(publishProfile.Attribute("ManagementCertificate").Value));
+                Certificate = new X509Certificate2(Convert.FromBase64String(publishProfile.Attribute("ManagementCertificate").Value), "", X509KeyStorageFlags.Exportable);
         }
 
         public void Save(string filename)

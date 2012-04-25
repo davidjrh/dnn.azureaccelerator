@@ -1,4 +1,5 @@
-﻿using System;
+﻿#region Usings
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
@@ -7,8 +8,11 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
+using System.ServiceModel;
+using System.ServiceModel.Web;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -18,13 +22,15 @@ using System.Xml.Linq;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.StorageClient;
 using DotNetNuke.Azure.Accelerator.Management;
-
+using HtmlAgilityPack;
+#endregion
 
 namespace DNNAzureWizard
 {    
 
     public partial class FrmDNNAzureWizard : Form
     {
+        #region Constants and enums
         private const int WizardWidth = 700;
         private const int WizardHeight = 500;
         private const string CreateNewLabel = "<Create New...>";
@@ -55,10 +61,13 @@ namespace DNNAzureWizard
             TabUploading = 10,
             TabFinish = 11
         }
+        #endregion
 
 
         Process _p;
-        private string CertificatePassword;
+        private string _certificatePassword;
+        private string ServiceConfigurationFile { get; set; }
+        private string ServicePackageFile { get; set; }
 
         public FrmDNNAzureWizard()
         {
@@ -182,7 +191,7 @@ namespace DNNAzureWizard
                             else
                             {
                                 MoveSteps(1);
-                                ExportServicePackage(CertificatePassword);
+                                ExportServicePackage(_certificatePassword);
                             }
                             btnOK.Text = "Finish";
                             btnCancel.Enabled = false;
@@ -211,7 +220,7 @@ namespace DNNAzureWizard
                 sourceConfigurationFile = Path.Combine(new[] { Environment.CurrentDirectory, "packages", selectSingleNode.InnerText });
                 var singleNode = pNode.SelectSingleNode("PackageFile");
                 if (singleNode != null)
-                    sourcePackageFile = Path.Combine(new string[] { Environment.CurrentDirectory, "packages", singleNode.InnerText });
+                    sourcePackageFile = Path.Combine(new[] { Environment.CurrentDirectory, "packages", singleNode.InnerText });
             }
 
             txtLogFinal.Text = "EXPORT SERVICE PACKAGE";
@@ -266,7 +275,7 @@ namespace DNNAzureWizard
         private string GetFinalLog()
             {
                 bool success = true;
-                var log = new StringBuilder("====================== UPLOAD LOG ======================");
+                var log = new StringBuilder("====================== DEPLOYMENT LOG ======================");
                 log.AppendLine("");
                 foreach (ListViewItem li in lstTasks.Items)
                 {
@@ -274,6 +283,8 @@ namespace DNNAzureWizard
                     if (li.SubItems[1].ForeColor != Color.DarkGreen)
                         success = false;
                 }
+                log.AppendFormat(txtLOG.Text);
+
                 if (!success)
                 {
                     lblSuccess.Text = "Upload failed!";
@@ -343,6 +354,261 @@ namespace DNNAzureWizard
             {
                 lblStTest.Text = string.Format("Test credentials to http{0}://{1}.blob.windows.core.net", (chkStorageHTTPS.Checked ? "s" : ""), txtStorageName.Text);
             }
+
+
+            private void ChkEnableRDPCheckedChanged(object sender, EventArgs e)
+            {
+                pnlRDP.Enabled = chkEnableRDP.Checked;
+                foreach (Control ctl in pnlRDP.Controls)
+                {
+                    ctl.Enabled = pnlRDP.Enabled;
+                    errProv.SetError(ctl, null);
+                }
+                if (!chkEnableRDP.Checked)
+                    cboCertificates.SelectedItem = null;
+                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
+
+                // Reload packages
+                ReloadDeploymentPackages();
+            }
+
+            private void CmdViewCertificateClick(object sender, EventArgs e)
+            {
+                if (Certificate != null)
+                    X509Certificate2UI.DisplayCertificate(Certificate, this.Handle);
+            }
+
+            private void CboCertificatesSelectedIndexChanged(object sender, EventArgs e)
+            {
+                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
+                if (cboCertificates.SelectedIndex == cboCertificates.Items.Count - 1)                     // Launch the create certificate window
+                {
+                    var frm = new FrmCreateCertificate();
+                    if (frm.ShowDialog() == DialogResult.Cancel)
+                        cboCertificates.SelectedItem = null;
+                    else
+                    {
+                        ReloadX509Certificates();
+                        foreach (Object item in cboCertificates.Items)
+                            if ((item is X509Certificate) && (((X509Certificate2)item).SerialNumber == frm.SerialNumber))
+                            {
+                                cboCertificates.SelectedItem = item;
+                                break;
+                            }
+                    }
+                }
+            }
+
+            private static string EncryptWithCertificate(string clearText, X509Certificate2 certificate)
+            {
+                var encoding = new UTF8Encoding();
+                Byte[] clearTextsByte = encoding.GetBytes(clearText);
+                var contentinfo = new ContentInfo(clearTextsByte);
+                var envelopedCms = new EnvelopedCms(contentinfo);
+                envelopedCms.Encrypt(new CmsRecipient(certificate));
+                return Convert.ToBase64String(envelopedCms.Encode());
+            }
+
+            private void CboHostingServiceSelectedIndexChanged(object sender, EventArgs e)
+            {
+                try
+                {
+                    if (cboHostingService.Text == RefreshLabel)
+                        RefreshHostedServices();
+                    if (cboHostingService.Text == CreateNewLabel)
+                    {
+                        cboHostingService.Text = "";
+                        var frm = new FrmNewHostedService { Wizard = this };
+                        if (frm.ShowDialog() == DialogResult.OK)
+                            RefreshHostedServices();
+                        cboHostingService.SelectedValue = frm.ServiceName;
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+
+            private void CboHostingServiceOnValidating(object sender, CancelEventArgs cancelEventArgs)
+            {
+                string error = null;
+                if (cboHostingService.Text == string.Empty || cboHostingService.Text.Contains("."))
+                {
+                    error = "Please select or create a hosting service";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            private void CboStorageOnValidating(object sender, CancelEventArgs cancelEventArgs)
+            {
+                string error = null;
+                if (cboStorage.Text == string.Empty || cboStorage.Text.Contains("."))
+                {
+                    error = "Please select or create a storage account";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+
+            private void CboStorageSelectedIndexChanged(object sender, EventArgs e)
+            {
+                try
+                {
+                    txtStorageKey.Text = "";
+                    txtStorageName.Text = "";
+                    chkStorageHTTPS.Checked = true;
+                    if (cboStorage.Text == RefreshLabel)
+                    {
+                        RefreshStorageAccounts();
+                        return;
+                    }
+
+                    if (cboStorage.Text == CreateNewLabel)
+                    {
+                        cboStorage.Text = "";
+                        var frm = new FrmNewStorageAccount { Wizard = this };
+                        if (frm.ShowDialog() == DialogResult.OK)
+                            RefreshStorageAccounts();
+                        cboStorage.SelectedValue = frm.ServiceName;
+                        return;
+                    }
+                    if (cboStorage.Text != "")
+                    {
+                        try
+                        {
+                            if (cboStorage.Tag != null)
+                            {
+                                var storageAccounts = (List<StorageService>)cboStorage.Tag;
+                                var storageAccount = storageAccounts.FirstOrDefault(x => x.ServiceName == cboStorage.Text);
+                                if (storageAccount != null)
+                                {
+                                    var storageKeys = ServiceManager.GetStorageKeys(Subscription.SubscriptionId,
+                                                                                    storageAccount.ServiceName);
+                                    txtStorageKey.Text = storageKeys.StorageServiceKeys.Primary;
+                                    txtStorageName.Text = cboStorage.Text;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            txtStorageKey.Text = "";
+                            txtStorageName.Text = "";
+                            LogException(ex);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+
+            private void TxtPackagesContainerOnValidating(object sender, CancelEventArgs cancelEventArgs)
+            {
+                string error = null;
+
+                if (!Regex.IsMatch(txtPackagesContainer.Text, @"^[a-z0-9](([a-z0-9\-[^\-])){1,61}[a-z0-9]$"))
+                    error = "Invalid container name. Container names must be valid DNS names, and must conform to these rules: \n - Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.\n- Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.\n- All letters in a container name must be lowercase.\n- Container names must be from 3 through 63 characters long.";
+                errProv.SetError((Control)sender, error);
+            }
+
+            private void TxtVhdNameOnValidating(object sender, CancelEventArgs cancelEventArgs)
+            {
+                string error = null;
+                if (txtVHDName.Text.Length == 0)
+                {
+                    error = "You must specify a blob name for the VHD";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            private void TxtVhdDriveSizeOnValidating(object sender, CancelEventArgs cancelEventArgs)
+            {
+                string error = null;
+                int driveSize;
+                if ((txtVHDDriveSize.Text.Length == 0) ||
+                    !int.TryParse(txtVHDDriveSize.Text, out driveSize) ||
+                    (driveSize < 128) || (driveSize > 1048576))
+                {
+                    error = "You must specify a valid VHD size (recommended minumum: 512Mb; maximum 1Tb=1048576Mb)";
+                }
+                errProv.SetError((Control)sender, error);
+            }
+
+            private void CboDatabaseSelectedIndexChanged(object sender, EventArgs e)
+            {
+                try
+                {
+                    if (cboDatabase.Text == RefreshLabel)
+                    {
+                        RefreshDatabaseServers();
+                        return;
+                    }
+
+                    if (cboDatabase.Text == CreateNewLabel)
+                    {
+                        cboDatabase.Text = "";
+                        var frm = new FrmNewDatabaseServer { Wizard = this };
+                        if (frm.ShowDialog() == DialogResult.OK)
+                        {
+                            RefreshDatabaseServers();
+                            cboDatabase.SelectedValue = frm.ServerName;
+                            txtDBAdminUser.Text = frm.AdminUser;
+                            txtDBAdminPassword.Text = frm.AdminPassword;
+                        }
+
+
+                        return;
+                    }
+                    //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
+
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+
+            private void OptSubscriptionCheckedChanged(object sender, EventArgs e)
+            {
+                try
+                {
+                    ReloadX509Certificates();
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+            }
+
+
+            //private void cboContainers_SelectedIndexChanged(object sender, EventArgs e)
+            //{
+            //    try
+            //    {
+            //        if (cboContainers.Text == RefreshLabel)
+            //        {
+            //            ThreadPool.QueueUserWorkItem(o => RefreshContainers());
+            //            return;
+            //        }
+
+            //        if (cboContainers.Text == CreateNewLabel)
+            //        {
+            //            cboStorage.Text = "";
+            //            var frm = new FrmNewContainer { Wizard = this };
+            //            if (frm.ShowDialog() == DialogResult.OK)
+            //                RefreshContainers();
+            //            cboStorage.SelectedValue = frm.ContainerName;
+            //            return;
+            //        }                
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        LogException(ex);
+            //    }
+            //}
 
         #endregion
 
@@ -478,13 +744,13 @@ namespace DNNAzureWizard
                         {
                             return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);    
                         }
-                        CertificatePassword = "";
+                        _certificatePassword = "";
                         if (chkEnableRDP.Checked)
                         {
                             var frm = new FrmCertificatePassword();
                             if (frm.ShowDialog() != DialogResult.OK)
                                 return false;
-                            CertificatePassword = frm.Password;
+                            _certificatePassword = frm.Password;
                         }                        
                         return dlgFolder.ShowDialog() == DialogResult.OK;
                         
@@ -658,7 +924,7 @@ namespace DNNAzureWizard
             private string ReplaceTokens(string cfgStr)
             {
                 // Replace the tokens - SQL Azure settings
-                cfgStr = cfgStr.Replace("@@DBSERVER@@", txtDBServer.Text.Trim());
+                cfgStr = cfgStr.Replace("@@DBSERVER@@", (optSubscription.Checked? cboDatabase.Text: txtDBServer.Text.Trim()));
                 cfgStr = cfgStr.Replace("@@DBADMINUSER@@", txtDBAdminUser.Text.Trim());
                 cfgStr = cfgStr.Replace("@@DBADMINPASSWORD@@", txtDBAdminPassword.Text);
                 cfgStr = cfgStr.Replace("@@DBNAME@@", txtDBName.Text.Trim());
@@ -728,7 +994,9 @@ namespace DNNAzureWizard
         /// </summary>
             private void PrepareTasks()
             {
-                lstTasks.Items.Clear();                
+                lstTasks.Items.Clear();
+            ServiceConfigurationFile = "";
+            ServicePackageFile = "";
                 var xtasks = new XmlDocument();
                 xtasks.Load(Environment.CurrentDirectory + "\\config\\DeploymentTasks.xml");
 
@@ -746,16 +1014,21 @@ namespace DNNAzureWizard
                                 var selectSingleNode = pNode.SelectSingleNode("ConfigurationFile");
                                 if (selectSingleNode != null)
                                 {
+                                    ServiceConfigurationFile = selectSingleNode.InnerText;
                                     var li = new ListViewItem(new [] { "Upload service configuration file '" + selectSingleNode.InnerText + "'", "Pending" });
                                     li.Tag = selectSingleNode;
                                     li.UseItemStyleForSubItems = false;
                                     lstTasks.Items.Add(li);
                                     var singleNode = pNode.SelectSingleNode("PackageFile");
                                     if (singleNode != null)
-                                        li = new ListViewItem(new [] { "Upload service package file '" + singleNode.InnerText + "'", "Pending" });
-                                    li.Tag = pNode.SelectSingleNode("PackageFile");
-                                    li.UseItemStyleForSubItems = false;
-                                    lstTasks.Items.Add(li);
+                                    {
+                                        ServicePackageFile = singleNode.InnerText;
+                                        li = new ListViewItem(new[] { "Upload service package file '" + singleNode.InnerText + "'", "Pending" });
+                                        li.Tag = pNode.SelectSingleNode("PackageFile");
+                                        li.UseItemStyleForSubItems = false;
+                                        lstTasks.Items.Add(li);                                        
+                                    }
+
                                 }
                             }
                         }
@@ -767,7 +1040,14 @@ namespace DNNAzureWizard
                         {
                             var li = new ListViewItem(new[] {selectSingleNode.InnerText, "Pending"})
                                          {Tag = task, UseItemStyleForSubItems = false};
-                            lstTasks.Items.Add(li);
+                            var addTask = true;
+                            if (task.Attributes != null && task.Attributes["type"].InnerText == "UploadCertificate" && !chkEnableRDP.Checked)
+                                addTask = false;
+                            if (task.Attributes != null && task.Attributes["type"].InnerText == "Install" && !chkAutoInstall.Checked)
+                                addTask = false;
+
+                            if (addTask)
+                                lstTasks.Items.Add(li);
                         }
                     }
                 }
@@ -803,8 +1083,15 @@ namespace DNNAzureWizard
             private void ProcessTasks()
             {
                 XmlNode environmentVariables = null;
+                bool cancelled = false;
                 foreach (ListViewItem task in lstTasks.Items)
                 {
+                    if (cancelled)
+                    {
+                        task.SubItems[1].Text = "Cancelled";
+                        task.SubItems[1].ForeColor = Color.Red;          
+                        continue;
+                    }
                     try
                     {
                         var xTag = (XmlNode)task.Tag;
@@ -845,6 +1132,34 @@ namespace DNNAzureWizard
                                     task.SubItems[1].Text = "Completed";
                                     task.SubItems[1].ForeColor = Color.DarkGreen;
                                     break;
+                                case "VerifyProvisioning":
+                                    task.SubItems[1].Text = "Verifying...";
+                                    Application.DoEvents();
+                                    VerifyProvisioning(task);
+                                    task.SubItems[1].Text = "Completed";
+                                    task.SubItems[1].ForeColor = Color.DarkGreen;
+                                    break;
+                                case "UploadCertificate":
+                                    task.SubItems[1].Text = "Running...";
+                                    Application.DoEvents();
+                                    UploadCertificate(task);
+                                    task.SubItems[1].Text = "Completed";
+                                    task.SubItems[1].ForeColor = Color.DarkGreen;
+                                    break;
+                                case "Deploy":
+                                    task.SubItems[1].Text = "Running...";
+                                    Application.DoEvents();
+                                    DeployPackage(task);
+                                    task.SubItems[1].Text = "Completed";
+                                    task.SubItems[1].ForeColor = Color.DarkGreen;
+                                    break;
+                                case "Install":
+                                    task.SubItems[1].Text = "Running...";
+                                    Application.DoEvents();
+                                    InstallDotNetNuke(task);
+                                    task.SubItems[1].Text = "Completed";
+                                    task.SubItems[1].ForeColor = Color.DarkGreen;
+                                    break;
                             }
                         }
                         else // is a Upload service package
@@ -855,6 +1170,12 @@ namespace DNNAzureWizard
                             task.SubItems[1].Text = "Completed";
                             task.SubItems[1].ForeColor = Color.DarkGreen;
                         }
+                    }
+                    catch(CancelException cex)
+                    {
+                        cancelled = true;
+                        task.SubItems[1].Text = "Error: " + cex.Message;
+                        task.SubItems[1].ForeColor = Color.Red;                            
                     }
                     catch (Exception ex)
                     {
@@ -867,25 +1188,416 @@ namespace DNNAzureWizard
                     RemoveEnvironmentVariables(environmentVariables);
             }
 
-            /// <summary>
+        private void DeployPackage(ListViewItem task)
+        {
+            try
+            {
+                task.SubItems[1].Text = "Deploying...";
+                Application.DoEvents();
+
+                // Obtain service and package files
+                var credentials = new StorageCredentialsAccountAndKey(txtStorageName.Text, txtStorageKey.Text);
+                var storage = new CloudStorageAccount(credentials, chkStorageHTTPS.Checked);
+                var blobClient = new CloudBlobClient(storage.BlobEndpoint.AbsoluteUri, credentials);
+                var packageUri = blobClient.GetBlobReference(txtPackagesContainer.Text + "/" + ServicePackageFile).Uri;
+                var serviceConfiguration =
+                    ReplaceFileTokens(
+                        Path.Combine(new[] {Environment.CurrentDirectory, "packages", ServiceConfigurationFile}));
+
+                var deploymentName =
+                    "DotNetNuke - " +
+                    DateTime.UtcNow.ToString(CultureInfo.InvariantCulture);
+                deploymentName =
+                    deploymentName.Replace("/", "").Replace(":", "").Replace(" ", "").Replace("-", "").ToLower();
+
+                // Check for previous deployment to delete it             
+                DeletePreviousDeployment(task);
+
+                // Deploy
+                Deploy(task, packageUri, deploymentName, serviceConfiguration);
+
+                // Wait for deployment
+                WaitForDeployment(task, int.Parse(DNNShared.RoleStartupUtils.GetSetting("AsyncDeployInstancesTimeout", "900")));
+
+            }
+            catch (Exception ex)
+            {
+                throw new CancelException(ex.Message);                
+            }
+        }
+
+        private void Deploy(ListViewItem task, Uri packageUri, string deploymentName, string serviceConfiguration)
+        {
+            task.SubItems[1].Text = "Creating deployment...";
+            Application.DoEvents();
+            string trackingId = null;
+            HttpStatusCode? statusCode = null;
+            using (var scope = new OperationContextScope((IContextChannel) ServiceManager))
+            {
+                ServiceManager.CreateOrUpdateDeployment(Subscription.SubscriptionId, cboHostingService.Text,
+                                                        cboEnvironment.Text,
+                                                        new CreateDeploymentInput
+                                                            {
+                                                                TreatWarningsAsError = false,
+                                                                StartDeployment = true,
+                                                                Label =
+                                                                    Convert.ToBase64String(Encoding.UTF8.GetBytes(deploymentName)),
+                                                                Name = deploymentName,
+                                                                PackageUrl = packageUri,
+                                                                Configuration =
+                                                                    Convert.ToBase64String(
+                                                                        Encoding.UTF8.GetBytes(
+                                                                            serviceConfiguration))
+                                                            });
+                if (WebOperationContext.Current != null && WebOperationContext.Current.IncomingResponse != null)
+                {
+                    trackingId = WebOperationContext.Current.IncomingResponse.Headers[Constants.OperationTrackingIdHeader];
+                    statusCode = WebOperationContext.Current.IncomingResponse.StatusCode;
+                }
+            }
+
+            if (trackingId != null && statusCode != null && statusCode == HttpStatusCode.Accepted)
+                WaitForAsyncOperation(ServiceManager, trackingId,
+                                      int.Parse(DNNShared.RoleStartupUtils.GetSetting("AsyncDeploymentTimeout", "300")));
+        }
+
+        private void DeletePreviousDeployment(ListViewItem task)
+        {
+
+            task.SubItems[1].Text = "Deleting previous deployment...";
+            Application.DoEvents();
+            try
+            {
+                string trackingId = null;
+                HttpStatusCode? statusCode = null;
+                using (var scope = new OperationContextScope((IContextChannel)ServiceManager))
+                {
+                    ServiceManager.DeleteDeploymentBySlot(Subscription.SubscriptionId, cboHostingService.Text, cboEnvironment.Text);
+                    if (WebOperationContext.Current != null && WebOperationContext.Current.IncomingResponse != null)
+                    {
+                        trackingId = WebOperationContext.Current.IncomingResponse.Headers[Constants.OperationTrackingIdHeader];
+                        statusCode = WebOperationContext.Current.IncomingResponse.StatusCode;
+                    }
+                }
+
+                if (trackingId != null && statusCode != null && statusCode == HttpStatusCode.Accepted)
+                    WaitForAsyncOperation(ServiceManager, trackingId, int.Parse(DNNShared.RoleStartupUtils.GetSetting("AsyncDeploymentTimeout", "300")));
+            }
+            catch (CommunicationException cex)
+            {
+                // The deployment does not exist
+            }
+        }
+
+        private void WaitForDeployment(ListViewItem task, int pollTimeoutInSeconds)
+        {
+            task.SubItems[1].Text = "Waiting for deployment...";
+            Application.DoEvents();
+            int count = 0;
+            int instancesNotReady;
+            Deployment deployment;
+            do
+            {
+                deployment = ServiceManager.GetDeploymentBySlot(Subscription.SubscriptionId,
+                                                                cboHostingService.Text, cboEnvironment.Text);
+                instancesNotReady =
+                    deployment.RoleInstanceList.Count(x => x.InstanceStatus != RoleInstanceStatus.Ready);
+
+                if (pollTimeoutInSeconds > 0 && count > pollTimeoutInSeconds)
+                    break;
+                Thread.Sleep(5000);
+                count += 5;
+            }
+            while (deployment.Status != DeploymentStatus.Running || instancesNotReady > 0);
+
+            if (deployment.Status != DeploymentStatus.Running)
+                throw new CancelException("The deployment has timeout");
+        }
+
+        private void WaitForAsyncOperation(IServiceManagement service, string trackingId, int pollTimeoutInSeconds)
+        {
+            Operation tracking;
+            int count = 0;
+            do
+            {
+                tracking = service.GetOperationStatus(Subscription.SubscriptionId, trackingId);
+                if (pollTimeoutInSeconds > 0 && count > pollTimeoutInSeconds)
+                    break;
+                Thread.Sleep(5000);
+                count += 5;
+            }
+            while (tracking.Status != OperationState.Failed && tracking.Status != OperationState.Succeeded);
+
+            if (tracking.Status == OperationState.InProgress)
+                throw new WindowsAzureException(string.Format("Operation '{0}' has timeout", trackingId));
+
+            if (tracking.Status == OperationState.Failed)
+                throw new WindowsAzureException(string.Format("Operation '{0}' finished with errors: {1}", trackingId, tracking.Error.Message));
+        }
+
+        /// <summary>
+        /// Does a webrequest to "http://&lt;webSiteName&gt;/Install/Install.aspx?mode=install
+        /// </summary>
+        /// <returns>Returns true if the installation was successfull</returns>
+        public bool InstallDotNetNuke(ListViewItem task)
+        {
+            var success = false;
+            try
+            {
+                task.SubItems[1].Text = "Installing...";
+                Application.DoEvents();
+
+                var deployment = ServiceManager.GetDeploymentBySlot(Subscription.SubscriptionId, cboHostingService.Text,
+                                                                    cboEnvironment.Text);
+
+                // used to build entire input
+                var sb = new StringBuilder();
+
+                // used on each read operation
+                var buf = new byte[8192];
+
+                // prepare the web page we will be asking for
+                var request = (HttpWebRequest)WebRequest.Create(string.Format("{0}/install/install.aspx?mode=install", deployment.Url.ToString()));
+
+                // execute the request
+                var response = (HttpWebResponse)request.GetResponse();
+
+                // we will read data via the response stream
+                Stream resStream = response.GetResponseStream();
+
+                int count;
+                do
+                {
+                    // fill the buffer with data
+                    count = resStream.Read(buf, 0, buf.Length);
+                    // make sure we read some data
+                    if (count != 0)
+                        sb.Append(Encoding.ASCII.GetString(buf, 0, count));
+                }
+                while (count > 0); // any more data to read?
+
+                string result = sb.ToString();
+                if (result.Trim() == string.Empty)
+                    throw new CancelException("No response from the installation process. Make sure that the site is pending for install and that the destination database is empty.");
+                GenerateLogFromHtml(result);
+                if (result.IndexOf("Successfully Installed Site 0", StringComparison.Ordinal) > 0)
+                {
+                    success = true;
+                    txtLOG.Text += "\nInstallation successfull!";
+                }
+                else
+                {
+                    txtLOG.Text += "\nInstallation Error!";
+                }
+
+                Process.Start(deployment.Url.ToString());
+            }
+            catch (Exception ex)
+            {
+                throw new CancelException(ex.Message);
+            }
+
+            return success;
+        }
+
+        /// <summary>
+        /// Extract installation log from HTML response and throwing Log events
+        /// </summary>
+        /// <param name="htmlText">HTML response text</param>
+        private void GenerateLogFromHtml(string htmlText)
+        {
+            var doc = new HtmlAgilityPack.HtmlDocument();
+            doc.LoadHtml(htmlText);
+
+            if (doc.DocumentNode.SelectSingleNode("//body") == null)
+            {
+                return;
+            }
+            var message = string.Empty;
+            var breakLine = false;
+            var error = false;
+
+            foreach (var node in doc.DocumentNode.SelectSingleNode("//body").ChildNodes)
+            {
+                switch (node.Name)
+                {
+                    case "h1":
+                        message = node.InnerText;
+                        breakLine = true;
+                        break;
+                    case "h2":
+                        message = node.InnerText;
+                        breakLine = true;
+                        if (node.InnerText.ToLower().Contains("error"))
+                        {
+                            error = true;
+                        }
+                        break;
+                    case "br":
+                        if (message != string.Empty)
+                            breakLine = true;
+                        break;
+                    case "font":
+                        if (node.Attributes.Count(x => x.Name == "color") > 0 && node.Attributes["color"].Value != "green")
+                        {
+                            error = true;
+                        }
+                        message += " " + node.InnerText;
+                        break;
+                    case "#text":
+                        message += node.InnerText;
+                        break;
+                }
+
+                if (message == string.Empty)
+                {
+                    continue;
+                }
+
+                message = message.Replace("\r\n", " ").Replace("&nbsp;", " ").Trim();
+
+                if (breakLine)
+                {
+                    if (error)
+                    {
+                        txtLOG.Text += "\nERROR: " + message;
+                    }
+                    else
+                    {
+                        txtLOG.Text += "\n" + message;
+                    }
+
+                    message = string.Empty;
+
+                    breakLine = false;
+
+                    error = false;
+                }
+            }
+        }
+
+        private void UploadCertificate(ListViewItem task)
+        {
+            try
+            {
+                task.SubItems[1].Text = "Uploading certificate...";
+                byte[] certData = Certificate.Export(X509ContentType.Pfx, "TempPassword");
+                ServiceManager.AddCertificates(Subscription.SubscriptionId, cboHostingService.Text,
+                                               new CertificateFile
+                                               {
+                                                   CertificateFormat = "pfx",
+                                                   Data = Convert.ToBase64String(certData),
+                                                   Password = "TempPassword"
+                                               });                
+            }
+            catch(Exception ex)
+            {
+                throw new CancelException(ex.Message);
+            }
+        }
+
+        internal class CancelException : Exception
+        {
+            internal CancelException(string message) : base(message)
+            {
+            }
+        }
+
+        private void VerifyProvisioning(ListViewItem task)
+        {
+            try
+            {
+                if (ServiceConfigurationFile == string.Empty || !File.Exists(Path.Combine(new [] {Environment.CurrentDirectory, "packages", ServiceConfigurationFile})))
+                    throw new CancelException("The service configuration file for deploying can't be found");
+                if (ServicePackageFile == string.Empty || !File.Exists(Path.Combine(new[] { Environment.CurrentDirectory, "packages", ServicePackageFile })))
+                    throw new CancelException("The service package file for deploying can't be found");
+
+                // Verify hosted service
+                var warnings = new StringBuilder("");
+                task.SubItems[1].Text = "Verifying hosted service...";
+                Application.DoEvents();
+                var hostedService = ServiceManager.GetHostedService(Subscription.SubscriptionId, cboHostingService.Text);
+                if (hostedService == null)
+                    throw new CancelException(string.Format("The hosted service '{0}' does not exist",
+                                                            cboHostingService.Text));
+
+                // Verify storage account
+                task.SubItems[1].Text = "Verifying storage account...";
+                Application.DoEvents();
+                var storageAccount = ServiceManager.GetStorageService(Subscription.SubscriptionId, cboStorage.Text);
+                if (storageAccount == null)
+                    throw new CancelException(string.Format("The storage account'{0}' does not exist",
+                                                            cboStorage.Text));   
+                int i = 0;
+                while (storageAccount.StorageServiceProperties.Status != StorageServiceStatus.Created)
+                {
+                    i++;
+                    if (i > 100)
+                        throw new CancelException("The operation has timeout");
+                    task.SubItems[1].Text = string.Format("Waiting for storage account: {0}...",
+                                                          storageAccount.StorageServiceProperties.Status);
+                    Application.DoEvents();
+                    Thread.Sleep(5000);
+                    storageAccount = ServiceManager.GetStorageService(Subscription.SubscriptionId, cboStorage.Text);                    
+                }
+                if (hostedService.HostedServiceProperties.Location != storageAccount.StorageServiceProperties.Location)
+                    warnings.AppendLine("- The hosted service and storage account have different locations. This will result in poor performance and will add extra traffic charges.");
+
+                // Verify database server
+                task.SubItems[1].Text = "Verifying database server...";
+                Application.DoEvents();
+                var databaseServer =
+                    DatabaseManager.ListDatabaseServers(Subscription.SubscriptionId).FirstOrDefault(
+                        x => x.Name == cboDatabase.Text);
+                if (databaseServer == null)
+                    throw new CancelException(string.Format("The database server '{0}' does not exist", cboDatabase.Text));
+                if (databaseServer.Location != hostedService.HostedServiceProperties.Location)
+                    warnings.AppendLine("- The hosted service and database server have different locations. This will result in poor performance and will add extra traffic charges.");
+
+                // Verify deployment location
+                task.SubItems[1].Text = "Verifying deployment...";
+                Application.DoEvents();
+                try
+                {
+                    var deployment = ServiceManager.GetDeploymentBySlot(Subscription.SubscriptionId, cboHostingService.Text,
+                                                                         cboEnvironment.Text);
+                    if (deployment != null)
+                        warnings.AppendLine(
+                            string.Format(
+                                "- Currently there is a deployment on '{0}' slot. If you continue, the deployment will be overwritten.",
+                                cboEnvironment.Text));
+                }
+                catch (CommunicationException cex)
+                {
+                    // The deployment does not exist
+                }
+
+
+                if (warnings.ToString() != string.Empty)
+                    if (MessageBox.Show(string.Format("There are warnings for the current deployment: \n{0}\n\n Are you sure that you want to continue?", warnings), "Warnings", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                        throw new CancelException("Operation cancelled by user");
+
+            }
+            catch(CancelException)
+            {
+                throw;
+            }
+            catch(Exception ex)
+            {
+                throw new CancelException(ex.Message);
+            }            
+        }
+
+        /// <summary>
             /// Upload the contents to Windows Azure
             /// </summary>
             private void UploadToWindowsAzure()
             {
-                try
-                {
-                    CheckForIllegalCrossThreadCalls = false;
-                    txtLOG.Text = "";
-                    PrepareTasks();
-                    Application.DoEvents();
+                txtLOG.Text = "";
+                PrepareTasks();
+                Application.DoEvents();
 
-                    ProcessTasks();
-
-                }
-                finally
-                {
-                    CheckForIllegalCrossThreadCalls = true;
-                }
+                ProcessTasks();
             }
 
             /// <summary>
@@ -998,12 +1710,12 @@ namespace DNNAzureWizard
             private void ReloadX509Certificates()
             {
                 cboCertificates.Items.Clear();
-                if (optSubscription.Checked 
-                    && PublishSettings != null 
-                    && PublishSettings.Certificate != null)
-                {
-                    cboCertificates.Items.Add(PublishSettings.Certificate);
-                }
+                //if (optSubscription.Checked 
+                //    && PublishSettings != null 
+                //    && PublishSettings.Certificate != null)
+                //{
+                //    cboCertificates.Items.Add(PublishSettings.Certificate);
+                //}
 
                 // Open Certificates Store
                 var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
@@ -1033,8 +1745,6 @@ namespace DNNAzureWizard
 
 
         #endregion
-
-
 
         #region " Background upload worker "
 
@@ -1145,8 +1855,7 @@ namespace DNNAzureWizard
                 }
                 catch (Exception ex)
                 {
-                    UploadFileItem.SubItems[1].Text = "Error: " + ex.Message;
-                    UploadFileItem.SubItems[1].ForeColor = Color.Red;
+                    throw new CancelException(ex.Message);
                 }
                 finally
                 {
@@ -1162,59 +1871,6 @@ namespace DNNAzureWizard
 
 
         #endregion
-
-            private void ChkEnableRDPCheckedChanged(object sender, EventArgs e)
-            {
-                pnlRDP.Enabled = chkEnableRDP.Checked;
-                foreach (Control ctl in pnlRDP.Controls)
-                {
-                    ctl.Enabled = pnlRDP.Enabled;
-                    errProv.SetError(ctl, null);
-                }
-                if (!chkEnableRDP.Checked)
-                    cboCertificates.SelectedItem = null;
-                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
-
-                // Reload packages
-                ReloadDeploymentPackages();
-            }
-
-            private void CmdViewCertificateClick(object sender, EventArgs e)
-            {
-                if (Certificate != null)
-                    X509Certificate2UI.DisplayCertificate(Certificate, this.Handle);
-            }
-
-            private void CboCertificatesSelectedIndexChanged(object sender, EventArgs e)
-            {
-                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
-                if (cboCertificates.SelectedIndex == cboCertificates.Items.Count - 1)                     // Launch the create certificate window
-                {
-                    var frm = new FrmCreateCertificate();
-                    if (frm.ShowDialog() == DialogResult.Cancel)
-                        cboCertificates.SelectedItem = null;
-                    else
-                    {
-                        ReloadX509Certificates();
-                        foreach (Object item in cboCertificates.Items)
-                            if ((item is X509Certificate) && (((X509Certificate2) item).SerialNumber == frm.SerialNumber))
-                            {
-                                cboCertificates.SelectedItem = item;
-                                break;
-                            }                        
-                    }
-                }
-            }
-
-            private static string EncryptWithCertificate(string clearText, X509Certificate2 certificate)
-            {
-                var encoding = new UTF8Encoding();
-                Byte[] clearTextsByte = encoding.GetBytes(clearText);
-                var contentinfo = new ContentInfo(clearTextsByte);
-                var envelopedCms = new EnvelopedCms(contentinfo);
-                envelopedCms.Encrypt(new CmsRecipient(certificate));
-                return Convert.ToBase64String(envelopedCms.Encode());
-            }
 
             #region Control validation
 
@@ -1750,205 +2406,6 @@ namespace DNNAzureWizard
         //}
 
         #endregion
-
-        private void CboHostingServiceSelectedIndexChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                if (cboHostingService.Text == RefreshLabel)
-                    RefreshHostedServices();
-                if (cboHostingService.Text == CreateNewLabel)
-                {
-                    cboHostingService.Text = "";
-                    var frm = new FrmNewHostedService {Wizard = this};
-                    if (frm.ShowDialog() == DialogResult.OK)
-                        RefreshHostedServices();
-                    cboHostingService.SelectedValue = frm.ServiceName;
-                }
-
-            }
-            catch (Exception ex)
-            {
-                LogException(ex);
-            }
-        }
-
-        private void CboHostingServiceOnValidating(object sender, CancelEventArgs cancelEventArgs)
-        {
-            string error = null;
-            if (cboHostingService.Text == string.Empty || cboHostingService.Text.Contains("."))
-            {
-                error = "Please select or create a hosting service";
-            }
-            errProv.SetError((Control)sender, error);
-        }
-
-        private void CboStorageOnValidating(object sender, CancelEventArgs cancelEventArgs)
-        {
-            string error = null;
-            if (cboStorage.Text == string.Empty || cboStorage.Text.Contains("."))
-            {
-                error = "Please select or create a storage account";
-            }
-            errProv.SetError((Control)sender, error);            
-        }
-
-
-        private void CboStorageSelectedIndexChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                txtStorageKey.Text = "";
-                if (cboStorage.Text == RefreshLabel)
-                {
-                    RefreshStorageAccounts();
-                    return;
-                }
-                    
-                if (cboStorage.Text == CreateNewLabel)
-                {
-                    cboStorage.Text = "";
-                    var frm = new FrmNewStorageAccount { Wizard = this };
-                    if (frm.ShowDialog() == DialogResult.OK)
-                        RefreshStorageAccounts();
-                    cboStorage.SelectedValue = frm.ServiceName;
-                    return;
-                }
-                if (cboStorage.Text != "")
-                {
-                    try
-                    {
-                        if (cboStorage.Tag != null)
-                        {
-                            var storageAccounts = (List<StorageService>) cboStorage.Tag;
-                            var storageAccount = storageAccounts.FirstOrDefault(x => x.ServiceName == cboStorage.Text);
-                            if (storageAccount != null)
-                            {
-                                var storageKeys = ServiceManager.GetStorageKeys(Subscription.SubscriptionId,
-                                                                                storageAccount.ServiceName);
-                                txtStorageKey.Text = storageKeys.StorageServiceKeys.Primary;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        txtStorageKey.Text = "";
-                        LogException(ex);
-                    }                     
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(ex);
-            }
-        }
-
-        private void TxtPackagesContainerOnValidating(object sender, CancelEventArgs cancelEventArgs)
-        {
-            string error = null;
-
-           if (!Regex.IsMatch(txtPackagesContainer.Text, @"^[a-z0-9](([a-z0-9\-[^\-])){1,61}[a-z0-9]$"))
-                error = "Invalid container name. Container names must be valid DNS names, and must conform to these rules: \n - Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.\n- Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.\n- All letters in a container name must be lowercase.\n- Container names must be from 3 through 63 characters long.";
-            errProv.SetError((Control)sender, error);                   
-        }
-
-        private void TxtVhdNameOnValidating(object sender, CancelEventArgs cancelEventArgs)
-        {
-            string error = null;
-            if (txtVHDName.Text.Length == 0)
-            {
-                error = "You must specify a blob name for the VHD";
-            }
-            errProv.SetError((Control)sender, error);
-        }
-
-        private void TxtVhdDriveSizeOnValidating(object sender, CancelEventArgs cancelEventArgs)
-        {
-            string error = null;
-            int driveSize;
-            if ((txtVHDDriveSize.Text.Length == 0) ||
-                !int.TryParse(txtVHDDriveSize.Text, out driveSize) ||
-                (driveSize < 128) || (driveSize > 1048576))
-            {
-                error = "You must specify a valid VHD size (recommended minumum: 512Mb; maximum 1Tb=1048576Mb)";
-            }
-            errProv.SetError((Control)sender, error);
-        }
-
-        private void CboDatabaseSelectedIndexChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                if (cboDatabase.Text == RefreshLabel)
-                {
-                    RefreshDatabaseServers();
-                    return;
-                }
-
-                if (cboDatabase.Text == CreateNewLabel)
-                {
-                    cboDatabase.Text = "";
-                    var frm = new FrmNewDatabaseServer { Wizard = this };
-                    if (frm.ShowDialog() == DialogResult.OK)
-                    {
-                        RefreshDatabaseServers();
-                        cboDatabase.SelectedValue = frm.ServerName;
-                        txtDBAdminUser.Text = frm.AdminUser;
-                        txtDBAdminPassword.Text = frm.AdminPassword;
-                    }
-                        
-                    
-                    return;
-                }
-                //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
-
-            }
-            catch (Exception ex)
-            {
-                LogException(ex);
-            }
-        }
-
-        private void optSubscription_CheckedChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                ReloadX509Certificates();
-            }
-            catch (Exception ex)
-            {
-                LogException(ex);
-            }
-        }
-
-
-
-
-        //private void cboContainers_SelectedIndexChanged(object sender, EventArgs e)
-        //{
-        //    try
-        //    {
-        //        if (cboContainers.Text == RefreshLabel)
-        //        {
-        //            ThreadPool.QueueUserWorkItem(o => RefreshContainers());
-        //            return;
-        //        }
-
-        //        if (cboContainers.Text == CreateNewLabel)
-        //        {
-        //            cboStorage.Text = "";
-        //            var frm = new FrmNewContainer { Wizard = this };
-        //            if (frm.ShowDialog() == DialogResult.OK)
-        //                RefreshContainers();
-        //            cboStorage.SelectedValue = frm.ContainerName;
-        //            return;
-        //        }                
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogException(ex);
-        //    }
-        //}
 
     }
 }

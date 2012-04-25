@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*">
+<ServiceConfiguration serviceName="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="2" osVersion="*">
   <Role name="SMBServer">
     <Instances count="1" />
     <ConfigurationSettings>
@@ -13,9 +13,9 @@
       <Setting name="driveContainer" value="azure-accelerator-drives" />
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
-      <Setting name="package" value="DotNetNuke_Community_06.01.04_Install.zip" />
+      <Setting name="package" value="" />
       <Setting name="dnnFolder" value="DotNetNuke" />
-      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=351307" />
+      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=364276" />
       <Setting name="DBAdminUser" value="@@DBADMINUSER@@" />
       <Setting name="DBAdminPassword" value="@@DBADMINPASSWORD@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />

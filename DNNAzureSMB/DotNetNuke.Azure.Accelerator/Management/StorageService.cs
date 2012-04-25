@@ -100,6 +100,9 @@ namespace DotNetNuke.Azure.Accelerator.Management
         [DataMember(Order = 4)]
         public string Label { get; set; }
 
+        [DataMember(Order = 5)]
+        public string Status { get; set; }
+
         public ExtensionDataObject ExtensionData { get; set; }
     }
 
@@ -160,7 +163,6 @@ namespace DotNetNuke.Azure.Accelerator.Management
         [WebInvoke(Method = "POST", UriTemplate = @"{subscriptionId}/services/storageservices/{serviceName}/keys?action=regenerate")]
         IAsyncResult BeginRegenerateStorageServiceKeys(string subscriptionId, string serviceName, RegenerateKeys regenerateKeys, AsyncCallback callback, object state);
         StorageService EndRegenerateStorageServiceKeys(IAsyncResult asyncResult);
-
 
         /// <summary>
         /// Creates a new storage account in Windows Azure

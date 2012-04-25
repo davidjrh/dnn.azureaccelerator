@@ -60,6 +60,10 @@
     <ApplicationIcon>DotNetNuke.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="HtmlAgilityPack, Version=1.4.0.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>assemblies\HtmlAgilityPack.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.WindowsAzure.StorageClient, Version=1.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>assemblies\Microsoft.WindowsAzure.StorageClient.dll</HintPath>
       <SpecificVersion>False</SpecificVersion>
@@ -71,6 +75,8 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
+    <Reference Include="System.ServiceModel.Web" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -157,22 +163,10 @@
       <DesignTime>True</DesignTime>
     </Compile>
     <None Include="app.config" />
-    <None Include="packages\DNNAzureSingleAndSmall6.1_RDP.cscfg">
+    <None Include="packages\DNNAzureSingleAndSmall_RDP.cscfg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="packages\DNNAzureSingleAndSmall6.1.cscfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSMB6.1_RDP.cscfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSingleAndExtraSmall6.1.cscfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSingleAndExtraSmall6.1_RDP.cscfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSMB6.1.cscfg">
+    <None Include="packages\DNNAzureSingleAndSmall_RDP.cspkg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Properties\Settings.settings">
@@ -186,49 +180,24 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="assemblies\HtmlAgilityPack.dll" />
+    <Content Include="assemblies\HtmlAgilityPack.XML" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.dll" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.xml" />
+    <Content Include="packages\DNNAzureSingleAndSmall_RDP.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="Resources\icon-warning.gif" />
-    <None Include="packages\DNNAzureSingleAndSmall6.1_RDP.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSingleAndSmall6.1.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSMB6.1_RDP.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSingleAndExtraSmall6.1.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="utils\makecert.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="packages\DNNAzureSMB6.1.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="logs\PlaceHolder.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Sql\CreateDatabase.sql">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Sql\CreateUser.sql">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Sql\DropDatabase.sql">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Sql\VerifyDatabase.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="config\DeploymentTasks.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Content Include="DotNetNuke.ico" />
-    <None Include="packages\DNNAzureSingleAndExtraSmall6.1_RDP.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">
@@ -253,6 +222,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DNNShared\DNNShared.csproj">
+      <Project>{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}</Project>
+      <Name>DNNShared</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DotNetNuke.Azure.Accelerator\DotNetNuke.Azure.Accelerator.csproj">
       <Project>{E0AA0D55-E39F-464F-9974-3E302D3A3598}</Project>
       <Name>DotNetNuke.Azure.Accelerator</Name>

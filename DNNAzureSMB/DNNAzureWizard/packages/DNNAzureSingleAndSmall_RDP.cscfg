@@ -20,7 +20,7 @@
       <Setting name="SMBMode" value="false" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />
-      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=364276" />
+      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=354688" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />

@@ -37,6 +37,14 @@ namespace DotNetNuke.Azure.Accelerator.Management
         public const string Deleting = "Deleting";
     }
 
+    public static class StorageServiceStatus
+    {
+        public const string Creating = "Creating";
+        public const string ResolvingDns = "ResolvingDns";
+        public const string Created = "Created";
+        public const string Deleting = "Deleting";
+    }
+
     public static class RoleInstanceStatus
     {
         public const string Initializing = "Initializing";

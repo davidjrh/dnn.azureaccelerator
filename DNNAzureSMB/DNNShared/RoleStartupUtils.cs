@@ -370,6 +370,19 @@ namespace DNNShared
             return localAddress != null ? localAddress.ToString() : "";
         }
 
+        public static string GetSetting(string key, string defaultValue = "")
+        {
+            try
+            {
+                if (RoleEnvironment.IsAvailable)
+                    return RoleEnvironment.GetConfigurationSettingValue(key);
+            }
+            catch (RoleEnvironmentException)  // The configuration setting that was being retrieved does not exist.
+            {
+            }
+            return ConfigurationManager.AppSettings.AllKeys.Contains(key) ? ConfigurationManager.AppSettings[key] : defaultValue;
+        }
+
         #endregion
 
         #region Diagnostic monitor initialization
