@@ -19,7 +19,11 @@ accelerator wizard.
 - Added new deployment progress page on the webrole website, showing the service deployment status until the site is ready. By default,
 the deployment log stored on Table Storage is not shown on this page, but you can enable it on the service configuration file for
 debugging purposes. You can access these details using remote desktop on any webrole and browsing "http://admin.dnndev.me".
-
+- Wizard redesigned adding steps for automatic provisioning and deployment, allowing to provision hosted services, storage accounts, 
+SQL Azure server, firewall rules, etc. 
+- Added an option on the Wizard to do an automatic installation with default parameters. Remember that default credentials are user
+"host" with password "dnnhost", change that credentials as soon as possible
+- Added an option on the Wizard to export to a local system folder for later deployment
 
 Version 6.1 - 02 nov 2011
 
