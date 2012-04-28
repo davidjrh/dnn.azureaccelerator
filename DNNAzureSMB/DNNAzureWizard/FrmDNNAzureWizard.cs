@@ -1217,7 +1217,7 @@ namespace DNNAzureWizard
                 Deploy(task, packageUri, deploymentName, serviceConfiguration);
 
                 // Wait for deployment
-                WaitForDeployment(task, int.Parse(DNNShared.RoleStartupUtils.GetSetting("AsyncDeployInstancesTimeout", "900")));
+                WaitForDeployment(task, int.Parse(GetSetting("AsyncDeployInstancesTimeout", "900")));
 
             }
             catch (Exception ex)
@@ -1258,7 +1258,7 @@ namespace DNNAzureWizard
 
             if (trackingId != null && statusCode != null && statusCode == HttpStatusCode.Accepted)
                 WaitForAsyncOperation(ServiceManager, trackingId,
-                                      int.Parse(DNNShared.RoleStartupUtils.GetSetting("AsyncDeploymentTimeout", "300")));
+                                      int.Parse(GetSetting("AsyncDeploymentTimeout", "300")));
         }
 
         private void DeletePreviousDeployment(ListViewItem task)
@@ -1281,9 +1281,9 @@ namespace DNNAzureWizard
                 }
 
                 if (trackingId != null && statusCode != null && statusCode == HttpStatusCode.Accepted)
-                    WaitForAsyncOperation(ServiceManager, trackingId, int.Parse(DNNShared.RoleStartupUtils.GetSetting("AsyncDeploymentTimeout", "300")));
+                    WaitForAsyncOperation(ServiceManager, trackingId, int.Parse(GetSetting("AsyncDeploymentTimeout", "300")));
             }
-            catch (CommunicationException cex)
+            catch (CommunicationException)
             {
                 // The deployment does not exist
             }
@@ -1567,7 +1567,7 @@ namespace DNNAzureWizard
                                 "- Currently there is a deployment on '{0}' slot. If you continue, the deployment will be overwritten.",
                                 cboEnvironment.Text));
                 }
-                catch (CommunicationException cex)
+                catch (CommunicationException)
                 {
                     // The deployment does not exist
                 }
@@ -2405,6 +2405,13 @@ namespace DNNAzureWizard
         //    Application.DoEvents();            
         //}
 
+        #endregion
+
+        #region Utils
+        public static string GetSetting(string key, string defaultValue = "")
+        {
+            return ConfigurationManager.AppSettings.AllKeys.Contains(key) ? ConfigurationManager.AppSettings[key] : defaultValue;
+        }
         #endregion
 
     }

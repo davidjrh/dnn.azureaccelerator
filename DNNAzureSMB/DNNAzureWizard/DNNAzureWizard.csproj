@@ -222,10 +222,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DNNShared\DNNShared.csproj">
-      <Project>{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}</Project>
-      <Name>DNNShared</Name>
-    </ProjectReference>
     <ProjectReference Include="..\DotNetNuke.Azure.Accelerator\DotNetNuke.Azure.Accelerator.csproj">
       <Project>{E0AA0D55-E39F-464F-9974-3E302D3A3598}</Project>
       <Name>DotNetNuke.Azure.Accelerator</Name>
