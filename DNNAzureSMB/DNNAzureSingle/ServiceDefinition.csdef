@@ -42,6 +42,7 @@
       <Setting name="DBAdminUser" />
       <Setting name="DBAdminPassword" />
       <Setting name="ShowDeploymentProgressDetails" />
+      <Setting name="packageInstallConfiguration" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

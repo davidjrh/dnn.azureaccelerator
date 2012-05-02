@@ -173,15 +173,17 @@ namespace DNNShared
                         if (!dbExists)
                         {
                             // Create the database
-                            Trace.TraceInformation("The specified database does not exists, creating new database...");
+                            Trace.TraceInformation("The specified database does not exist, creating new database...");
                             var cmdC1 = new SqlCommand(string.Format("CREATE DATABASE {0}", connBuilderOriginal.InitialCatalog), dbConn);
                             cmdC1.ExecuteNonQuery();
 
                             // Check for the principal existence
-                            var cmd2 = new SqlCommand("SELECT COUNT(NAME) FROM sys.database_principals WHERE NAME=@loginName", dbConn);
+                            Trace.TraceInformation("Check for the user login existence...");
+                            var cmd2 = new SqlCommand("SELECT COUNT(NAME) FROM sys.sql_logins WHERE NAME=@loginName", dbConn);
                             cmd2.Parameters.AddWithValue("loginName", connBuilderOriginal.UserID);
                             if ((int)cmd2.ExecuteScalar() == 0)
                             {
+                                Trace.TraceInformation("User login does not exist, creating user login...");
                                 var cmdUs = new SqlCommand(string.Format("CREATE LOGIN {0} WITH PASSWORD = '{1}'", connBuilderOriginal.UserID, connBuilderOriginal.Password), dbConn);
                                 cmdUs.ExecuteNonQuery();
                             }
@@ -352,6 +354,36 @@ namespace DNNShared
             {
                 Trace.TraceError("Error while web site contents setup: " + ex.Message);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Downloads a customized installation configuration file to local file system
+        /// </summary>
+        /// <param name="localInstallConfig">Path to the DotNetNuke.install.config file</param>
+        /// <param name="storageConnectionString">Azure storage connection string</param>
+        /// <param name="packageContainer">Container where the customized installation configuration file resides</param>
+        /// <param name="packageInstallConfig">Customized installation configuration file stored on Azure Storage</param>
+        public static void SetupInstallConfig(string localInstallConfig, string storageConnectionString, string packageContainer, string packageInstallConfig)
+        {
+            if (!string.IsNullOrEmpty(packageInstallConfig))
+            {
+                try
+                {
+
+                    Trace.TraceInformation("Check for customized installation configuration settings...");
+                    var account = CloudStorageAccount.Parse(storageConnectionString);
+                    var blobClient = account.CreateCloudBlobClient();
+                    var blobContainer = blobClient.GetContainerReference(packageContainer);
+
+                    Trace.TraceInformation(string.Format("Downloading customized installation settings '{0}' to '{1}'...", packageInstallConfig, localInstallConfig));
+                    blobContainer.GetBlobReference(packageInstallConfig).DownloadToFile(localInstallConfig);
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError("Error while downloading customized installation file: {0}", ex.Message);
+                }
+
             }
         }
 
@@ -849,5 +881,6 @@ namespace DNNShared
         }
 
         #endregion
+
     }
 }

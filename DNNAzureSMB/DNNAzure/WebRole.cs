@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.Web.Administration;
@@ -91,6 +92,17 @@ namespace DNNAzure
                     // Setup Database Connection string
                     RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                     RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"));
+
+                    // Setup DotNetNuke.install.config
+                    RoleStartupUtils.SetupInstallConfig(
+                                        Path.Combine(new[]
+                                                         {
+                                                             Drive.LocalPath, RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                             "Install\\DotNetNuke.install.config"
+                                                         }),
+                                        RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                                        RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
+                                        RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
 
                 }
                 catch (Exception ex)

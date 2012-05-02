@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Threading;
 using Microsoft.WindowsAzure.ServiceRuntime;
@@ -82,6 +83,17 @@ namespace SMBServer
                 // Setup Database Connection string
                 RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                 RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"));
+
+                // Setup DotNetNuke.install.config
+                RoleStartupUtils.SetupInstallConfig(
+                                    Path.Combine(new[]
+                                                         {
+                                                             Drive.LocalPath, RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                             "Install\\DotNetNuke.install.config"
+                                                         }),
+                                    RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                                    RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
+                                    RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
                 
                 Trace.TraceInformation("Exiting SMB Server OnStart");
             }

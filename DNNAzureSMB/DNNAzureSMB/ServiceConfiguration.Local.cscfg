@@ -35,6 +35,7 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="MIIBpwYJKoZIhvcNAQcDoIIBmDCCAZQCAQAxggFQMIIBTAIBADA0MCAxHjAcBgNVBAMTFUROTiBBenVyZSBBY2NlbGVyYXRvcgIQUkmc34noCaxOUzuTBGeRlzANBgkqhkiG9w0BAQEFAASCAQCrkJMY61IUDUIYVgvro1F14QMugJw+zOCOzU8dS1+QGbo95cafvz5dqj6OdZ1C93JCiHn15TWt8RTY0AiqTUS83ruRDyBQ1M4TjXe/Q+AEbKJDdLdFnrcpH0s+bFU4EWyayFjBshiJlDWGTZW9A5mP0b8ZhCWxUBk36LrU049QO3/vC6zmtEktCTAXEjUBJZY6bxpPxpGKBW9cMwhGlckpggTsJcDo4Oz7kHVioteAg2PQHJA7+LNhNPgOyOWLXbZHxds4sGqOFB91B7h3psAMl4bD5WX8clrguOVjJk6AYZ9NkeqXzB19R9bqy/3HnOaLMaSxyy6abDOWFG8Te5URMDsGCSqGSIb3DQEHATAUBggqhkiG9w0DBwQICr0sf41T6ZSAGFf6HFxmtc1JDXalYlsWJ7RXEiFWYph6Eg==" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="2013-03-29T23:59:59.0000000+00:00" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="true" />
+      <Setting name="packageInstallConfiguration" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="0B2D3841A4BC3C6486BDCCB5D14A71BAB34242D8" thumbprintAlgorithm="sha1" />
