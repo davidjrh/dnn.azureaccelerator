@@ -332,5 +332,26 @@ namespace DotNetNuke.Azure.Accelerator.Management
             }
         }
 
+
+        /// <summary>
+        /// Available locations for SQL Azure (actually is a fixed sub-set of the Windows Azure Locations)
+        /// </summary>
+        /// <param name="proxy"></param>
+        /// <param name="subscriptionId"></param>
+        /// <returns>Returns a fixed list of locations where SQL Azure is available</returns>
+        public static LocationList ListLocations(this IDatabaseManagement proxy, string subscriptionId)
+        {
+            var locations = new LocationList
+                                {
+                                    new Location {Name = "North Central US"},
+                                    new Location {Name = "South Central US"},
+                                    new Location {Name = "North Europe"},
+                                    new Location {Name = "West Europe"},
+                                    new Location {Name = "East Asia"},
+                                    new Location {Name = "Southeast Asia"}
+                                };
+            return locations;
+        }
+
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using DotNetNuke.Azure.Accelerator.Management;
 
@@ -53,7 +54,7 @@ namespace DNNAzureWizard
             cboLocation.SelectedIndex = 0;
             Cursor = Cursors.WaitCursor;
             Application.DoEvents();
-            var locations = Wizard.ServiceManager.ListLocations(Wizard.Subscription.SubscriptionId);
+            var locations = Wizard.DatabaseManager.ListLocations(Wizard.Subscription.SubscriptionId);
             cboLocation.Tag = locations;
             cboLocation.Items.Clear();
             foreach (var location in locations)
@@ -80,6 +81,11 @@ namespace DNNAzureWizard
             {
                 if (txtHostedServiceName.Text.Trim() == string.Empty)
                     throw new ApplicationException("You must specify a valid service name");
+
+                if (!Regex.IsMatch(txtHostedServiceName.Text, @"^[a-z0-9](([a-z0-9\-[^\-])){1,21}[a-z0-9]$"))
+                    throw new ApplicationException("The storage account name must be between 3 and 24 characters in length and use lower-case letters and numbers only.");
+
+
                 Enabled = false;
                 Cursor = Cursors.WaitCursor;
                 Application.DoEvents();

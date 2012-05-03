@@ -53,7 +53,7 @@ namespace DNNAzureWizard
             cboLocation.SelectedIndex = 0;
             Cursor = Cursors.WaitCursor;
             Application.DoEvents();
-            var locations = Wizard.ServiceManager.ListLocations(Wizard.Subscription.SubscriptionId);
+            var locations = Wizard.DatabaseManager.ListLocations(Wizard.Subscription.SubscriptionId);
             cboLocation.Tag = locations;
             cboLocation.Items.Clear();
             foreach (var location in locations)
