@@ -99,8 +99,17 @@ namespace DotNetNuke.Azure.Accelerator.Forms
             {
                 foreach (string cookie in web.Document.Cookie.Split(';'))
                 {
-                    var name = cookie.Split('=')[0];
-                    var value = cookie.Substring(name.Length + 1);                    
+                    string name, value;
+                    if (cookie.Contains("="))
+                    {
+                        name = cookie.Split('=')[0];
+                        value = cookie.Split('=')[1];
+                    }
+                    else
+                    {
+                        name = cookie;
+                        value = "";
+                    }
                     const string path = "/";
                     const string domain = "windows.azure.com"; 
                     container.Add(new Cookie(name.Trim(), value.Trim(), path, domain));

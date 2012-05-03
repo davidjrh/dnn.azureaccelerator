@@ -1,8 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<ServicePackage>
-  <Name>DNN Azure Single and ExtraSmall 6.1 (RDP Enabled)</Name>
-  <Description>This package uses the webrole "Instance 0" for sharing the website contents for all the webroles. All the instances are ExtraSmall.</Description>
-  <ConfigurationFile>DNNAzureSingleAndExtraSmall6.1_RDP.cscfg</ConfigurationFile>
-  <PackageFile>DNNAzureSingleAndExtraSmall6.1_RDP.cspkg</PackageFile>
-  <RDPEnabled>true</RDPEnabled>
-</ServicePackage>

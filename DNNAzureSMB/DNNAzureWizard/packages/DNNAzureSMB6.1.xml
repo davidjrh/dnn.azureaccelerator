@@ -1,8 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<ServicePackage>
-  <Name>DNN Azure SMB 6.1</Name>
-  <Description>This package uses a dedicated worker role instance for sharing the website contents for all the webroles. All the instances are Small.</Description>
-  <ConfigurationFile>DNNAzureSMB6.1.cscfg</ConfigurationFile>
-  <PackageFile>DNNAzureSMB6.1.cspkg</PackageFile>
-  <RDPEnabled>false</RDPEnabled>
-</ServicePackage>
