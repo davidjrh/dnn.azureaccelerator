@@ -689,6 +689,8 @@ namespace DNNAzureWizard
             string msg = ex.Message;
 #if DEBUG
                 msg += " - Stack trace: " + ex.StackTrace;
+                if (ex.InnerException != null)
+                    msg += "\n\n - InnerException: " + ex.InnerException;
 #endif
             MessageBox.Show(msg, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
