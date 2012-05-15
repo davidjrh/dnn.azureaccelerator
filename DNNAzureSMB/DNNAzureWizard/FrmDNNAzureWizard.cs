@@ -948,10 +948,8 @@ namespace DNNAzureWizard
             cfgStr = cfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());
 
             // Replace the tokens - VHD settings
-            cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", txtVHDBlobName.Text.Trim().ToLower());
-            int driveSize;
-            int.TryParse(txtVHDSize.Text, out driveSize);
-            cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", txtVHDSize.Text.Trim().ToLower());
+            cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", (optSubscription.Checked ? txtVHDName.Text : txtVHDBlobName.Text.Trim()));
+            cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", (optSubscription.Checked ? txtVHDDriveSize.Text : txtVHDSize.Text.Trim()));
 
             // Replace the tokens - RDP settings
             if (chkEnableRDP.Checked)
@@ -1546,6 +1544,9 @@ namespace DNNAzureWizard
                 }
                 if (hostedService.HostedServiceProperties.Location != storageAccount.StorageServiceProperties.Location)
                     warnings.AppendLine("- The hosted service and storage account have different locations. This will result in poor performance and will add extra traffic charges.");
+                
+                txtStorageName.Text = storageAccount.ServiceName;
+                txtStorageKey.Text = ServiceManager.GetStorageKeys(Subscription.SubscriptionId, cboStorage.Text).StorageServiceKeys.Primary;
 
                 // Verify database server
                 task.SubItems[1].Text = "Verifying database server...";
