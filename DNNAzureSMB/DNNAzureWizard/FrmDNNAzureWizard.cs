@@ -424,7 +424,7 @@ namespace DNNAzureWizard
                     var frm = new FrmNewHostedService { Wizard = this };
                     if (frm.ShowDialog() == DialogResult.OK)
                         RefreshHostedServices();
-                    cboHostingService.SelectedValue = frm.ServiceName;
+                    cboHostingService.SelectedIndex = cboHostingService.Items.IndexOf(frm.ServiceName);
                 }
 
             }
@@ -474,7 +474,7 @@ namespace DNNAzureWizard
                     var frm = new FrmNewStorageAccount { Wizard = this };
                     if (frm.ShowDialog() == DialogResult.OK)
                         RefreshStorageAccounts();
-                    cboStorage.SelectedValue = frm.ServiceName;
+                    cboStorage.SelectedIndex = cboStorage.Items.IndexOf(frm.ServiceName);
                     return;
                 }
                 if (cboStorage.Text != "")
@@ -557,7 +557,7 @@ namespace DNNAzureWizard
                     if (frm.ShowDialog() == DialogResult.OK)
                     {
                         RefreshDatabaseServers();
-                        cboDatabase.SelectedValue = frm.ServerName;
+                        cboDatabase.SelectedIndex = cboDatabase.Items.IndexOf(frm.ServerName);
                         txtDBAdminUser.Text = frm.AdminUser;
                         txtDBAdminPassword.Text = frm.AdminPassword;
                     }
@@ -565,7 +565,6 @@ namespace DNNAzureWizard
 
                     return;
                 }
-                //ThreadPool.QueueUserWorkItem(o => RefreshContainers());
 
             }
             catch (Exception ex)
