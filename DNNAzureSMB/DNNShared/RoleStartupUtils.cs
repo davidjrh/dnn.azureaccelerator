@@ -746,9 +746,15 @@ namespace DNNShared
         {
             int exitCode = 0;
             //Enable SMB traffic through the firewall
-            Trace.TraceInformation("Enabling SMB traffic through the firewall");    
+            Trace.TraceInformation("Enabling SMB traffic through the firewall");
+
+            string error;
+            exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);  
+
             if (UseAdvancedFirewall()) // Is Windows Server 2008 R2? (OS Family == "2" in the service configuration file)
             {
+                // This rules are need after enabling the fileandprint service on Windows Server 2008 R2, to enable
+                // mapping the drive using Windows Azure Connect on a remote machine
                 // Changed to the new netsh firewall syntax. For more info, see http://support.microsoft.com/kb/947709/. 
                 exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Public", "In", "Public", "ICMPv4", "Any", "Any", "LocalSubnet", "");
                 exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Domain", "In", "Domain", "ICMPv4", "Any", "Any", "Any", "");
@@ -788,11 +794,6 @@ namespace DNNShared
                 exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Public", "Out", "Public", "TCP", "Any", "445", "LocalSubnet", "System");
                 exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Domain", "Out", "Domain", "TCP", "Any", "445", "Any", "System");
                 exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Private", "Out", "Private", "TCP", "Any", "445", "LocalSubnet", "System");         
-            }
-            else
-            {
-                string error;
-                exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);
             }
 
             return exitCode;
