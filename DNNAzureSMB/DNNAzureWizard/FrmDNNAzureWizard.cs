@@ -834,8 +834,8 @@ namespace DNNAzureWizard
             summary.AppendLine("- Storage name: " + (optSubscription.Checked ? cboStorage.Text : txtStorageName.Text.Trim()));
             summary.AppendLine("- Storage key: " + txtStorageKey.Text.Trim());
             summary.AppendLine("- Storage package container: " + txtStorageContainer.Text.Trim());
-            summary.AppendLine("- VHD blob name: " + (optSubscription.Checked ? txtVHDName.Text : txtVHDBlobName.Text.Trim()));
-            summary.AppendLine("- VHD size: " + (optSubscription.Checked ? txtVHDDriveSize.Text : txtVHDSize.Text.Trim()));
+            summary.AppendLine("- VHD blob name: " + (optSubscription.Checked ? txtVHDName.Text.Trim() : txtVHDBlobName.Text.Trim()));
+            summary.AppendLine("- VHD size: " + (optSubscription.Checked ? txtVHDDriveSize.Text.Trim() : txtVHDSize.Text.Trim()));
             summary.AppendLine("");
             summary.AppendLine("DATABASE SETTINGS:");
             summary.AppendLine("- DB Server Name: " + (txtDBServer.Visible ? txtDBServer.Text : cboDatabase.Text) + ".database.windows.net");
@@ -948,8 +948,8 @@ namespace DNNAzureWizard
             cfgStr = cfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());
 
             // Replace the tokens - VHD settings
-            cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", (optSubscription.Checked ? txtVHDName.Text : txtVHDBlobName.Text.Trim()));
-            cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", (optSubscription.Checked ? txtVHDDriveSize.Text : txtVHDSize.Text.Trim()));
+            cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", (optSubscription.Checked ? txtVHDName.Text.Trim() : txtVHDBlobName.Text.Trim()));
+            cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", (optSubscription.Checked ? txtVHDDriveSize.Text.Trim() : txtVHDSize.Text.Trim()));
 
             // Replace the tokens - RDP settings
             if (chkEnableRDP.Checked)
