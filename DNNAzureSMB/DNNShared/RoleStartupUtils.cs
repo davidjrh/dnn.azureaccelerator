@@ -744,15 +744,96 @@ namespace DNNShared
         /// <returns>Returns 0 if success</returns>
         public static int EnableSMBFirewallTraffic()
         {
-            string error;
+            int exitCode = 0;
             //Enable SMB traffic through the firewall
-            Trace.TraceInformation("Enable SMB traffic through the firewall");            
-            int exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);
-            // Changed to the new netsh firewall syntax. For more info, see http://support.microsoft.com/kb/947709/. 
-            // TODO Add a startup task with all the File and Printer Sharing rules, one by one. The new advfirewall syntax shown in the command below does not create the rules, only enable them if they exists
-            //int exitCode = ExecuteCommand("netsh.exe", "advfirewall firewall set rule group=\"File and Printer Sharing\" new enable=Yes", out error, 10000);
-            if (exitCode != 0)
-                Trace.TraceError("Error setting up firewall, error msg:" + error);
+            Trace.TraceInformation("Enabling SMB traffic through the firewall");    
+            if (UseAdvancedFirewall()) // Is Windows Server 2008 R2? (OS Family == "2" in the service configuration file)
+            {
+                // Changed to the new netsh firewall syntax. For more info, see http://support.microsoft.com/kb/947709/. 
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Public", "In", "Public", "ICMPv4", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Domain", "In", "Domain", "ICMPv4", "Any", "Any", "Any", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Private", "In", "Private", "ICMPv4", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-In) - Public", "In", "Public", "ICMPv6", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-In) - Domain", "In", "Domain", "ICMPv6", "Any", "Any", "Any", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-In) - Private", "In", "Private", "ICMPv6", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-In) - Public", "In", "Public", "UDP", "138", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-In) - Domain", "In", "Domain", "UDP", "138", "Any", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-In) - Private", "In", "Private", "UDP", "138", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-In) - Public", "In", "Public", "UDP", "137", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-In) - Domain", "In", "Domain", "UDP", "137", "Any", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-In) - Private", "In", "Private", "UDP", "137", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-In) - Public", "In", "Public", "TCP", "139", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-In) - Domain", "In", "Domain", "TCP", "139", "Any", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-In) - Private", "In", "Private", "TCP", "139", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-In) - Public", "In", "Public", "TCP", "445", "Any", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-In) - Domain", "In", "Domain", "TCP", "445", "Any", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-In) - Private", "In", "Private", "TCP", "445", "Any", "LocalSubnet", "System");
+
+                // Outbound rules
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-Out) - Public", "Out", "Public", "ICMPv4", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-Out) - Domain", "Out", "Domain", "ICMPv4", "Any", "Any", "Any", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-Out) - Private", "Out", "Private", "ICMPv4", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-Out) - Public", "Out", "Public", "ICMPv6", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-Out) - Domain", "Out", "Domain", "ICMPv6", "Any", "Any", "Any", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-Out) - Private", "Out", "Private", "ICMPv6", "Any", "Any", "LocalSubnet", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-Out) - Public", "Out", "Public", "UDP", "Any", "138", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-Out) - Domain", "Out", "Domain", "UDP", "Any", "138", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-Out) - Private", "Out", "Private", "UDP", "Any", "138", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-Out) - Public", "Out", "Public", "UDP", "Any", "137", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-Out) - Domain", "Out", "Domain", "UDP", "Any", "137", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-Out) - Private", "Out", "Private", "UDP", "Any", "137", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-Out) - Public", "Out", "Public", "TCP", "Any", "139", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-Out) - Domain", "Out", "Domain", "TCP", "Any", "139", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-Out) - Private", "Out", "Private", "TCP", "Any", "139", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Public", "Out", "Public", "TCP", "Any", "445", "LocalSubnet", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Domain", "Out", "Domain", "TCP", "Any", "445", "Any", "System");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Private", "Out", "Private", "TCP", "Any", "445", "LocalSubnet", "System");         
+            }
+            else
+            {
+                string error;
+                exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);
+            }
+
+            return exitCode;
+        }
+
+        /// <summary>
+        /// Returns true if the OS version is 6.1 or higher (Windows Server 2008 R2, Windows 7, Windows 8)
+        /// </summary>
+        /// <returns></returns>
+        private static bool UseAdvancedFirewall()
+        {
+            return (Environment.OSVersion.Version.Major == 6 && Environment.OSVersion.Version.Minor >= 1) ||
+                   (Environment.OSVersion.Version.Major > 6);
+        }
+
+        private static int SetupAdvancedFirewallRule(string ruleName, string direction, string profile, string protocol, string localPort, string remotePort, string remoteIp, string program)
+        {
+            // Try to update the rule first
+            var rule = string.Format(" dir={0}", direction);
+            rule += string.Format(" profile={0}", profile);
+            rule += string.Format(" protocol={0}", protocol);
+            if (protocol.ToUpperInvariant() == "TCP" || protocol.ToUpperInvariant() == "UDP")
+            {
+                rule += string.Format(" localport={0}", localPort);
+                rule += string.Format(" remoteport={0}", remotePort);
+            }
+
+            rule += string.Format(" remoteip={0}", remoteIp);
+            if (!string.IsNullOrEmpty(program))
+                rule += string.Format(" program={0}", program);
+            rule += " action=Allow enable=Yes";
+
+            var updateArgs = string.Format("advfirewall firewall set rule name=\"{0}\" new {1}", ruleName, rule);
+            var createArgs = string.Format("advfirewall firewall add rule name=\"{0}\" {1}", ruleName, rule);
+
+            string error;
+            var exitCode = ExecuteCommand("netsh.exe", updateArgs, out error, 10000, false);
+            if (exitCode != 0) // If not exists, then create the rule
+            {
+                exitCode = ExecuteCommand("netsh.exe", createArgs, out error, 10000);
+            }
             return exitCode;
         }
 
@@ -829,6 +910,7 @@ namespace DNNShared
 
             return exitCode;
         }
+
         /// <summary>
         /// Executes an external .exe command
         /// </summary>
@@ -836,11 +918,17 @@ namespace DNNShared
         /// <param name="arguments">Arguments</param>
         /// <param name="error">Contents of the error results if fails</param>
         /// <param name="timeout">Timeout for executing the command in milliseconds</param>
+        /// <param name="traceError">Trace error if the exit code is not zero</param>
         /// <returns>Exit code</returns>
-        public static int ExecuteCommand(string exe, string arguments, out string error, int timeout)
+        public static int ExecuteCommand(string exe, string arguments, out string error, int timeout, bool traceError = true)
         {
             string output;
-            return ExecuteCommand(exe, arguments, out output, out error, timeout);
+            int exitCode = ExecuteCommand(exe, arguments, out output, out error, timeout);
+            if (exitCode != 0 && traceError)
+            {
+                Trace.TraceWarning("Error executing command: {0}", error);
+            }
+            return exitCode;
         }
         #endregion
 
