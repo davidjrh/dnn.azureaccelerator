@@ -247,9 +247,13 @@ namespace DNNAzure
                     appPool.ProcessModel.UserName = "localhost\\" + userName;
                     appPool.ProcessModel.Password = password;
 
+                    // Setup limits
                     appPool.ProcessModel.IdleTimeout = appPoolIdleTimeout;
                     appPool.ProcessModel.StartupTimeLimit = appPoolStartupTimeLimit;
                     appPool.ProcessModel.PingResponseTime = appPoolPingResponseTime;
+
+                    // Enable 32bit modules on Win64
+                    appPool.Enable32BitAppOnWin64 = true;
 
                     appPool.ManagedRuntimeVersion = managedRuntimeVersion;
                     appPool.ManagedPipelineMode = managedPipelineMode.ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;
