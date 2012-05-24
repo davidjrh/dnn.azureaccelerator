@@ -70,6 +70,9 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />
       <Setting name="ShowDeploymentProgressDetails" value="false" />
+      <Setting name="appPool.IdleTimeout" value="Infinite" />
+      <Setting name="appPool.StartupTimeLimit" value="180" />
+      <Setting name="appPool.PingResponseTime" value="180" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />

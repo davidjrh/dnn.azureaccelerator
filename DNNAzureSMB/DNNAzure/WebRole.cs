@@ -137,10 +137,16 @@ namespace DNNAzure
             {
                 if (!CreateDNNWebSite(RoleEnvironment.GetConfigurationSettingValue("hostHeaders"), 
                                         RoleEnvironment.GetConfigurationSettingValue("localPath") + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
-                                      RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                      RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"), 
-                                      RoleEnvironment.GetConfigurationSettingValue("managedRuntimeVersion"), 
-                                      RoleEnvironment.GetConfigurationSettingValue("managedPipelineMode")))
+                                          RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
+                                          RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"), 
+                                          RoleEnvironment.GetConfigurationSettingValue("managedRuntimeVersion"), 
+                                          RoleEnvironment.GetConfigurationSettingValue("managedPipelineMode"),
+                                          RoleEnvironment.GetConfigurationSettingValue("appPool.IdleTimeout").ToLower() == "infinite"?
+                                                                  TimeSpan.Zero:
+                                                                  new TimeSpan(0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.IdleTimeout")), 0),
+                                        new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.StartupTimeLimit"))),
+                                        new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.PingResponseTime")))
+                                      ))
                     Trace.TraceError("Failed to create the DNNWebSite");
             }
             catch (Exception ex)
@@ -164,8 +170,14 @@ namespace DNNAzure
         /// <param name="password">Password for the application pool identity </param>
         /// <param name="managedRuntimeVersion">Runtime version for the application pool</param>
         /// <param name="managedPipelineMode">Pipeline mode for the application pool</param>
+        /// <param name="appPoolIdleTimeout">Amount of time (in minutes) a worker process will remain idle before it shuts down </param>
+        /// <param name="appPoolStartupTimeLimit">Specifies the time (in seconds) that IIS waits for an application pool to start. </param>
+        /// <param name="appPoolPingResponseTime">Specifies the time (in seconds) that a worker process is given to respond to a health-monitoring ping. After the time limit is exceeded, the WWW service terminates the worker process. </param>
         /// <returns></returns>
-        public bool CreateDNNWebSite(string hostHeaders, string homePath, string userName, string password, string managedRuntimeVersion, string managedPipelineMode)
+        public bool CreateDNNWebSite(string hostHeaders, string homePath, string userName, string password, 
+                                        string managedRuntimeVersion, string managedPipelineMode,
+                                        TimeSpan appPoolIdleTimeout, TimeSpan appPoolStartupTimeLimit,
+                                        TimeSpan appPoolPingResponseTime)
         {
             // Create the user account for the Application Pool. 
             Trace.TraceInformation("Creating user account for the Application Pool");
@@ -225,13 +237,22 @@ namespace DNNAzure
                     {
                         Trace.TraceInformation("Creating application pool...");
                         appPool = serverManager.ApplicationPools.Add(appPoolName);
-                        appPool.ProcessModel.IdentityType = ProcessModelIdentityType.SpecificUser;
-                        appPool.ProcessModel.UserName = "localhost\\" + userName;
-                        appPool.ProcessModel.Password = password;
-
-                        appPool.ManagedRuntimeVersion = managedRuntimeVersion;
-                        appPool.ManagedPipelineMode = managedPipelineMode.ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;
                     }
+                    else
+                    {
+                        Trace.TraceInformation("Updating application pool...");
+                    }
+
+                    appPool.ProcessModel.IdentityType = ProcessModelIdentityType.SpecificUser;
+                    appPool.ProcessModel.UserName = "localhost\\" + userName;
+                    appPool.ProcessModel.Password = password;
+
+                    appPool.ProcessModel.IdleTimeout = appPoolIdleTimeout;
+                    appPool.ProcessModel.StartupTimeLimit = appPoolStartupTimeLimit;
+                    appPool.ProcessModel.PingResponseTime = appPoolPingResponseTime;
+
+                    appPool.ManagedRuntimeVersion = managedRuntimeVersion;
+                    appPool.ManagedPipelineMode = managedPipelineMode.ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;
 
                     // Sets the application pool
                     Trace.TraceInformation("Setting application pool to the website...");

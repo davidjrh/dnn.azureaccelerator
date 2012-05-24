@@ -753,7 +753,7 @@ namespace DNNShared
 
             if (UseAdvancedFirewall()) // Is Windows Server 2008 R2? (OS Family == "2" in the service configuration file)
             {
-                // This rules are need after enabling the fileandprint service on Windows Server 2008 R2, to enable
+                // This rules are needed after enabling the fileandprint service on Windows Server 2008 R2, to enable
                 // mapping the drive using Windows Azure Connect on a remote machine
                 // Changed to the new netsh firewall syntax. For more info, see http://support.microsoft.com/kb/947709/. 
                 exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Public", "In", "Public", "ICMPv4", "Any", "Any", "LocalSubnet", "");

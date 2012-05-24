@@ -62,6 +62,9 @@
       <Setting name="managedRuntimeVersion" />
       <Setting name="managedPipelineMode" />
       <Setting name="ShowDeploymentProgressDetails" />
+      <Setting name="appPool.IdleTimeout" />
+      <Setting name="appPool.StartupTimeLimit" />
+      <Setting name="appPool.PingResponseTime" />
     </ConfigurationSettings>
   </WebRole>
 </ServiceDefinition>

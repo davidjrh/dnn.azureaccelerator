@@ -43,6 +43,9 @@
       <Setting name="DBAdminPassword" />
       <Setting name="ShowDeploymentProgressDetails" />
       <Setting name="packageInstallConfiguration" />
+      <Setting name="appPool.IdleTimeout" />
+      <Setting name="appPool.StartupTimeLimit" />
+      <Setting name="appPool.PingResponseTime" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
