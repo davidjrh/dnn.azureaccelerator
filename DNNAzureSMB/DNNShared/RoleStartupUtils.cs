@@ -231,7 +231,7 @@ namespace DNNShared
         /// </summary>
         /// <param name="webConfigPath">Path to the web config file</param>
         /// <param name="databaseConnectionString">Database connection string</param>
-        public static bool SetupWebConfig(string webConfigPath, string databaseConnectionString)
+        public static bool SetupWebConfig(string webConfigPath, string databaseConnectionString, string installationDate)
         {
             bool success = false;
             try
@@ -263,6 +263,26 @@ namespace DNNShared
                     webconfig.SelectSingleNode("/configuration/appSettings").AppendChild(wfNode);
                 }
                 wfNode.Attributes["value"].Value = "true";
+
+                // Modify web.config settings: setting up "InstallationDate" setting
+                DateTime installationDateValue;
+                if (!string.IsNullOrEmpty(installationDate) && DateTime.TryParse(installationDate, out installationDateValue))
+                {
+                    var idNode = webconfig.SelectSingleNode("/configuration/appSettings/add[@key='InstallationDate']");
+                    if (idNode == null)
+                    {
+                        idNode = webconfig.CreateElement("add");
+                        var attkey = webconfig.CreateAttribute("key");
+                        attkey.Value = "IsWebFarm";
+                        idNode.Attributes.Append(attkey);
+                        var attvalue = webconfig.CreateAttribute("value");
+                        attvalue.Value = installationDate;
+                        idNode.Attributes.Append(attvalue);
+                        webconfig.SelectSingleNode("/configuration/appSettings").AppendChild(idNode);
+                    }
+                    idNode.Attributes["value"].Value = installationDate;                       
+                }
+             
                     
                 webconfig.Save(webConfigPath);
                 Trace.TraceInformation("Web.config modified successfully");

@@ -46,6 +46,7 @@
       <Setting name="appPool.IdleTimeout" />
       <Setting name="appPool.StartupTimeLimit" />
       <Setting name="appPool.PingResponseTime" />
+      <Setting name="InstallationDate" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

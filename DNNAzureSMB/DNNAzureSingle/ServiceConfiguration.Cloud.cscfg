@@ -45,6 +45,7 @@
       <Setting name="appPool.IdleTimeout" value="Infinite" />
       <Setting name="appPool.StartupTimeLimit" value="180" />
       <Setting name="appPool.PingResponseTime" value="180" />
+      <Setting name="InstallationDate" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />

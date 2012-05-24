@@ -25,6 +25,7 @@
       <Setting name="DBAdminUser" />
       <Setting name="DBAdminPassword" />
       <Setting name="packageInstallConfiguration" />
+      <Setting name="InstallationDate" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

@@ -91,7 +91,8 @@ namespace DNNAzure
 
                     // Setup Database Connection string
                     RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
-                                                    RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"));
+                                                    RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"),
+                                                    RoleEnvironment.GetConfigurationSettingValue("InstallationDate"));
 
                     // Setup DotNetNuke.install.config
                     RoleStartupUtils.SetupInstallConfig(
