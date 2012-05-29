@@ -72,10 +72,12 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.EnterpriseServices" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.ServiceModel.Web" />
+    <Reference Include="System.Web.Services" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -83,6 +85,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\DotNetNukePackage.cs" />
     <Compile Include="FrmCertificatePassword.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -128,6 +131,11 @@
     <Compile Include="ProcessUtility.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Web References\DNN.UpdateService\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.map</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="FrmCertificatePassword.resx">
       <DependentUpon>FrmCertificatePassword.cs</DependentUpon>
     </EmbeddedResource>
@@ -175,6 +183,14 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <None Include="Web References\DNN.UpdateService\azurepackages.wsdl" />
+    <None Include="Web References\DNN.UpdateService\Reference.map">
+      <Generator>MSDiscoCodeGenerator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+    <None Include="Web References\DNN.UpdateService\VersionInfo1.datasource">
+      <DependentUpon>Reference.map</DependentUpon>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="assemblies\HtmlAgilityPack.dll" />
@@ -184,6 +200,7 @@
     <Content Include="packages\DNNAzureSingleAndSmall_RDP.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="Web References\DNN.UpdateService\azurepackages.disco" />
     <None Include="Resources\icon-warning.gif" />
     <None Include="utils\makecert.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -223,6 +240,25 @@
       <Project>{E0AA0D55-E39F-464F-9974-3E302D3A3598}</Project>
       <Name>DotNetNuke.Azure.Accelerator</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WebReferences Include="Web References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WebReferenceUrl Include="http://update.dotnetnuke.com/azurepackages.asmx">
+      <UrlBehavior>Dynamic</UrlBehavior>
+      <RelPath>Web References\DNN.UpdateService\</RelPath>
+      <UpdateFromURL>http://update.dotnetnuke.com/azurepackages.asmx</UpdateFromURL>
+      <ServiceLocationURL>
+      </ServiceLocationURL>
+      <CachedDynamicPropName>
+      </CachedDynamicPropName>
+      <CachedAppSettingsObjectName>Settings</CachedAppSettingsObjectName>
+      <CachedSettingsPropName>DNNAzureWizard_DotNetNuke_UpdateService_UpdateService</CachedSettingsPropName>
+    </WebReferenceUrl>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

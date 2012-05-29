@@ -19,6 +19,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
+using DNNAzureWizard.Components;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.StorageClient;
 using DotNetNuke.Azure.Accelerator.Management;
@@ -35,6 +36,7 @@ namespace DNNAzureWizard
         private const int WizardHeight = 500;
         private const string CreateNewLabel = "<Create New...>";
         private const string RefreshLabel = "<Refresh...>";
+        private const string CustomLabel = "<Custom package Url...>";
 
         /* The following expression to validate a pwd of 6 to 16 characters and contain three of the following 4 items: 
          * upper case letter, lower case letter, a symbol, a number
@@ -46,6 +48,7 @@ namespace DNNAzureWizard
          *      (?=.*?[^\w\d\s]) - contains 1 symbol
          */
         internal const string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
+        internal const string ValidUrlRegex = @"^(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?$";
 
         private enum WizardTabs
         {
@@ -273,6 +276,44 @@ namespace DNNAzureWizard
         {
             ThreadPool.QueueUserWorkItem(o => RefreshHostedServices());
             ThreadPool.QueueUserWorkItem(o => RefreshStorageAccounts());
+        }
+
+        private void RefreshDotNetNukeDownloadUrlsAsync()
+        {
+            ThreadPool.QueueUserWorkItem(o => RefreshDotNetNukeDownloadUrls());
+        }
+
+        private void RefreshDotNetNukeDownloadUrls()
+        {
+            try
+            {
+                cboDNNVersion.Items.Clear();
+                var updateSvc = new DNN.UpdateService.UpdateService();
+                var versions = updateSvc.GetVersions();
+                foreach (var versionInfo in versions.Where(y => 
+                                            y.PackageName == DotNetNukePackage.DNN_CE || y.PackageName == DotNetNukePackage.DNN_PE)
+                                            .OrderByDescending(x => x.Version))
+                {
+                    cboDNNVersion.Items.Add(new DotNetNukePackage
+                                        {
+                                            PackageName = versionInfo.PackageName,
+                                            Version = versionInfo.Version,
+                                            DownloadUrl = versionInfo.DownloadURL,
+                                            Latest = cboDNNVersion.Items.Count == 0
+                                        });       
+                    
+                }
+
+                if (cboDNNVersion.Items.Count == 0)
+                    cboDNNVersion.Items.Add("");
+                cboDNNVersion.Items.Add(CustomLabel);
+                cboDNNVersion.SelectedIndex = 0;
+                
+            }
+            catch(Exception ex)
+            {
+                LogException(ex);
+            }
         }
 
         private string GetFinalLog()
@@ -666,6 +707,7 @@ namespace DNNAzureWizard
             RefreshSubscriptions();
             ReloadDeploymentPackages();
             ReloadX509Certificates();
+            RefreshDotNetNukeDownloadUrlsAsync();
         }
         private void RefreshSubscriptions()
         {
@@ -875,6 +917,7 @@ namespace DNNAzureWizard
             foreach (ListViewItem li in lstPackages.Items)
                 if (li.Selected)
                     summary.AppendLine("- " + li.Text);
+            summary.AppendLine("- DotNetNuke package location: " + txtDNNUrl.Text.Trim());
             if (optSubscription.Checked)
             {
                 summary.AppendLine("- Auto-install DotNetNuke with defaults: " + (chkAutoInstall.Checked ? "true" : "false"));
@@ -906,6 +949,7 @@ namespace DNNAzureWizard
             errProv.SetError((Control)sender, error);
         }
 
+
         private bool ValidateAzureSettings()
         {
             TxtStorageNameValidating(txtStorageName, null);
@@ -918,9 +962,21 @@ namespace DNNAzureWizard
             return !invalidInput;
         }
 
+        void TxtDNNUrlValidating(object sender, CancelEventArgs e)
+        {
+            string error = null;
+
+            if (!Regex.Match(txtDNNUrl.Text.Trim(), ValidUrlRegex).Success)
+            {
+                error = "The DotNetNuke package Url is not valid";
+            }
+            errProv.SetError((Control)sender, error);
+        }
+
         private bool ValidatePackagesSelectionSettings()
         {
             LstPackagesValidating(lstPackages, null);
+            TxtDNNUrlValidating(txtDNNUrl, null);
             bool invalidInput = PackageSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
             return !invalidInput;
         }
@@ -946,6 +1002,7 @@ namespace DNNAzureWizard
             // Replace the tokens - Paths
             cfgStr = cfgStr.Replace("@@APPPATH@@", Environment.CurrentDirectory + '\\');
             cfgStr = cfgStr.Replace("@@PACKAGECONTAINER@@", txtStorageContainer.Text.Trim().ToLower());
+            cfgStr = cfgStr.Replace("@@PACKAGEURL@@", txtDNNUrl.Text.Trim());
 
             // Replace the tokens - VHD settings
             cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", (optSubscription.Checked ? txtVHDName.Text.Trim() : txtVHDBlobName.Text.Trim()));
@@ -2433,6 +2490,45 @@ namespace DNNAzureWizard
             return ConfigurationManager.AppSettings.AllKeys.Contains(key) ? ConfigurationManager.AppSettings[key] : defaultValue;
         }
         #endregion
+
+        private void cboDNNVersion_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                txtDNNUrl.Visible = false;
+                txtDNNUrl.Text = "";
+                if (cboDNNVersion.Text == CustomLabel)
+                {
+                    txtDNNUrl.Text = "http://";
+                    txtDNNUrl.Visible = true;
+                }
+                else
+                {
+                    if (cboDNNVersion.SelectedItem != null && cboDNNVersion.SelectedItem.GetType() == typeof(DotNetNukePackage))
+                    {
+                        txtDNNUrl.Text = ((DotNetNukePackage) cboDNNVersion.SelectedItem).DownloadUrl;
+                    }                     
+                }
+                lblCustomUrl.Visible = txtDNNUrl.Visible;
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void lnkMorePackages_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            try
+            {
+                const string downloadPackagesURL = "http://dnnazureaccelerator.codeplex.com/releases";
+                Process.Start(downloadPackagesURL);                
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);                
+            }
+        }
 
     }
 }
