@@ -15,7 +15,7 @@
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />
       <Setting name="dnnFolder" value="DotNetNuke" />
-      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=364276" />
+      <Setting name="packageUrl" value="@@PACKAGEURL@@" />
       <Setting name="DBAdminUser" value="@@DBADMINUSER@@" />
       <Setting name="DBAdminPassword" value="@@DBADMINPASSWORD@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
