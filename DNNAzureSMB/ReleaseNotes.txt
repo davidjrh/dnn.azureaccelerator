@@ -1,4 +1,4 @@
-Version 6.2 - Pending release date
+Version 6.2 - 30 may 2012
 General
 - Modified the local file sharing user account creation on roles to don't allow account expiration
 - Modified the web roles endpoints to allow traffic on port 443
@@ -24,6 +24,11 @@ SQL Azure server, firewall rules, etc.
 - Added an option on the Wizard to do an automatic installation with default parameters. Remember that default credentials are user
 "host" with password "dnnhost", change that credentials as soon as possible
 - Added an option on the Wizard to export to a local system folder for later deployment
+- 32bit compiled modules now work
+- Added configuration settings in the service configuration file to customize some application pool timeout limits to allow to deploy 
+and install successfully on ExtraSmall instances
+- Added a new configuration setting to specify a custom install configuration file to overwrite the default installation 
+"Install/DotNetNuke.install.config"
 
 Version 6.1 - 02 nov 2011
 
