@@ -37,6 +37,9 @@
   <WebRole name="DNNAzure">
     <Runtime executionContext="elevated">
     </Runtime>
+    <Startup>
+      <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
+    </Startup>
     <Sites>
       <Site name="Web">
         <Bindings>

@@ -1,8 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition">
-  <WebRole name="DNNAzure" vmsize="Small">
+  <WebRole name="DNNAzure" vmsize="ExtraSmall">
     <Runtime executionContext="elevated">
     </Runtime>
+    <Startup>
+      <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
+    </Startup>
     <Sites>
       <Site name="Web">
         <Bindings>
