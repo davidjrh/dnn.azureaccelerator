@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="2" osVersion="*">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="2" osVersion="*" schemaVersion="2012-05.1.7">
   <Role name="DNNAzure">
     <Instances count="1" />
     <ConfigurationSettings>
@@ -20,7 +20,7 @@
       <Setting name="SMBMode" value="false" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />
-      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=364276" />
+      <Setting name="packageUrl" value="@@PACKAGEURL@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
@@ -46,6 +46,7 @@
       <Setting name="appPool.StartupTimeLimit" value="180" />
       <Setting name="appPool.PingResponseTime" value="180" />
       <Setting name="InstallationDate" value="" />
+      <Setting name="AddonsUrl" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />

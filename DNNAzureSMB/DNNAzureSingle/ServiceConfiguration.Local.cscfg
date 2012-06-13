@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*" schemaVersion="2012-05.1.7">
   <Role name="DNNAzure">
     <Instances count="1" />
     <ConfigurationSettings>
@@ -19,8 +19,8 @@
       <Setting name="localPath" value="X:" />
       <Setting name="SMBMode" value="false" />
       <Setting name="packageContainer" value="dotnetnuke-packages" />
-      <Setting name="package" value="DotNetNuke_Community_06.01.04_Install.zip" />
-      <Setting name="packageUrl" value="http://dotnetnuke.codeplex.com/Download?DownloadId=351307" />
+      <Setting name="package" value="" />
+      <Setting name="packageUrl" value="@@PACKAGEURL@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="true" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="dnnadmin" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="MIIBpwYJKoZIhvcNAQcDoIIBmDCCAZQCAQAxggFQMIIBTAIBADA0MCAxHjAcBgNVBAMTFUROTiBBenVyZSBBY2NlbGVyYXRvcgIQUkmc34noCaxOUzuTBGeRlzANBgkqhkiG9w0BAQEFAASCAQARHrdnP7rU35NXABAy36qZx4Y5b9VreUTEO7/rLiu/8A737PsX/6opgCG8ciY5in4CpZ7MtOXV/gLqb07CAVZmJGno5Ev4AcN0umStNdHe1e4/gifayNATCG+5ViFwKsaKp1SdFoS2DYoIga2/Lor6kU6SBNGHC28ky5oaabHndlnHEXnWttklEdRjaOOp/NdUeJqTEYRsR7NQYdXqFL0NZ9K5QVMNQeRgSGSJfwTfJWtU0+w+L65kDrZxizKE3FSN4T1L0QsnYhT4j8DuD+GFRGIFDsfH888088+UdvK5yejHZm4jQXMzORKyLoqzazOCRz1hwxR60436IXpO0i//MDsGCSqGSIb3DQEHATAUBggqhkiG9w0DBwQIFhWqM5mgSIqAGDSzG3+6PCfNL6masi8tR3IctrNwonKBGQ==" />
@@ -46,6 +46,7 @@
       <Setting name="appPool.StartupTimeLimit" value="180" />
       <Setting name="appPool.PingResponseTime" value="180" />
       <Setting name="InstallationDate" value="" />
+      <Setting name="AddonsUrl" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="0B2D3841A4BC3C6486BDCCB5D14A71BAB34242D8" thumbprintAlgorithm="sha1" />

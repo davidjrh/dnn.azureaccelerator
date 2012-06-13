@@ -325,7 +325,7 @@ namespace DNNShared
                     File.Delete(packageFile);
                 }
 
-                // Check for folder content, and if it's empty, import content from Azure Storage
+                // Check for folder content, and if it's empty, import content from Azure Storage or an external Url (i.e. CodePlex)
                 var wsFolder = new DirectoryInfo(webSitePath);
                 if (wsFolder.GetFiles().Length == 0 && wsFolder.GetDirectories().Length == 0)
                 {
@@ -960,13 +960,16 @@ namespace DNNShared
             if (string.IsNullOrEmpty(destinationFile)) throw new ArgumentNullException("destinationFile");
 
             if (string.IsNullOrEmpty(packageUrl))
-                packageUrl = GetPackageUrl();
-
+            {
+                Trace.TraceInformation("Package Url not specified");
+                return false;
+            }
+                
             try
             {
                 // Create a new WebClient instance.
                 var myWebClient = new WebClient();
-
+                
                 //TODO Change the DotNetNuke-Appgallery to DotNetNuke-Cloud
                 myWebClient.Headers.Add("User-Agent", "DotNetNuke-Appgallery/1.0.0.0(Microsoft Windows NT 6.1.7600.0)");
 
@@ -981,12 +984,36 @@ namespace DNNShared
                 Trace.TraceError(string.Format("Error while downloading file '{0}': {1}", packageUrl, ex));
                 return false;
             }
-        }
+        }        
 
-        private static string GetPackageUrl()
+
+        #endregion
+
+        #region OnStart Addons
+        public static bool DownloadAddons(string destinationFile, string addonsUrl = "")
         {
-            // TODO Get the Url from a Web Service on DNN web site
-            return "http://dotnetnuke.codeplex.com/Download?DownloadId=351307";
+            if (string.IsNullOrEmpty(destinationFile)) throw new ArgumentNullException("destinationFile");
+
+            if (string.IsNullOrEmpty(addonsUrl))
+            {
+                return false;
+            }
+
+            try
+            {
+                // Create a new WebClient instance.
+                var myWebClient = new WebClient();
+                Trace.TraceInformation(string.Format("Downloading addons file '{0}' from '{1}'...", destinationFile, addonsUrl));
+                // Download the Web resource and save it into the current filesystem folder.
+                myWebClient.DownloadFile(addonsUrl, destinationFile);
+                Trace.TraceInformation("Successfully downloaded addons file \"{0}\" from \"{1}\"", destinationFile, addonsUrl);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError(string.Format("Error while downloading addons file '{0}': {1}", addonsUrl, ex));
+                return false;
+            }            
         }
 
         #endregion
