@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2012-05.1.7">
   <WorkerRole name="SMBServer">
-    <Runtime executionContext="elevated"></Runtime>
+    <Runtime executionContext="elevated">
+    </Runtime>
     <Imports>
       <Import moduleName="Diagnostics" />
       <Import moduleName="Connect" />
@@ -25,6 +26,7 @@
       <Setting name="DBAdminPassword" />
       <Setting name="packageInstallConfiguration" />
       <Setting name="InstallationDate" />
+      <Setting name="AddonsUrl" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
@@ -34,7 +36,8 @@
     </Endpoints>
   </WorkerRole>
   <WebRole name="DNNAzure">
-    <Runtime executionContext="elevated"></Runtime>
+    <Runtime executionContext="elevated">
+    </Runtime>
     <Startup>
       <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
     </Startup>

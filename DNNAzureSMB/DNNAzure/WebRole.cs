@@ -105,6 +105,10 @@ namespace DNNAzure
                                         RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
                                         RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
 
+                    // Setup post install addons (always overwrite)
+                    RoleStartupUtils.InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
+                                                    Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));
+
                 }
                 catch (Exception ex)
                 {

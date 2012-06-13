@@ -990,14 +990,65 @@ namespace DNNShared
         #endregion
 
         #region OnStart Addons
-        public static bool DownloadAddons(string destinationFile, string addonsUrl = "")
-        {
-            if (string.IsNullOrEmpty(destinationFile)) throw new ArgumentNullException("destinationFile");
 
+        public static bool InstallAddons(string addonsUrl, string webSitePath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(addonsUrl))
+                    return false;
+
+                // Create website folder if not exists
+                if (!Directory.Exists(webSitePath))
+                {
+                    Trace.TraceInformation(string.Format("Creating folder '{0}'...", webSitePath));
+                    Directory.CreateDirectory(webSitePath);
+                }
+                const string localDNNPackageFilename = "DNNAddons.zip";
+                string addonsFile = Path.Combine(Path.GetTempPath(), localDNNPackageFilename);
+                // Delete previous failed attemps of web site creation
+                if (File.Exists(addonsFile))
+                {
+                    Trace.TraceWarning(string.Format("Deleting previous addons file '{0}'...", addonsFile));
+                    File.Delete(addonsFile);
+                }                
+                if (!DownloadAddons(addonsFile, addonsUrl))
+                    return false;
+                
+                // Unzip downloaded file
+                Trace.TraceInformation("Decompressing addons file...");
+                try
+                {
+                    UnzipFile(addonsFile, webSitePath);
+                }
+                catch (CompressOperationException ex)
+                {
+                    Trace.TraceError("Error while decompresing the addons file: {0}", ex);
+                    return false;
+                }
+
+                Trace.TraceInformation(string.Format("Deleting addons file '{0}'...", addonsFile));
+                File.Delete(addonsFile);
+
+                Trace.TraceInformation("Addons successfully deployed");
+                return true;
+                
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError(string.Format("Error while installing addons file '{0}': {1}", addonsUrl, ex));
+                return false;
+            }
+        }
+
+        private static bool DownloadAddons(string destinationFile, string addonsUrl)
+        {
             if (string.IsNullOrEmpty(addonsUrl))
             {
                 return false;
             }
+
+            if (string.IsNullOrEmpty(destinationFile)) throw new ArgumentNullException("destinationFile");
 
             try
             {

@@ -95,6 +95,11 @@ namespace SMBServer
                                     RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
                                     RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
                                     RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
+
+                // Setup post install addons (always overwrite)
+                RoleStartupUtils.InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
+                                                Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));
+
                 
                 Trace.TraceInformation("Exiting SMB Server OnStart");
             }
