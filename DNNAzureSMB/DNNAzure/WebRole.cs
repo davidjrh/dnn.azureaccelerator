@@ -244,6 +244,7 @@ namespace DNNAzure
                         // Add SSL binding
                         if (!string.IsNullOrEmpty(sslThumbprint))
                         {
+                            Trace.TraceInformation("Adding SSL binding using certificate '{0}' on port '{1}'...", sslThumbprint, sslPort);
                             var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
                             store.Open(OpenFlags.OpenExistingOnly);
                             var certificate = store.Certificates.Find(X509FindType.FindByThumbprint, sslThumbprint, true);
