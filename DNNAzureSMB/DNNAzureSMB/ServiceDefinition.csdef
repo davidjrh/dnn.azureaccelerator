@@ -70,6 +70,11 @@
       <Setting name="appPool.IdleTimeout" />
       <Setting name="appPool.StartupTimeLimit" />
       <Setting name="appPool.PingResponseTime" />
+      <Setting name="InstallationDate" />
+      <Setting name="AddonsUrl" />
+      <Setting name="SSL.CertificateThumbprint" />
+      <Setting name="SSL.HostHeader" />
+      <Setting name="SSL.Port" />
     </ConfigurationSettings>
   </WebRole>
 </ServiceDefinition>

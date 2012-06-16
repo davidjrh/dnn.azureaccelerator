@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.Web.Administration;
@@ -150,7 +151,10 @@ namespace DNNAzure
                                                                   TimeSpan.Zero:
                                                                   new TimeSpan(0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.IdleTimeout")), 0),
                                         new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.StartupTimeLimit"))),
-                                        new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.PingResponseTime")))
+                                        new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.PingResponseTime"))),
+                                        RoleEnvironment.GetConfigurationSettingValue("SSL.CertificateThumbprint"),
+                                        RoleEnvironment.GetConfigurationSettingValue("SSL.HostHeader"),
+                                        RoleEnvironment.GetConfigurationSettingValue("SSL.Port")
                                       ))
                     Trace.TraceError("Failed to create the DNNWebSite");
             }
@@ -178,11 +182,15 @@ namespace DNNAzure
         /// <param name="appPoolIdleTimeout">Amount of time (in minutes) a worker process will remain idle before it shuts down </param>
         /// <param name="appPoolStartupTimeLimit">Specifies the time (in seconds) that IIS waits for an application pool to start. </param>
         /// <param name="appPoolPingResponseTime">Specifies the time (in seconds) that a worker process is given to respond to a health-monitoring ping. After the time limit is exceeded, the WWW service terminates the worker process. </param>
+        /// <param name="sslHostHeader">Host header for SSL binding</param>
+        /// <param name="sslPort">Port for SSL binding</param>
+        /// <param name="sslThumbprint">Certificate thumbprint of the SSL binding</param>
         /// <returns></returns>
         public bool CreateDNNWebSite(string hostHeaders, string homePath, string userName, string password, 
                                         string managedRuntimeVersion, string managedPipelineMode,
                                         TimeSpan appPoolIdleTimeout, TimeSpan appPoolStartupTimeLimit,
-                                        TimeSpan appPoolPingResponseTime)
+                                        TimeSpan appPoolPingResponseTime,
+                                        string sslThumbprint, string sslHostHeader, string sslPort)
         {
             // Create the user account for the Application Pool. 
             Trace.TraceInformation("Creating user account for the Application Pool");
@@ -231,7 +239,25 @@ namespace DNNAzure
                         site = serverManager.Sites.Add(webSiteName, protocol, localIPAddress + ":" + port + ":" + headers[0], homePath);
 
                         for (int i = 1; i < headers.Length; i++)
-                            site.Bindings.Add("*:" + port + ":" + headers[i], protocol);
+                            site.Bindings.Add(localIPAddress + ":" + port + ":" + headers[i], protocol);
+
+                        // Add SSL binding
+                        if (!string.IsNullOrEmpty(sslThumbprint))
+                        {
+                            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+                            store.Open(OpenFlags.OpenExistingOnly);
+                            var certificate = store.Certificates.Find(X509FindType.FindByThumbprint, sslThumbprint, true);
+
+                            if (certificate != null && certificate.Count > 0)
+                            {
+                                site.Bindings.Add(localIPAddress + ":" + sslPort + ":" + sslHostHeader, certificate[0].GetCertHash(),
+                                                  "My");
+                            }
+                            else
+                            {
+                                Trace.TraceError("Can't add SSL binding. The certificate thumbprint '{0}' does not exist in the local machine store", sslThumbprint);
+                            }
+                        }
                     }
 
                     // Creates an application pool with the identity of the user that connects to the SMB Server                    

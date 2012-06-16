@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2012-05.1.7">
-  <WebRole name="DNNAzure" vmsize="ExtraSmall">
-    <Runtime executionContext="elevated"></Runtime>
+  <WebRole name="DNNAzure" vmsize="Small">
+    <Runtime executionContext="elevated">
+    </Runtime>
     <Startup>
       <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
     </Startup>
@@ -50,6 +51,9 @@
       <Setting name="appPool.PingResponseTime" />
       <Setting name="InstallationDate" />
       <Setting name="AddonsUrl" />
+      <Setting name="SSL.CertificateThumbprint" />
+      <Setting name="SSL.HostHeader" />
+      <Setting name="SSL.Port" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

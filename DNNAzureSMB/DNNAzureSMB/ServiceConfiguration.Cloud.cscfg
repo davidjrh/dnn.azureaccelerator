@@ -75,6 +75,11 @@
       <Setting name="appPool.IdleTimeout" value="Infinite" />
       <Setting name="appPool.StartupTimeLimit" value="180" />
       <Setting name="appPool.PingResponseTime" value="180" />
+      <Setting name="InstallationDate" value="" />
+      <Setting name="AddonsUrl" value="" />
+      <Setting name="SSL.CertificateThumbprint" value="" />
+      <Setting name="SSL.HostHeader" value="" />
+      <Setting name="SSL.Port" value="443" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
