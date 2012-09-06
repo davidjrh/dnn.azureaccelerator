@@ -37,6 +37,7 @@ namespace DNNAzureWizard
             this.pnl = new System.Windows.Forms.Panel();
             this.pnl8 = new System.Windows.Forms.Panel();
             this.PackageSettings = new System.Windows.Forms.Panel();
+            this.lnkMorePackages = new System.Windows.Forms.LinkLabel();
             this.label62 = new System.Windows.Forms.Label();
             this.txtDNNUrl = new System.Windows.Forms.TextBox();
             this.lblCustomUrl = new System.Windows.Forms.Label();
@@ -190,7 +191,9 @@ namespace DNNAzureWizard
             this.btnOK = new System.Windows.Forms.Button();
             this.errProv = new System.Windows.Forms.ErrorProvider(this.components);
             this.dlgFolder = new System.Windows.Forms.FolderBrowserDialog();
-            this.lnkMorePackages = new System.Windows.Forms.LinkLabel();
+            this.label61 = new System.Windows.Forms.Label();
+            this.linkLabel2 = new System.Windows.Forms.LinkLabel();
+            this.dlgFile = new System.Windows.Forms.OpenFileDialog();
             ((System.ComponentModel.ISupportInitialize)(this.split)).BeginInit();
             this.split.Panel1.SuspendLayout();
             this.split.Panel2.SuspendLayout();
@@ -260,17 +263,17 @@ namespace DNNAzureWizard
             // 
             // pnl
             // 
+            this.pnl.Controls.Add(this.pnl2);
+            this.pnl.Controls.Add(this.pnl1);
+            this.pnl.Controls.Add(this.pnl4);
             this.pnl.Controls.Add(this.pnl8);
             this.pnl.Controls.Add(this.pnl10);
             this.pnl.Controls.Add(this.pnl3);
             this.pnl.Controls.Add(this.pnl11);
-            this.pnl.Controls.Add(this.pnl2);
             this.pnl.Controls.Add(this.pnl7);
             this.pnl.Controls.Add(this.pnl6);
             this.pnl.Controls.Add(this.pnl9);
             this.pnl.Controls.Add(this.pnl5);
-            this.pnl.Controls.Add(this.pnl1);
-            this.pnl.Controls.Add(this.pnl4);
             this.pnl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnl.Location = new System.Drawing.Point(0, 0);
             this.pnl.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
@@ -283,7 +286,7 @@ namespace DNNAzureWizard
             this.pnl8.Controls.Add(this.PackageSettings);
             this.pnl8.Controls.Add(this.pictureBox7);
             this.pnl8.Controls.Add(this.label37);
-            this.pnl8.Location = new System.Drawing.Point(472, 12);
+            this.pnl8.Location = new System.Drawing.Point(466, 46);
             this.pnl8.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.pnl8.Name = "pnl8";
             this.pnl8.Size = new System.Drawing.Size(682, 372);
@@ -310,6 +313,18 @@ namespace DNNAzureWizard
             this.PackageSettings.Name = "PackageSettings";
             this.PackageSettings.Size = new System.Drawing.Size(681, 312);
             this.PackageSettings.TabIndex = 4;
+            // 
+            // lnkMorePackages
+            // 
+            this.lnkMorePackages.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lnkMorePackages.AutoSize = true;
+            this.lnkMorePackages.Location = new System.Drawing.Point(517, 39);
+            this.lnkMorePackages.Name = "lnkMorePackages";
+            this.lnkMorePackages.Size = new System.Drawing.Size(144, 15);
+            this.lnkMorePackages.TabIndex = 38;
+            this.lnkMorePackages.TabStop = true;
+            this.lnkMorePackages.Text = "Download more packages";
+            this.lnkMorePackages.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkMorePackages_LinkClicked);
             // 
             // label62
             // 
@@ -780,7 +795,7 @@ namespace DNNAzureWizard
             this.label49.Font = new System.Drawing.Font("Segoe UI Light", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label49.Location = new System.Drawing.Point(10, 18);
             this.label49.Name = "label49";
-            this.label49.Size = new System.Drawing.Size(295, 25);
+            this.label49.Size = new System.Drawing.Size(296, 25);
             this.label49.TabIndex = 2;
             this.label49.Text = "Hosting && Storage Services Settings";
             // 
@@ -887,7 +902,7 @@ namespace DNNAzureWizard
             this.label43.Font = new System.Drawing.Font("Segoe UI Light", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label43.Location = new System.Drawing.Point(10, 18);
             this.label43.Name = "label43";
-            this.label43.Size = new System.Drawing.Size(225, 25);
+            this.label43.Size = new System.Drawing.Size(223, 25);
             this.label43.TabIndex = 2;
             this.label43.Text = "Deployment Type Settings";
             // 
@@ -897,6 +912,8 @@ namespace DNNAzureWizard
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BackColor = System.Drawing.SystemColors.Control;
+            this.panel1.Controls.Add(this.linkLabel2);
+            this.panel1.Controls.Add(this.label61);
             this.panel1.Controls.Add(this.label44);
             this.panel1.Controls.Add(this.cboSubscriptions);
             this.panel1.Controls.Add(this.radioButton1);
@@ -925,7 +942,7 @@ namespace DNNAzureWizard
             this.cboSubscriptions.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboSubscriptions.FormattingEnabled = true;
             this.cboSubscriptions.Items.AddRange(new object[] {
-            "<Refresh...>"});
+            "<Import publish settings file...>"});
             this.cboSubscriptions.Location = new System.Drawing.Point(141, 94);
             this.cboSubscriptions.Name = "cboSubscriptions";
             this.cboSubscriptions.Size = new System.Drawing.Size(315, 23);
@@ -962,7 +979,7 @@ namespace DNNAzureWizard
             // linkLabel1
             // 
             this.linkLabel1.AutoSize = true;
-            this.linkLabel1.Location = new System.Drawing.Point(35, 158);
+            this.linkLabel1.Location = new System.Drawing.Point(60, 180);
             this.linkLabel1.Name = "linkLabel1";
             this.linkLabel1.Size = new System.Drawing.Size(262, 15);
             this.linkLabel1.TabIndex = 10;
@@ -974,9 +991,9 @@ namespace DNNAzureWizard
             // 
             this.label45.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.label45.Location = new System.Drawing.Point(35, 136);
+            this.label45.Location = new System.Drawing.Point(60, 158);
             this.label45.Name = "label45";
-            this.label45.Size = new System.Drawing.Size(630, 22);
+            this.label45.Size = new System.Drawing.Size(482, 22);
             this.label45.TabIndex = 9;
             this.label45.Text = "For more information about creating a Windows Azure subscription, see";
             // 
@@ -1105,7 +1122,7 @@ namespace DNNAzureWizard
             this.label48.Font = new System.Drawing.Font("Segoe UI Light", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label48.Location = new System.Drawing.Point(10, 18);
             this.label48.Name = "label48";
-            this.label48.Size = new System.Drawing.Size(202, 25);
+            this.label48.Size = new System.Drawing.Size(203, 25);
             this.label48.TabIndex = 2;
             this.label48.Text = "Virtual Network Settings";
             // 
@@ -1376,7 +1393,7 @@ namespace DNNAzureWizard
             this.label25.Font = new System.Drawing.Font("Segoe UI Light", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label25.Location = new System.Drawing.Point(16, 19);
             this.label25.Name = "label25";
-            this.label25.Size = new System.Drawing.Size(155, 25);
+            this.label25.Size = new System.Drawing.Size(156, 25);
             this.label25.TabIndex = 2;
             this.label25.Text = "Settings Summary";
             // 
@@ -2034,17 +2051,31 @@ namespace DNNAzureWizard
             // 
             this.dlgFolder.Description = "Select the folder to export the service configuration and package file:";
             // 
-            // lnkMorePackages
+            // label61
             // 
-            this.lnkMorePackages.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.lnkMorePackages.AutoSize = true;
-            this.lnkMorePackages.Location = new System.Drawing.Point(517, 39);
-            this.lnkMorePackages.Name = "lnkMorePackages";
-            this.lnkMorePackages.Size = new System.Drawing.Size(144, 15);
-            this.lnkMorePackages.TabIndex = 38;
-            this.lnkMorePackages.TabStop = true;
-            this.lnkMorePackages.Text = "Download more packages";
-            this.lnkMorePackages.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkMorePackages_LinkClicked);
+            this.label61.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.label61.Location = new System.Drawing.Point(59, 130);
+            this.label61.Name = "label61";
+            this.label61.Size = new System.Drawing.Size(289, 22);
+            this.label61.TabIndex = 15;
+            this.label61.Text = "Don\'t know how to obtain your publish settings file?";
+            // 
+            // linkLabel2
+            // 
+            this.linkLabel2.AutoSize = true;
+            this.linkLabel2.Location = new System.Drawing.Point(341, 130);
+            this.linkLabel2.Name = "linkLabel2";
+            this.linkLabel2.Size = new System.Drawing.Size(167, 15);
+            this.linkLabel2.TabIndex = 16;
+            this.linkLabel2.TabStop = true;
+            this.linkLabel2.Text = "Download Publish Settings file";
+            this.linkLabel2.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel2_LinkClicked);
+            // 
+            // dlgFile
+            // 
+            this.dlgFile.Filter = "Publish Settings files|*.publishsettings|All files|*.*";
+            this.dlgFile.Title = "Import publish settings file";
             // 
             // FrmDNNAzureWizard
             // 
@@ -2292,6 +2323,9 @@ namespace DNNAzureWizard
         private System.Windows.Forms.Label lblCustomUrl;
         private System.Windows.Forms.Label label62;
         private System.Windows.Forms.LinkLabel lnkMorePackages;
+        private System.Windows.Forms.LinkLabel linkLabel2;
+        private System.Windows.Forms.Label label61;
+        private System.Windows.Forms.OpenFileDialog dlgFile;
         
     }
 }

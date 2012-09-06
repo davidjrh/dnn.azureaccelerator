@@ -8,8 +8,9 @@ namespace DotNetNuke.Azure.Accelerator.Forms
 {
     public partial class FrmWASettingsDownload : Form
     {
-        private const string DownloadUrl = "https://windows.azure.com/download.publishsettings";
+        private const string DownloadUrl = "http://go.microsoft.com/fwlink/?LinkId=229563"; // "https://windows.azure.com/download.publishsettings";
         private const string DownloadUrlSuccess = "https://windows.azure.com/landing?target=/download.publishsettings&wa=wsignin1.0";
+        //private const string DownloadUrlSuccessLeftPart = "https://windows.azure.com/download.publishsettings?t=";
         private const string UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
 
         public PublishSettings PublishingSettings { get; set; }
@@ -28,14 +29,17 @@ namespace DotNetNuke.Azure.Accelerator.Forms
 
         private void WebOnNavigating(object sender, WebBrowserNavigatingEventArgs args)
         {
-            if (args.Url.ToString().ToLowerInvariant() == DownloadUrlSuccess.ToLowerInvariant())
-            {
-                args.Cancel = true;
-                // The user has been authenticated and the publish profile generated. 
-                // Don't download using the webbrowser control, instead download using a WebRequest call
-                if (DownloadSettingsFile())
-                    Close();
-            }
+            // The new Office 365 integration requires handling this in a different way
+            // Woraround: save the publish settings file locally and import it 
+
+            //if (args.Url.ToString().ToLowerInvariant() == DownloadUrlSuccess.ToLowerInvariant())
+            //{
+            //    args.Cancel = true;
+            //    // The user has been authenticated and the publish profile generated. 
+            //    // Don't download using the webbrowser control, instead download using a WebRequest call
+            //    if (DownloadSettingsFile())
+            //        Close();
+            //}
         }
 
         private bool DownloadSettingsFile()

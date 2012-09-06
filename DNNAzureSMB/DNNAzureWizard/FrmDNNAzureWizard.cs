@@ -37,6 +37,7 @@ namespace DNNAzureWizard
         private const string CreateNewLabel = "<Create New...>";
         private const string RefreshLabel = "<Refresh...>";
         private const string CustomLabel = "<Custom package Url...>";
+        private const string ImportPublishSettings = "<Import publish settings file...>";
 
         /* The following expression to validate a pwd of 6 to 16 characters and contain three of the following 4 items: 
          * upper case letter, lower case letter, a symbol, a number
@@ -721,7 +722,7 @@ namespace DNNAzureWizard
             }
             if (cboSubscriptions.Items.Count == 0)
                 cboSubscriptions.Items.Add("");
-            cboSubscriptions.Items.Add(RefreshLabel);
+            cboSubscriptions.Items.Add(ImportPublishSettings);
             cboSubscriptions.SelectedIndex = 0;
         }
 
@@ -2202,15 +2203,23 @@ namespace DNNAzureWizard
         {
             try
             {
-                if (cboSubscriptions.Text == RefreshLabel)
+                if (cboSubscriptions.Text == ImportPublishSettings)
                 {
                     cboSubscriptions.SelectedIndex = 0;
-                    var publishSettings = DotNetNuke.Azure.Accelerator.Components.Utils.GetWAPublishingSettings();
+                    /*var publishSettings = DotNetNuke.Azure.Accelerator.Components.Utils.GetWAPublishingSettings();
                     if (publishSettings != null)
                     {
                         PublishSettings = publishSettings;
                         PublishSettings.Save(PublishSettingsFilename);
                         RefreshSubscriptions();
+                    }*/
+                    if (dlgFile.ShowDialog(this) == DialogResult.OK)
+                    {
+                        if (File.Exists(dlgFile.FileName))
+                        {
+                            File.Copy(dlgFile.FileName, PublishSettingsFilename, true);
+                            RefreshSubscriptions();
+                        }
                     }
                 }
             }
@@ -2527,6 +2536,18 @@ namespace DNNAzureWizard
             catch (Exception ex)
             {
                 LogException(ex);                
+            }
+        }
+
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            try
+            {
+                Process.Start("http://go.microsoft.com/fwlink/?LinkId=229563");
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
             }
         }
 
