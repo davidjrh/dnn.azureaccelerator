@@ -863,8 +863,9 @@ namespace DNNShared
         /// </summary>
         /// <param name="userName">Name for the user account</param>
         /// <param name="password">Password for the user account</param>
+        /// <param name="passwordNeverExpires">Boolean to indicate if the password never expires (true by default)</param>
         /// <returns>Returns 0 if success</returns>
-        public static int CreateUserAccount(string userName, string password)
+        public static int CreateUserAccount(string userName, string password, bool passwordNeverExpires = true)
         {
             string error;
 
@@ -875,6 +876,19 @@ namespace DNNShared
             {
                 //Log error and continue since the user account may already exist
                 Trace.TraceWarning("Error creating user account, error msg:" + error);
+            }
+            else
+            {
+                // Password never expires
+                if (passwordNeverExpires)
+                {
+                    Trace.TraceInformation("Setting account password expiration to never");
+                    exitCode = ExecuteCommand("wmic.exe", string.Format("USERACCOUNT WHERE \"Name='{0}'\" SET PasswordExpires=FALSE", userName), out error, 10000);
+                    if (exitCode != 0)
+                    {
+                        Trace.TraceWarning("Error while setting account password expiration, error msg:" + error);
+                    }
+                }                
             }
             return exitCode;
         }
