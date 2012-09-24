@@ -1342,6 +1342,13 @@ namespace DNNAzureWizard
                 if (trackingId != null && statusCode != null && statusCode == HttpStatusCode.Accepted)
                     WaitForAsyncOperation(ServiceManager, trackingId, int.Parse(GetSetting("AsyncDeploymentTimeout", "300")));
             }
+            catch(WindowsAzureException wex)
+            {
+                if (wex.Code != ErrorCode.ResourceNotFound) // The deployment does not exist
+                {
+                    throw;
+                }
+            }
             catch (CommunicationException)
             {
                 // The deployment does not exist
@@ -1629,6 +1636,13 @@ namespace DNNAzureWizard
                             string.Format(
                                 "- Currently there is a deployment on '{0}' slot. If you continue, the deployment will be overwritten.",
                                 cboEnvironment.Text));
+                }
+                catch (WindowsAzureException wex)
+                {
+                    if (wex.Code != ErrorCode.ResourceNotFound) // The deployment does not exist
+                    {
+                        throw;
+                    }
                 }
                 catch (CommunicationException)
                 {
