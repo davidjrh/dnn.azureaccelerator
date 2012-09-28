@@ -8,11 +8,14 @@
 
   **********************************************************************************************
 -->
-<ServiceDefinition name="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition">
+<ServiceDefinition name="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2012-05.1.7">
   <WorkerRole name="SMBServer">
     <Runtime executionContext="elevated"></Runtime>
     <Imports>
       <Import moduleName="Diagnostics" />
+      <Import moduleName="Connect" />
+      <Import moduleName="RemoteAccess" />
+      <Import moduleName="RemoteForwarder" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="AcceleratorConnectionString" />
@@ -23,9 +26,18 @@
       <Setting name="shareName" />
       <Setting name="driveContainer" />
       <Setting name="DatabaseConnectionString" />
+      <Setting name="packageContainer" />
+      <Setting name="package" />
+      <Setting name="dnnFolder" />
+      <Setting name="packageUrl" />
+      <Setting name="DBAdminUser" />
+      <Setting name="DBAdminPassword" />
+      <Setting name="packageInstallConfiguration" />
+      <Setting name="InstallationDate" />
+      <Setting name="AddonsUrl" />
     </ConfigurationSettings>
     <LocalResources>
-      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="300" />
+      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
     </LocalResources>
     <Endpoints>
       <InternalEndpoint name="SMB" protocol="tcp" port="445" />
@@ -33,6 +45,9 @@
   </WorkerRole>
   <WebRole name="DNNAzure">
     <Runtime executionContext="elevated"></Runtime>
+    <Startup>
+      <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
+    </Startup>
     <Sites>
       <Site name="Web">
         <Bindings>
@@ -42,9 +57,12 @@
     </Sites>
     <Endpoints>
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
+      <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
+      <Import moduleName="Connect" />
+      <Import moduleName="RemoteAccess" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="fileshareUserName" />
@@ -55,6 +73,15 @@
       <Setting name="hostHeaders" />
       <Setting name="managedRuntimeVersion" />
       <Setting name="managedPipelineMode" />
+      <Setting name="ShowDeploymentProgressDetails" />
+      <Setting name="appPool.IdleTimeout" />
+      <Setting name="appPool.StartupTimeLimit" />
+      <Setting name="appPool.PingResponseTime" />
+      <Setting name="InstallationDate" />
+      <Setting name="AddonsUrl" />
+      <Setting name="SSL.CertificateThumbprint" />
+      <Setting name="SSL.HostHeader" />
+      <Setting name="SSL.Port" />
     </ConfigurationSettings>
   </WebRole>
 </ServiceDefinition>

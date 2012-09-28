@@ -4,7 +4,42 @@
     <Runtime executionContext="elevated">
     </Runtime>
     <Startup>
-      <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
+      <Task executionContext="elevated" commandLine="scripts\SetupSMTP.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+        </Environment>
+      </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupProducts.cmd" taskType="simple">
+        <Environment>
+          <Variable name="TMP">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/LocalResources/LocalResource[@name='WebPITemp']/@path" />
+          </Variable>
+          <Variable name="TEMP">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/LocalResources/LocalResource[@name='WebPITemp']/@path" />
+          </Variable>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Enabled']/@value" />
+          </Variable>
+          <Variable name="PRODUCTS">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Products']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupIISRemoteMgmt.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='IISRemoteManagement.Enabled']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
     </Startup>
     <Sites>
       <Site name="Web">
@@ -17,6 +52,7 @@
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
       <InternalEndpoint name="SMB" protocol="tcp" port="445" />
       <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
+      <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
@@ -54,9 +90,18 @@
       <Setting name="SSL.CertificateThumbprint" />
       <Setting name="SSL.HostHeader" />
       <Setting name="SSL.Port" />
+      <Setting name="WebPlatformInstaller.Products" />
+      <Setting name="WebPlatformInstaller.Enabled" />
+      <Setting name="IISRemoteManagement.Enabled" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
+      <LocalStorage name="WebPITemp" cleanOnRoleRecycle="true" sizeInMB="500" />
     </LocalResources>
+    <Certificates>
+      <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA1" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA2" storeLocation="LocalMachine" storeName="My" />
+    </Certificates>
   </WebRole>
 </ServiceDefinition>

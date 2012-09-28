@@ -903,6 +903,7 @@ namespace DNNAzureWizard
                 summary.AppendLine("- Password: <not shown>");
 #endif
                 summary.AppendLine("- Expires: " + cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
+                summary.AppendLine("- Web Deploy enabled: " + (chkWebDeploy.Checked ? "true" : "false"));
             }
             summary.AppendLine("");
 
@@ -1023,6 +1024,18 @@ namespace DNNAzureWizard
                 cfgStr = cfgStr.Replace("@@RDPUSERNAME@@", "");
                 cfgStr = cfgStr.Replace("@@RDPPASSWORD@@", "");
                 cfgStr = cfgStr.Replace("@@RDPEXPIRATIONDATE@@", DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
+            }
+
+            // Replace the tokens - WebDeploy settings
+            if (chkEnableRDP.Checked && chkWebDeploy.Checked)
+            {
+                cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "true");
+                cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", "WDeploy");
+            }
+            else
+            {
+                cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "false");
+                cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", "");
             }
 
             // Replace the tokens - Virtual Network settings

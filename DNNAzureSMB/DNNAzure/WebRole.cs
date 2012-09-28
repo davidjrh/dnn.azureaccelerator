@@ -202,7 +202,7 @@ namespace DNNAzure
             Trace.TraceInformation("Creating DNNWebSite with hostHeaders '" + hostHeaders + "'...");
             string systemDrive = Environment.SystemDirectory.Substring(0, 2);
             string originalwebSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_Web";
-            string webSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_DotNetNuke";
+            const string webSiteName = "DotNetNuke";
             string[] headers = hostHeaders.Split(';');
             string protocol = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].Protocol;
             string port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].IPEndpoint.Port.ToString();

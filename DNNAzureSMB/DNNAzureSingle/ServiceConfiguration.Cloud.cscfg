@@ -50,9 +50,15 @@
       <Setting name="SSL.CertificateThumbprint" value="" />
       <Setting name="SSL.HostHeader" value="" />
       <Setting name="SSL.Port" value="443" />
+      <Setting name="WebPlatformInstaller.Products" value="@@WPIPRODUCTS@@" />
+      <Setting name="WebPlatformInstaller.Enabled" value="true" />
+      <Setting name="IISRemoteManagement.Enabled" value="@@REMOTEMGMTENABLED@@" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA1" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA2" thumbprint="@@RDPTHUMBPRINT@@" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
 </ServiceConfiguration>
