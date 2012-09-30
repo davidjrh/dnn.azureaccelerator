@@ -46,14 +46,18 @@
           </Variable>
         </Environment>
       </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupIISRemoteMgmt.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='IISRemoteManagement.Enabled']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
       <Task executionContext="elevated" commandLine="scripts\SetupProducts.cmd" taskType="simple">
         <Environment>
-          <Variable name="TMP">
-            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/LocalResources/LocalResource[@name='WebPITemp']/@path" />
-          </Variable>
-          <Variable name="TEMP">
-            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/LocalResources/LocalResource[@name='WebPITemp']/@path" />
-          </Variable>
           <Variable name="EMULATED">
             <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
           </Variable>
@@ -62,16 +66,6 @@
           </Variable>
           <Variable name="PRODUCTS">
             <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Products']/@value" />
-          </Variable>
-        </Environment>
-      </Task>
-      <Task executionContext="elevated" commandLine="scripts\SetupIISRemoteMgmt.cmd" taskType="simple">
-        <Environment>
-          <Variable name="EMULATED">
-            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
-          </Variable>
-          <Variable name="ENABLED">
-            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='IISRemoteManagement.Enabled']/@value" />
           </Variable>
         </Environment>
       </Task>

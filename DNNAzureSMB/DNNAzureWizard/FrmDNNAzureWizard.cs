@@ -1037,15 +1037,23 @@ namespace DNNAzureWizard
                 cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "false");
                 cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", "");
             }
+            
 
             // Replace the tokens - Virtual Network settings
             cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", chkAzureConnect.Checked ? txtConnectActivationToken.Text.Trim() : "");
 
             // Replace the tokens - Certificate settings
             if (chkEnableRDP.Checked && (Certificate != null))
+            {
                 cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", Certificate.Thumbprint);
+                cfgStr = cfgStr.Replace("00DEADBEEF00", Certificate.Thumbprint);
+            }                
             else
+            {
                 cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", "");
+                cfgStr = cfgStr.Replace("00DEADBEEF00", "");
+            }
+                
 
 
             return cfgStr;
