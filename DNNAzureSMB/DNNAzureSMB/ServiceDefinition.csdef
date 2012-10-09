@@ -109,5 +109,10 @@
       <Setting name="WebPlatformInstaller.Products" />
       <Setting name="IISRemoteManagement.Enabled" />
     </ConfigurationSettings>
+    <Certificates>
+      <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA1" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA2" storeLocation="LocalMachine" storeName="My" />
+    </Certificates>
   </WebRole>
 </ServiceDefinition>

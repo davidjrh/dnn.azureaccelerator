@@ -2578,7 +2578,7 @@ namespace DNNAzureWizard
         {
             try
             {
-                Process.Start("http://go.microsoft.com/fwlink/?LinkId=229563");
+                Process.Start("https://windows.azure.com/download/publishprofile.aspx");
             }
             catch (Exception ex)
             {

@@ -46,7 +46,36 @@
   <WebRole name="DNNAzure">
     <Runtime executionContext="elevated"></Runtime>
     <Startup>
-      <Task commandLine="SetupSMTP.cmd" executionContext="elevated" taskType="background" />
+      <Task executionContext="elevated" commandLine="scripts\SetupSMTP.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+        </Environment>
+      </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupIISRemoteMgmt.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='IISRemoteManagement.Enabled']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupProducts.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Enabled']/@value" />
+          </Variable>
+          <Variable name="PRODUCTS">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Products']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
     </Startup>
     <Sites>
       <Site name="Web">
@@ -58,6 +87,7 @@
     <Endpoints>
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
       <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
+      <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
@@ -82,6 +112,14 @@
       <Setting name="SSL.CertificateThumbprint" />
       <Setting name="SSL.HostHeader" />
       <Setting name="SSL.Port" />
+      <Setting name="WebPlatformInstaller.Enabled" />
+      <Setting name="WebPlatformInstaller.Products" />
+      <Setting name="IISRemoteManagement.Enabled" />
     </ConfigurationSettings>
+    <Certificates>
+      <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA1" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA2" storeLocation="LocalMachine" storeName="My" />
+    </Certificates>
   </WebRole>
 </ServiceDefinition>

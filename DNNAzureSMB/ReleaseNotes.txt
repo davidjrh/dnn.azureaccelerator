@@ -1,3 +1,31 @@
+Version 6.3 - 08 oct 2012
+New Features:
+- Added a new startup task to setup and configure the localhost SMTP server on the webroles. Now you can use
+LOCALHOST as SMTP server without the need of using a 3rd party SMTP server
+- Added "post-install" addons feature: if an url pointing to a .zip file is specified in the service configuration 
+file, after the successful start of the SMB server the .zip file will be downloaded and decompressed into the 
+DotNetNuke folder maintaining the same files and folder architecture and overwriting contents. This is an useful 
+feature to add in an automated way 3rd party files, dependencies, etc. to a DotNetNuke clean install. Use it as 
+you wish.
+- Added SSL binding support: the Accelerator wizard does not include a step to setup this yet, but the work is 
+done in the package. To manually setup SSL on your service configuration file, please read this thread 
+http://dnnazureaccelerator.codeplex.com/discussions/359504
+- Added Web Platform Installer support: a new startup task has been added to enable WebPI products installations
+and dependencies, like MVC3, WebDeploy, etc. 
+- Added WebDeploy support: a new checkbox has been added in the Remote Desktop setup step, in order to enable
+WebDeploy. Using the new Web Plaform Installer feature, with Web Deploy enabled (note that enabling this feature 
+takes about 10 more minutes for the VM deployment), you can access to your site using tools like WebMatrix or other 
+command line tools like WebDeploy's command line utility, in order to copy or modify files or create your own backups.
+
+Fixes:
+- Changed the way to import the publish settings file: discontinued the automatic download while refreshing the 
+subscription data, you have to manually download and import the file in the wizard. 
+- The packages are using the latest Azure SDK 1.7 (June 2012)
+- Fixed the packageUrl on the SMB package
+- Fixed references to use latest versions
+- Fixed an issue causing the "fileshare" user's password being expired after a month
+- Fixed an issue on the wizard's verification step while deploying ("No deployments were found")
+
 Version 6.2 - 30 may 2012
 General
 - Modified the local file sharing user account creation on roles to don't allow account expiration
