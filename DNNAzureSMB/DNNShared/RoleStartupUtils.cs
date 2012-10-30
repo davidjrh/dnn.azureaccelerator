@@ -747,29 +747,14 @@ namespace DNNShared
         {
             string error;
             Trace.TraceInformation("Sharing local folder " + path);
-            int exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + " /Grant:" + userName + ",full", out error, 10000);
-            if (exitCode != 0)
-            {
-                //Log error and continue since the drive may already be shared
-                Trace.TraceWarning("Error creating fileshare {0} for user {1}: {2}", path, userName, error);                
-            }
-            else
-            {
-                Trace.TraceInformation("Sucessfully shared the local folder '{0}' for user '{1}'", path, userName);
-            }
-            if (!string.IsNullOrEmpty(RDPuserName))
-            {
-                exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + " /Grant:" + RDPuserName + ",full", out error, 10000);
-                if (exitCode != 0)
-                {
-                    Trace.TraceWarning("Error creating fileshare {0} for user {1}: {2}", path, RDPuserName, error);
-                }
-                else
-                {
-                    Trace.TraceInformation("Sucessfully shared the local folder '{0}' for user '{1}'", path, RDPuserName);
-                }
-            }
+            string grantRDPUserName = "";
+            if (RDPuserName != "")
+                grantRDPUserName = " /Grant:" + RDPuserName + ",full";
+            int exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + " /Grant:" + userName + ",full" + grantRDPUserName, out error, 10000);
 
+            if (exitCode != 0)
+                //Log error and continue since the drive may already be shared
+                Trace.TraceWarning("Error creating fileshare, error msg:" + error, "Warning");
             return exitCode;
         }
 
