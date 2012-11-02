@@ -206,16 +206,6 @@ namespace DNNShared
                                 cmdC3.ExecuteNonQuery();
                                 var cmdC4 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_owner', '{0}'", connBuilderOriginal.UserID), dbConnNew);
                                 cmdC4.ExecuteNonQuery();
-                                /*  // This roles are not needed since the user is db_owner, and also causing an issue when trying to restore a bacpac from another database
-                                var cmdC5 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_ddladmin', '{0}'", connBuilderOriginal.UserID), dbConnNew);
-                                cmdC5.ExecuteNonQuery();
-                                var cmdC6 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_securityadmin', '{0}'", connBuilderOriginal.UserID), dbConnNew);
-                                cmdC6.ExecuteNonQuery();
-                                var cmdC7 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_datareader', '{0}'", connBuilderOriginal.UserID), dbConnNew);
-                                cmdC7.ExecuteNonQuery();
-                                var cmdC8 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_datawriter', '{0}'", connBuilderOriginal.UserID), dbConnNew);
-                                cmdC8.ExecuteNonQuery();
-                                */
                                 return true;
                             }
                         }
@@ -241,7 +231,7 @@ namespace DNNShared
         /// </summary>
         /// <param name="webConfigPath">Path to the web config file</param>
         /// <param name="databaseConnectionString">Database connection string</param>
-        public static bool SetupWebConfig(string webConfigPath, string databaseConnectionString, string installationDate)
+        public static bool SetupWebConfig(string webConfigPath, string databaseConnectionString, string installationDate, string source)
         {
             bool success = false;
             try
@@ -292,7 +282,25 @@ namespace DNNShared
                     }
                     idNode.Attributes["value"].Value = installationDate;                       
                 }
-             
+
+                // Modify web.config settings: setting up "Source" setting
+                if (!string.IsNullOrEmpty(source))
+                {
+                    var srNode = webconfig.SelectSingleNode("/configuration/appSettings/add[@key='Source']");
+                    if (srNode == null)
+                    {
+                        srNode = webconfig.CreateElement("add");
+                        var attkey = webconfig.CreateAttribute("key");
+                        attkey.Value = "Source";
+                        srNode.Attributes.Append(attkey);
+                        var attvalue = webconfig.CreateAttribute("value");
+                        attvalue.Value = source;
+                        srNode.Attributes.Append(attvalue);
+                        webconfig.SelectSingleNode("/configuration/appSettings").AppendChild(srNode);
+                    }
+                    srNode.Attributes["value"].Value = source;                    
+                }
+                
                     
                 webconfig.Save(webConfigPath);
                 Trace.TraceInformation("Web.config modified successfully");

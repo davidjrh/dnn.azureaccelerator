@@ -27,6 +27,7 @@
       <Setting name="packageInstallConfiguration" />
       <Setting name="InstallationDate" />
       <Setting name="AddonsUrl" />
+      <Setting name="UpdateService.Source" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

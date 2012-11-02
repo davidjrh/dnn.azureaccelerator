@@ -58,6 +58,7 @@
       <Setting name="FTP.Root.EncryptedPassword" value="" />
       <Setting name="FTP.Portals.Username" value="" />
       <Setting name="FTP.Portals.EncryptedPassword" value="" />
+      <Setting name="UpdateService.Source" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />

@@ -107,7 +107,8 @@ namespace SMBServer
                 // Setup Database Connection string
                 RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                 RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"),
-                                                RoleEnvironment.GetConfigurationSettingValue("InstallationDate"));
+                                                RoleEnvironment.GetConfigurationSettingValue("InstallationDate"),
+                                                RoleStartupUtils.GetSetting("UpdateService.Source"));
 
                 // Setup DotNetNuke.install.config
                 RoleStartupUtils.SetupInstallConfig(
