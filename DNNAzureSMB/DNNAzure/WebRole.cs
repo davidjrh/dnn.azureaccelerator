@@ -12,6 +12,7 @@ namespace DNNAzure
 {
     public class WebRole : RoleEntryPoint
     {
+        const string WebSiteName = "DotNetNuke";
         public static string DriveLetter;
         public static CloudDrive Drive;
 
@@ -34,7 +35,7 @@ namespace DNNAzure
 
             try
             {
-                SMBMode = bool.Parse(RoleEnvironment.GetConfigurationSettingValue("SMBMode"));
+                SMBMode = bool.Parse(RoleStartupUtils.GetSetting("SMBMode"));
             }
             catch {SMBMode = true;}
 
@@ -47,14 +48,33 @@ namespace DNNAzure
                 try
                 {
                     // Mount the drive
-                    Drive = RoleStartupUtils.MountCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"), 
-                                                            RoleEnvironment.GetConfigurationSettingValue("driveContainer"), 
-                                                            RoleEnvironment.GetConfigurationSettingValue("driveName"), 
-                                                            RoleEnvironment.GetConfigurationSettingValue("driveSize"));
+                    Drive = RoleStartupUtils.MountCloudDrive(RoleStartupUtils.GetSetting("AcceleratorConnectionString"), 
+                                                            RoleStartupUtils.GetSetting("driveContainer"), 
+                                                            RoleStartupUtils.GetSetting("driveName"), 
+                                                            RoleStartupUtils.GetSetting("driveSize"));
 
                     // Create a local account for sharing the drive
-                    RoleStartupUtils.CreateUserAccount(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                                       RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"));
+                    RoleStartupUtils.CreateUserAccount(RoleStartupUtils.GetSetting("fileshareUserName"),
+                                                       RoleStartupUtils.GetSetting("fileshareUserPassword"));
+
+                    // Setup FTP user accounts
+                    if (bool.Parse(RoleStartupUtils.GetSetting("FTP.Enabled", "False")))
+                    {
+                        // Create a local account for the FTP root user
+                        RoleStartupUtils.CreateUserAccount(
+                            RoleStartupUtils.GetSetting("FTP.Root.Username"),
+                            RoleStartupUtils.DecryptPassword(RoleStartupUtils.GetSetting("FTP.Root.EncryptedPassword")));
+
+                        if (!string.IsNullOrEmpty(RoleStartupUtils.GetSetting("FTP.Portals.Username")))
+                        {
+                            // Optionally create a local account for the FTP portals user
+                            RoleStartupUtils.CreateUserAccount(
+                                RoleStartupUtils.GetSetting("FTP.Portals.Username"),
+                                RoleStartupUtils.DecryptPassword(
+                                    RoleStartupUtils.GetSetting("FTP.Portals.EncryptedPassword")));
+                        }
+                    }
+
 
                     // Enable SMB traffic through the firewall
                     if (RoleStartupUtils.EnableSMBFirewallTraffic()!=0)
@@ -62,53 +82,59 @@ namespace DNNAzure
 
                     // Share it using SMB
                     string rdpUserName = "";
-                    try { rdpUserName = RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
+                    try { rdpUserName = RoleStartupUtils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
                     catch
                     {
                         Trace.TraceWarning("No RDP user name was specified. Consider enabling RDP for better maintenance options.");
                     }                  
                     // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
                     if (!RoleEnvironment.IsEmulated)
-                        RoleStartupUtils.ShareLocalFolder(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"), 
-                                                        rdpUserName, Drive.LocalPath,
-                                                        RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                        RoleStartupUtils.ShareLocalFolder(new []
+                                                              {
+                                                                 RoleStartupUtils.GetSetting("fileshareUserName"),  
+                                                                 rdpUserName,
+                                                                 RoleStartupUtils.GetSetting("FTP.Root.Username"),  
+                                                                 RoleStartupUtils.GetSetting("FTP.Portals.Username")
+                                                              },  
+                                                        Drive.LocalPath,
+                                                        RoleStartupUtils.GetSetting("shareName"));
 
                     // Check for the database existence
                     Trace.TraceInformation("Checking for database existence...");
-                    if (!RoleStartupUtils.SetupDatabase(RoleEnvironment.GetConfigurationSettingValue("DBAdminUser"),
-                                                RoleEnvironment.GetConfigurationSettingValue("DBAdminPassword"),
-                                                RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString")))
+                    if (!RoleStartupUtils.SetupDatabase(RoleStartupUtils.GetSetting("DBAdminUser"),
+                                                RoleStartupUtils.GetSetting("DBAdminPassword"),
+                                                RoleStartupUtils.GetSetting("DatabaseConnectionString")))
                         Trace.TraceError("Error while setting up the database. Check previous messages.");
 
                     // Check for the creation of the Website contents from Azure storage
                     Trace.TraceInformation("Checking for website content...");
-                    if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
-                                                            RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                                            RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                                            RoleEnvironment.GetConfigurationSettingValue("package"),
-                                                            RoleEnvironment.GetConfigurationSettingValue("packageUrl")))
+                    if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
+                                                            RoleStartupUtils.GetSetting("AcceleratorConnectionString"),
+                                                            RoleStartupUtils.GetSetting("packageContainer"),
+                                                            RoleStartupUtils.GetSetting("package"),
+                                                            RoleStartupUtils.GetSetting("packageUrl")))
                         Trace.TraceError("Website content could not be prepared. Check previous messages.");
 
 
                     // Setup Database Connection string
-                    RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
-                                                    RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"),
-                                                    RoleEnvironment.GetConfigurationSettingValue("InstallationDate"));
+                    RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleStartupUtils.GetSetting("dnnFolder") + "\\web.config",
+                                                    RoleStartupUtils.GetSetting("DatabaseConnectionString"),
+                                                    RoleStartupUtils.GetSetting("InstallationDate"));
 
                     // Setup DotNetNuke.install.config
                     RoleStartupUtils.SetupInstallConfig(
                                         Path.Combine(new[]
                                                          {
-                                                             Drive.LocalPath, RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                             Drive.LocalPath, RoleStartupUtils.GetSetting("dnnFolder"),
                                                              "Install\\DotNetNuke.install.config"
                                                          }),
-                                        RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                        RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                        RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
+                                        RoleStartupUtils.GetSetting("AcceleratorConnectionString"),
+                                        RoleStartupUtils.GetSetting("packageContainer"),
+                                        RoleStartupUtils.GetSetting("packageInstallConfiguration"));
 
                     // Setup post install addons (always overwrite)
-                    RoleStartupUtils.InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
-                                                    Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));
+                    RoleStartupUtils.InstallAddons(RoleStartupUtils.GetSetting("AddonsUrl"),
+                                                    Drive.LocalPath + "\\" + RoleStartupUtils.GetSetting("dnnFolder"));
 
                 }
                 catch (Exception ex)
@@ -123,10 +149,10 @@ namespace DNNAzure
             // Map the network drive
             try
             {
-                if (!RoleStartupUtils.MapNetworkDrive(SMBMode, RoleEnvironment.GetConfigurationSettingValue("localPath"),
-                                    RoleEnvironment.GetConfigurationSettingValue("shareName"),
-                                    RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                    RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword")))
+                if (!RoleStartupUtils.MapNetworkDrive(SMBMode, RoleStartupUtils.GetSetting("localPath"),
+                                    RoleStartupUtils.GetSetting("shareName"),
+                                    RoleStartupUtils.GetSetting("fileshareUserName"),
+                                    RoleStartupUtils.GetSetting("fileshareUserPassword")))
                     Trace.TraceError("Failed to map network drive");
                 //TODO: Create a thread for checking that the NetworkDrive has not been disconnected (SMB Server Fails) for trying to reconnecting to the new instance                
             }
@@ -141,22 +167,44 @@ namespace DNNAzure
             // Create the DNN Web site
             try
             {
-                if (!CreateDNNWebSite(RoleEnvironment.GetConfigurationSettingValue("hostHeaders"), 
-                                        RoleEnvironment.GetConfigurationSettingValue("localPath") + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
-                                          RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                          RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"), 
-                                          RoleEnvironment.GetConfigurationSettingValue("managedRuntimeVersion"), 
-                                          RoleEnvironment.GetConfigurationSettingValue("managedPipelineMode"),
-                                          RoleEnvironment.GetConfigurationSettingValue("appPool.IdleTimeout").ToLower() == "infinite"?
+                if (CreateDNNWebSite(RoleStartupUtils.GetSetting("hostHeaders"),
+                                          RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
+                                          RoleStartupUtils.GetSetting("fileshareUserName"),
+                                          RoleStartupUtils.GetSetting("fileshareUserPassword"), 
+                                          RoleStartupUtils.GetSetting("managedRuntimeVersion"), 
+                                          RoleStartupUtils.GetSetting("managedPipelineMode"),
+                                          RoleStartupUtils.GetSetting("appPool.IdleTimeout").ToLower() == "infinite"?
                                                                   TimeSpan.Zero:
-                                                                  new TimeSpan(0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.IdleTimeout")), 0),
-                                        new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.StartupTimeLimit"))),
-                                        new TimeSpan(0, 0, int.Parse(RoleEnvironment.GetConfigurationSettingValue("appPool.PingResponseTime"))),
-                                        RoleEnvironment.GetConfigurationSettingValue("SSL.CertificateThumbprint"),
-                                        RoleEnvironment.GetConfigurationSettingValue("SSL.HostHeader"),
-                                        RoleEnvironment.GetConfigurationSettingValue("SSL.Port")
+                                                                  new TimeSpan(0, int.Parse(RoleStartupUtils.GetSetting("appPool.IdleTimeout")), 0),
+                                        new TimeSpan(0, 0, int.Parse(RoleStartupUtils.GetSetting("appPool.StartupTimeLimit"))),
+                                        new TimeSpan(0, 0, int.Parse(RoleStartupUtils.GetSetting("appPool.PingResponseTime"))),
+                                        RoleStartupUtils.GetSetting("SSL.CertificateThumbprint"),
+                                        RoleStartupUtils.GetSetting("SSL.HostHeader"),
+                                        RoleStartupUtils.GetSetting("SSL.Port")
                                       ))
+                {
+                    // Setup FTP
+                    if (bool.Parse(RoleStartupUtils.GetSetting("FTP.Enabled", "False")))
+                    {
+                        // Enable SMB traffic through the firewall
+                        if (RoleStartupUtils.EnableFTPFirewallTraffic() != 0)
+                            goto Exit;                        
+
+                        // Create the FTP site
+                        CreateDNNFTPSite(RoleStartupUtils.GetSetting("hostHeaders"),
+                                         RoleStartupUtils.GetSetting("FTP.Root.Username"),
+                                         RoleStartupUtils.GetSetting("FTP.Portals.Username"),
+                                         RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
+                                         Path.Combine(RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"), "Portals"), 
+                                         WebSiteName);
+                    }
+                }
+                else
+                {
                     Trace.TraceError("Failed to create the DNNWebSite");
+                }
+                    
+
             }
             catch (Exception ex)
             {
@@ -168,7 +216,109 @@ namespace DNNAzure
             return base.OnStart();
         }
 
-#region Private functions
+        #region Private functions
+
+        private bool CreateDNNFTPSite(string hostHeaders, string rootUsername, string portalsAdminUsername, string siteRoot, string portalsRoot, string webSiteName)
+        {
+            Trace.TraceInformation("Creating FTP site...");
+            try
+            {
+                const string protocol = "ftp";
+                var port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPCmd"].IPEndpoint.Port.ToString();                
+                var ftpSiteName = string.Format("{0}_FTP", webSiteName);
+                string[] headers = hostHeaders.Split(';');
+
+                using (var serverManager = new ServerManager())
+                {
+                    var site = serverManager.Sites[ftpSiteName];
+                    if (site == null)
+                    {                        
+                        var localIpAddress = RoleStartupUtils.GetFirstIPv4LocalNetworkAddress();
+                        if (localIpAddress == "")
+                            localIpAddress = "*";
+                        var binding = localIpAddress + ":" + port + ":";
+                        Trace.TraceInformation("Creating FTP (SiteName={0}; Protocol={1}; Bindings={2}; RootPath={3}; PortalsPath={4}", ftpSiteName, "ftp", binding, siteRoot, portalsRoot);
+                        site = serverManager.Sites.Add(ftpSiteName, protocol, localIpAddress + ":" + port + ":", siteRoot);
+
+                        for (int i = 1; i < headers.Length; i++)
+                            site.Bindings.Add(localIpAddress + ":" + port + ":" + headers[i], protocol);
+                    }
+
+                    // Enable basic authentication
+                    Trace.TraceInformation("Enabling basic authentication on the FTP site...");
+                    site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("authentication").GetChildElement("basicAuthentication")["enabled"] = true;
+
+                    // Enable authorization for users in the root folder (read only)
+                    Trace.TraceInformation("Setting upt authorization for users in the FTP root folder (read only)...");
+                    var config = serverManager.GetApplicationHostConfiguration();
+                    var authorizationSection = config.GetSection("system.ftpServer/security/authorization", ftpSiteName);
+                    var authorizationCollection = authorizationSection.GetCollection();
+                    var authElement = authorizationCollection.CreateElement("add");
+                    authElement["accessType"] = @"Allow";
+                    authElement["users"] = rootUsername;
+                    authElement["permissions"] = @"Read";
+                    authorizationCollection.Add(authElement);
+                    if (!string.IsNullOrEmpty(portalsAdminUsername))
+                    {
+                        authElement = authorizationCollection.CreateElement("add");
+                        authElement["accessType"] = @"Allow";
+                        authElement["users"] = portalsAdminUsername;
+                        authElement["permissions"] = @"Read";
+                        authorizationCollection.Add(authElement);                        
+                    }
+
+                    // Remove SSL requirement
+                    Trace.TraceInformation("Removing SSL requirement for FTP...");
+                    site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("ssl")["controlChannelPolicy"] = 0;
+                    site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("ssl")["dataChannelPolicy"] = 0;
+
+                    // Add two virtual directories (one for each user)
+                    Trace.TraceInformation("Creating FTP virtual directories...");
+                    site.Applications[0].VirtualDirectories.Add("/" + rootUsername, siteRoot);
+                    if (!string.IsNullOrEmpty(portalsAdminUsername))
+                    {
+                        site.Applications[0].VirtualDirectories.Add("/" + portalsAdminUsername, portalsRoot);
+                    }
+
+                    // Add read/write permissions for each user
+                    Trace.TraceInformation("Setting up FTP permissions...");
+                    //   Root
+                    authorizationSection = config.GetSection("system.ftpServer/security/authorization", string.Format("{0}/{1}", ftpSiteName, rootUsername));
+                    authorizationCollection = authorizationSection.GetCollection();
+                    authorizationCollection.Clear();
+                    authElement = authorizationCollection.CreateElement("add");
+                    authElement["accessType"] = @"Allow";
+                    authElement["users"] = rootUsername;
+                    authElement["permissions"] = @"Read, Write";
+                    authorizationCollection.Add(authElement);
+                    if (!string.IsNullOrEmpty(portalsAdminUsername))
+                    {
+                        //   PortalsAdmin
+                        authorizationSection = config.GetSection("system.ftpServer/security/authorization", string.Format("{0}/{1}", ftpSiteName, portalsAdminUsername));
+                        authorizationCollection = authorizationSection.GetCollection();
+                        authorizationCollection.Clear();
+                        authElement = authorizationCollection.CreateElement("add");
+                        authElement["accessType"] = @"Allow";
+                        authElement["users"] = portalsAdminUsername;
+                        authElement["permissions"] = @"Read, Write";
+                        authorizationCollection.Add(authElement);
+                    }
+
+                    // Enable user isolation to "User name directory"
+                    Trace.TraceInformation("Enabling user isolation to 'User name directory'...");
+                    site.GetChildElement("ftpServer").GetChildElement("userIsolation")["mode"] = "StartInUsersDirectory";
+
+                    serverManager.CommitChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while creating the FTP site: " + ex.Message);
+                return false;
+            }
+            return true;
+        }
+
 
         /// <summary>
         /// Creates a DNNWebSite listening for hostHeaders
@@ -202,7 +352,6 @@ namespace DNNAzure
             Trace.TraceInformation("Creating DNNWebSite with hostHeaders '" + hostHeaders + "'...");
             string systemDrive = Environment.SystemDirectory.Substring(0, 2);
             string originalwebSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_Web";
-            const string webSiteName = "DotNetNuke";
             string[] headers = hostHeaders.Split(';');
             string protocol = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].Protocol;
             string port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].IPEndpoint.Port.ToString();
@@ -229,14 +378,14 @@ namespace DNNAzure
                 using (var serverManager = new ServerManager())
                 {
                     
-                    var site = serverManager.Sites[webSiteName];
+                    var site = serverManager.Sites[WebSiteName];
                     if (site == null)
                     {
-                        Trace.TraceInformation("Creating DNNWebSite (SiteName=" + webSiteName + ";protocol=" + protocol + ";Bindings=" + "*:" + port + ":" + headers[0] + ";HomePath=" + homePath);
+                        Trace.TraceInformation("Creating DNNWebSite (SiteName=" + WebSiteName + ";protocol=" + protocol + ";Bindings=" + "*:" + port + ":" + headers[0] + ";HomePath=" + homePath);
                         var localIPAddress = RoleStartupUtils.GetFirstIPv4LocalNetworkAddress();
                         if (localIPAddress == "")
                             localIPAddress = "*"; 
-                        site = serverManager.Sites.Add(webSiteName, protocol, localIPAddress + ":" + port + ":" + headers[0], homePath);
+                        site = serverManager.Sites.Add(WebSiteName, protocol, localIPAddress + ":" + port + ":" + headers[0], homePath);
 
                         for (int i = 1; i < headers.Length; i++)
                             site.Bindings.Add(localIPAddress + ":" + port + ":" + headers[i], protocol);
@@ -292,7 +441,7 @@ namespace DNNAzure
 
                     // Sets the application pool
                     Trace.TraceInformation("Setting application pool to the website...");
-                    serverManager.Sites[webSiteName].ApplicationDefaults.ApplicationPoolName = appPoolName;
+                    serverManager.Sites[WebSiteName].ApplicationDefaults.ApplicationPoolName = appPoolName;
 
                     // Commit all changes
                     serverManager.CommitChanges();

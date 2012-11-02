@@ -83,6 +83,11 @@
       <Setting name="WebPlatformInstaller.Products" value="@@WPIPRODUCTS@@" />
       <Setting name="WebPlatformInstaller.Enabled" value="true" />
       <Setting name="IISRemoteManagement.Enabled" value="@@REMOTEMGMTENABLED@@" />
+      <Setting name="FTP.Enabled" value="@@FTPENABLED@@" />
+      <Setting name="FTP.Root.Username" value="@@FTPROOTUSERNAME@@" />
+      <Setting name="FTP.Root.EncryptedPassword" value="@@FTPROOTPASSWORD@@" />
+      <Setting name="FTP.Portals.Username" value="@@FTPPORTALSUSERNAME@@" />
+      <Setting name="FTP.Portals.EncryptedPassword" value="@@FTPPORTALSPASSWORD@@" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />

@@ -81,6 +81,8 @@
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
       <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
       <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
+      <InputEndpoint name="FTPData" protocol="tcp" port="20" localPort="20" />
+      <InputEndpoint name="FTPCmd" protocol="tcp" port="21" localPort="21" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
@@ -108,6 +110,11 @@
       <Setting name="WebPlatformInstaller.Enabled" />
       <Setting name="WebPlatformInstaller.Products" />
       <Setting name="IISRemoteManagement.Enabled" />
+      <Setting name="FTP.Enabled" />
+      <Setting name="FTP.Root.Username" />
+      <Setting name="FTP.Root.EncryptedPassword" />
+      <Setting name="FTP.Portals.Username" />
+      <Setting name="FTP.Portals.EncryptedPassword" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />

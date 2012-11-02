@@ -47,6 +47,8 @@
       <InternalEndpoint name="SMB" protocol="tcp" port="445" />
       <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
       <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
+      <InputEndpoint name="FTPData" protocol="tcp" port="20" localPort="20" />
+      <InputEndpoint name="FTPCmd" protocol="tcp" port="21" localPort="21" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
@@ -87,6 +89,11 @@
       <Setting name="WebPlatformInstaller.Products" />
       <Setting name="WebPlatformInstaller.Enabled" />
       <Setting name="IISRemoteManagement.Enabled" />
+      <Setting name="FTP.Enabled" />
+      <Setting name="FTP.Root.Username" />
+      <Setting name="FTP.Root.EncryptedPassword" />
+      <Setting name="FTP.Portals.Username" />
+      <Setting name="FTP.Portals.EncryptedPassword" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

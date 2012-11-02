@@ -81,14 +81,19 @@
       <Setting name="SSL.HostHeader" value="" />
       <Setting name="SSL.Port" value="443" />
       <Setting name="WebPlatformInstaller.Enabled" value="true" />
-      <Setting name="WebPlatformInstaller.Products" value="WDeploy" />
+      <Setting name="WebPlatformInstaller.Products" value="WDeploy,FTPServer" />
       <Setting name="IISRemoteManagement.Enabled" value="true" />
+      <Setting name="FTP.Enabled" value="true" />
+      <Setting name="FTP.Root.Username" value="" />
+      <Setting name="FTP.Root.EncryptedPassword" value="" />
+      <Setting name="FTP.Portals.Username" value="" />
+      <Setting name="FTP.Portals.EncryptedPassword" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
       <Certificate name="SSL" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
       <Certificate name="SSL.CA1" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
-      <Certificate name="SSL.CA2" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />      
+      <Certificate name="SSL.CA2" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
 </ServiceConfiguration>

@@ -46,6 +46,24 @@ namespace SMBServer
                 RoleStartupUtils.CreateUserAccount(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
                                                    RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"));
 
+                // To ensure FTP users can access the shared folder
+                if (bool.Parse(RoleStartupUtils.GetSetting("FTP.Enabled", "False")))
+                {
+                    // Create a local account for the FTP root user
+                    RoleStartupUtils.CreateUserAccount(
+                        RoleStartupUtils.GetSetting("FTP.Root.Username"),
+                        RoleStartupUtils.DecryptPassword(RoleStartupUtils.GetSetting("FTP.Root.EncryptedPassword")));
+
+                    if (!string.IsNullOrEmpty(RoleStartupUtils.GetSetting("FTP.Portals.Username")))
+                    {
+                        // Optionally create a local account for the FTP portals user
+                        RoleStartupUtils.CreateUserAccount(
+                            RoleStartupUtils.GetSetting("FTP.Portals.Username"),
+                            RoleStartupUtils.DecryptPassword(
+                                RoleStartupUtils.GetSetting("FTP.Portals.EncryptedPassword")));
+                    }
+                }
+
                 // Enable SMB traffic through the firewall
                 if (RoleStartupUtils.EnableSMBFirewallTraffic() != 0)
                     goto Exit;
@@ -59,9 +77,15 @@ namespace SMBServer
                 }
                 // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
                 if (!RoleEnvironment.IsEmulated)
-                    RoleStartupUtils.ShareLocalFolder(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                                    rdpUserName, Drive.LocalPath,
-                                                    RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                    RoleStartupUtils.ShareLocalFolder(new[]
+                                                              {
+                                                                 RoleStartupUtils.GetSetting("fileshareUserName"),  
+                                                                 rdpUserName,
+                                                                 RoleStartupUtils.GetSetting("FTP.Root.Username"),  
+                                                                 RoleStartupUtils.GetSetting("FTP.Portals.Username")
+                                                              },
+                                                    Drive.LocalPath,
+                                                    RoleStartupUtils.GetSetting("shareName"));
 
                 // Check for the database existence
                 Trace.TraceInformation("Checking for database existence...");

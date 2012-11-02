@@ -5,6 +5,12 @@ using System.IO;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using DNNShared.Exceptions;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
@@ -16,6 +22,9 @@ using System.Configuration;
 
 namespace DNNShared
 {
+    /// <summary>
+    /// Role startup utilities
+    /// </summary>
     public class RoleStartupUtils
     {
 
@@ -197,6 +206,7 @@ namespace DNNShared
                                 cmdC3.ExecuteNonQuery();
                                 var cmdC4 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_owner', '{0}'", connBuilderOriginal.UserID), dbConnNew);
                                 cmdC4.ExecuteNonQuery();
+                                /*  // This roles are not needed since the user is db_owner, and also causing an issue when trying to restore a bacpac from another database
                                 var cmdC5 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_ddladmin', '{0}'", connBuilderOriginal.UserID), dbConnNew);
                                 cmdC5.ExecuteNonQuery();
                                 var cmdC6 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_securityadmin', '{0}'", connBuilderOriginal.UserID), dbConnNew);
@@ -205,7 +215,7 @@ namespace DNNShared
                                 cmdC7.ExecuteNonQuery();
                                 var cmdC8 = new SqlCommand(string.Format("EXEC sp_addrolemember 'db_datawriter', '{0}'", connBuilderOriginal.UserID), dbConnNew);
                                 cmdC8.ExecuteNonQuery();
-
+                                */
                                 return true;
                             }
                         }
@@ -433,6 +443,84 @@ namespace DNNShared
             {
             }
             return ConfigurationManager.AppSettings.AllKeys.Contains(key) ? ConfigurationManager.AppSettings[key] : defaultValue;
+        }
+
+
+        /// <summary>
+        /// Decrypts the password.
+        /// </summary>
+        /// <param name="encryptedPassword">The encrypted password.</param>
+        /// <returns></returns>
+        /// <exception cref="System.Security.SecurityException">Unable to decrypt password. Make sure that the cert used for encryption was uploaded to the Azure service</exception>
+        public static string DecryptPassword(string encryptedPassword)
+        {
+            SecureString password = null;
+            if (string.IsNullOrEmpty(encryptedPassword))
+            {
+                password = null;
+            }
+            else
+            {
+                try
+                {
+                    var encryptedBytes = Convert.FromBase64String(encryptedPassword);
+                    var envelope = new EnvelopedCms();
+                    envelope.Decode(encryptedBytes);
+                    var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+                    store.Open(OpenFlags.ReadOnly);
+                    envelope.Decrypt(store.Certificates);
+                    char[] passwordChars = Encoding.UTF8.GetChars(envelope.ContentInfo.Content);
+                    password = new SecureString();
+                    foreach (var character in passwordChars)
+                    {
+                        password.AppendChar(character);
+                    }
+                    Array.Clear(envelope.ContentInfo.Content, 0, envelope.ContentInfo.Content.Length);
+                    Array.Clear(passwordChars, 0, passwordChars.Length);
+                    password.MakeReadOnly();
+                }
+                catch (CryptographicException)
+                {
+                    // Unable to decrypt password. Make sure that the cert used for encryption was uploaded to the Azure service
+                    password = null;
+                }
+                catch (FormatException)
+                {
+                    // Encrypted password is not a valid base64 string
+                    password = null;
+                }
+            }
+            if (password == null)
+            {
+                throw new SecurityException("Unable to decrypt password. Make sure that the cert used for encryption was uploaded to the Azure service");
+            }
+            return GetUnsecuredString(password);
+        }
+
+        /// <summary>
+        /// Gets the unsecured string.
+        /// </summary>
+        /// <param name="secureString">The secure string.</param>
+        /// <returns></returns>
+        /// <exception cref="System.ArgumentNullException">secureString</exception>
+        public static string GetUnsecuredString(SecureString secureString)
+        {
+            if (secureString == null)
+            {
+                throw new ArgumentNullException("secureString");
+            }
+
+            IntPtr ptrUnsecureString = IntPtr.Zero;
+
+            try
+            {
+                ptrUnsecureString = Marshal.SecureStringToGlobalAllocUnicode(secureString);
+                return Marshal.PtrToStringUni(ptrUnsecureString);
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(ptrUnsecureString);
+            }
         }
 
         #endregion
@@ -738,23 +826,43 @@ namespace DNNShared
         /// <summary>
         /// Shares a local folder
         /// </summary>
-        /// <param name="userName">Username to share the drive with full access permissions</param>
-        /// <param name="RDPuserName">(Optional) Second username to grant full access permissions</param>
+        /// <param name="userNames">Username list to share the drive with full access permissions</param>
         /// <param name="path">Path to share</param>
         /// <param name="shareName">Share name</param>
         /// <returns>Returns 0 if success</returns>
-        public static int ShareLocalFolder(string userName, string RDPuserName, string path, string shareName)
+        public static int ShareLocalFolder(string[] userNames, string path, string shareName)
         {
             string error;
-            Trace.TraceInformation("Sharing local folder " + path);
-            string grantRDPUserName = "";
-            if (RDPuserName != "")
-                grantRDPUserName = " /Grant:" + RDPuserName + ",full";
-            int exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + " /Grant:" + userName + ",full" + grantRDPUserName, out error, 10000);
+            var grants = userNames.Where(userName => !string.IsNullOrEmpty(userName)).Aggregate("", (current, userName) => current + string.Format(" /Grant:{0},full", userName));
+            Trace.TraceInformation("Sharing local folder {0} with grants: {1}", path, grants);
+            int exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + grants, out error, 10000);
 
             if (exitCode != 0)
                 //Log error and continue since the drive may already be shared
-                Trace.TraceWarning("Error creating fileshare, error msg:" + error, "Warning");
+                Trace.TraceError("Error creating fileshare, error msg:" + error);
+            return exitCode;
+        }
+
+        public static int EnableFTPFirewallTraffic()
+        {
+            int exitCode = 0;
+            //Enable SMB traffic through the firewall
+            Trace.TraceInformation("Enabling FTP traffic through the firewall");     
+
+            if (UseAdvancedFirewall())
+            {
+                Trace.TraceInformation("Enabling FTP traffic through the firewall using advanced firewall");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (FTP Server - Data)", "In", "Public", "TCP", "20", "Any", "Any", "");
+                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (FTP Server - Command)", "In", "Public", "TCP", "21", "Any", "Any", "");
+            }
+            else
+            {
+                Trace.TraceInformation("Enabling FTP traffic through the firewall using non advanced firewall"); 
+                string error;
+                exitCode |= ExecuteCommand("netsh.exe", "firewall set portopening TCP 20 \"DotNetNuke Azure Accelerator (FTP Server - Data)\"", out error, 10000);
+                exitCode |= ExecuteCommand("netsh.exe", "firewall set portopening TCP 21 \"DotNetNuke Azure Accelerator (FTP Server - Command)\"", out error, 10000);
+            }
+
             return exitCode;
         }
 
@@ -870,7 +978,7 @@ namespace DNNShared
             string error;
 
             //Create the user account    
-            Trace.TraceInformation("Creating user account for sharing");
+            Trace.TraceInformation("Creating user account '{0}'...", userName);
             int exitCode = ExecuteCommand("net.exe", string.Format("user {0} {1} /expires:never /add", userName, password), out error, 10000);
             if (exitCode != 0)
             {
@@ -882,7 +990,7 @@ namespace DNNShared
                 // Password never expires
                 if (passwordNeverExpires)
                 {
-                    Trace.TraceInformation("Setting account password expiration to never");
+                    Trace.TraceInformation("Setting account password expiration to never for user account '{0}'...", userName);
                     exitCode = ExecuteCommand("wmic.exe", string.Format("USERACCOUNT WHERE \"Name='{0}'\" SET PasswordExpires=FALSE", userName), out error, 10000);
                     if (exitCode != 0)
                     {
