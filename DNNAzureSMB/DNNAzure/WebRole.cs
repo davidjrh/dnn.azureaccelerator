@@ -224,6 +224,7 @@ namespace DNNAzure
             try
             {
                 const string protocol = "ftp";
+                var ftproot = Environment.SystemDirectory.Substring(0, 2) + @"\inetpub\ftproot";
                 var port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPCmd"].IPEndpoint.Port.ToString();                
                 var ftpSiteName = string.Format("{0}_FTP", webSiteName);
                 string[] headers = hostHeaders.Split(';');
@@ -238,7 +239,7 @@ namespace DNNAzure
                             localIpAddress = "*";
                         var binding = localIpAddress + ":" + port + ":";
                         Trace.TraceInformation("Creating FTP (SiteName={0}; Protocol={1}; Bindings={2}; RootPath={3}; PortalsPath={4}", ftpSiteName, "ftp", binding, siteRoot, portalsRoot);
-                        site = serverManager.Sites.Add(ftpSiteName, protocol, localIpAddress + ":" + port + ":", siteRoot);
+                        site = serverManager.Sites.Add(ftpSiteName, protocol, localIpAddress + ":" + port + ":", ftproot);
 
                         for (int i = 1; i < headers.Length; i++)
                             site.Bindings.Add(localIpAddress + ":" + port + ":" + headers[i], protocol);
