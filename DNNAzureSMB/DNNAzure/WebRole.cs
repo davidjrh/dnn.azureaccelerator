@@ -187,17 +187,29 @@ namespace DNNAzure
                     // Setup FTP
                     if (bool.Parse(RoleStartupUtils.GetSetting("FTP.Enabled", "False")))
                     {
-                        // Enable SMB traffic through the firewall
+                        // Enable FTP traffic through the firewall
                         if (RoleStartupUtils.EnableFTPFirewallTraffic() != 0)
                             goto Exit;                        
 
                         // Create the FTP site
+                        var externalIP =
+                            RoleStartupUtils.GetExternalIP(
+                                RoleStartupUtils.GetSetting("FTP.ExternalIpProvider.Url", @"http://checkip.dyndns.org/"),
+                                RoleStartupUtils.GetSetting("FTP.ExternalIpProvider.RegexPattern", @"[^\d\.]*"));
+
                         CreateDNNFTPSite(RoleStartupUtils.GetSetting("hostHeaders"),
                                          RoleStartupUtils.GetSetting("FTP.Root.Username"),
                                          RoleStartupUtils.GetSetting("FTP.Portals.Username"),
                                          RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
                                          Path.Combine(RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"), "Portals"), 
-                                         WebSiteName);
+                                         WebSiteName,
+                                         externalIP,
+                                         RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port,
+                                         RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port);
+                        if (!string.IsNullOrEmpty(externalIP))
+                        {
+                            RoleStartupUtils.RestartService("FTPSVC");
+                        }
                     }
                 }
                 else
@@ -219,7 +231,7 @@ namespace DNNAzure
 
         #region Private functions
 
-        private bool CreateDNNFTPSite(string hostHeaders, string rootUsername, string portalsAdminUsername, string siteRoot, string portalsRoot, string webSiteName)
+        private bool CreateDNNFTPSite(string hostHeaders, string rootUsername, string portalsAdminUsername, string siteRoot, string portalsRoot, string webSiteName, string externalIP, int lowDataChannelPort, int highDataChannelPort)
         {
             Trace.TraceInformation("Creating FTP site...");
             try
@@ -250,9 +262,24 @@ namespace DNNAzure
                     Trace.TraceInformation("Enabling basic authentication on the FTP site...");
                     site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("authentication").GetChildElement("basicAuthentication")["enabled"] = true;
 
+                    var config = serverManager.GetApplicationHostConfiguration();
+
+                    // Enable passive mode
+                    if (!string.IsNullOrEmpty(externalIP))
+                    {
+                        Trace.TraceInformation("Enabling passive mode on the FTP site...");
+                        var firewallSupportSection = config.GetSection("system.ftpServer/firewallSupport");
+                        site.GetChildElement("ftpServer").GetChildElement("firewallSupport")["externalIp4Address"] = externalIP;
+                        firewallSupportSection["lowDataChannelPort"] = lowDataChannelPort;
+                        firewallSupportSection["highDataChannelPort"] = highDataChannelPort;
+                    }
+                    else
+                    {
+                        Trace.TraceWarning("Cannot enable FTP passive mode");
+                    }
+
                     // Enable authorization for users in the root folder (read only)
                     Trace.TraceInformation("Setting upt authorization for users in the FTP root folder (read only)...");
-                    var config = serverManager.GetApplicationHostConfiguration();
                     var authorizationSection = config.GetSection("system.ftpServer/security/authorization", ftpSiteName);
                     var authorizationCollection = authorizationSection.GetCollection();
                     var authElement = authorizationCollection.CreateElement("add");

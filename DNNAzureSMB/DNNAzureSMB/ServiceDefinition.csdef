@@ -84,6 +84,7 @@
       <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
       <InputEndpoint name="FTPData" protocol="tcp" port="20" localPort="20" />
       <InputEndpoint name="FTPCmd" protocol="tcp" port="21" localPort="21" />
+      <InputEndpoint name="FTPDataPassive" protocol="tcp" port="20000" localPort="20000" />
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
@@ -116,6 +117,8 @@
       <Setting name="FTP.Root.EncryptedPassword" />
       <Setting name="FTP.Portals.Username" />
       <Setting name="FTP.Portals.EncryptedPassword" />
+      <Setting name="FTP.ExternalIpProvider.Url" />
+      <Setting name="FTP.ExternalIpProvider.RegexPattern" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />

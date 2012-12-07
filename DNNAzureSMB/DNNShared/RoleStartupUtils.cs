@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using DNNShared.Exceptions;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
@@ -423,6 +424,35 @@ namespace DNNShared
                 }
 
             }
+        }
+
+        /// <summary>
+        /// Gets the external IP of the current host
+        /// </summary>
+        /// <param name="providerUrl">The web page that we are using to get the IP</param>
+        /// <param name="regexPattern">The regex pattern to get the IP from the web page returned by this url</param>
+        /// <returns>External IP address of the current host</returns>
+        public static string GetExternalIP(string providerUrl, string regexPattern)
+        {
+            var direction = "";
+            try
+            {
+                var regReplace = new Regex(regexPattern, RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+                var request = WebRequest.Create(providerUrl);
+                using (var response = request.GetResponse())
+                {
+                    using (var stream = new StreamReader(response.GetResponseStream()))
+                    {
+                        direction = stream.ReadToEnd();
+                    }
+                }
+                direction = regReplace.Replace(direction, "");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while getting the external IP address: {0}", ex.Message);
+            }
+            return direction;
         }
 
         /// <summary>
@@ -869,6 +899,21 @@ namespace DNNShared
                 string error;
                 exitCode |= ExecuteCommand("netsh.exe", "firewall set portopening TCP 20 \"DotNetNuke Azure Accelerator (FTP Server - Data)\"", out error, 10000);
                 exitCode |= ExecuteCommand("netsh.exe", "firewall set portopening TCP 21 \"DotNetNuke Azure Accelerator (FTP Server - Command)\"", out error, 10000);
+            }
+
+            return exitCode;
+        }
+
+        public static  int RestartService(string serviceName)
+        {
+            int exitCode = 0;
+            Trace.TraceInformation("Restarting service {0}...");
+            string error;
+            exitCode |= ExecuteCommand("net.exe", "stop " + serviceName, out error, 10000);
+            exitCode |= ExecuteCommand("net.exe", "start " + serviceName, out error, 10000);
+
+            if (exitCode != 0) {
+                Trace.TraceWarning("There was an error while starting the {0} service: {1}", serviceName, error);
             }
 
             return exitCode;
