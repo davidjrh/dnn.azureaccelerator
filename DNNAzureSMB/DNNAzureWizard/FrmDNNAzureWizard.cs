@@ -734,7 +734,7 @@ namespace DNNAzureWizard
                 if (ex.InnerException != null)
                     msg += "\n\n - InnerException: " + ex.InnerException;
 #endif
-            MessageBox.Show(msg, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(msg, "An exception occurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         private void ShowPage(int pageNumber)
         {
@@ -1742,7 +1742,7 @@ namespace DNNAzureWizard
 
             if (exitCode != 0)
                 if (errorDesc == "")
-                    throw new Exception("An error ocurred while executing the process. See the 'Logs' folder for more info");
+                    throw new Exception("An error occurred while executing the process. See the 'Logs' folder for more info");
                 else
                     throw new Exception(errorDesc);
         }

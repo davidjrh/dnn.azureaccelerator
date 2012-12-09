@@ -70,7 +70,7 @@ namespace DNNAzureWizard
             }
             catch (Exception ex)
             {
-                MessageBox.Show("An error ocurred while creating the certificate: " + ex.Message, "Error");
+                MessageBox.Show("An error occurred while creating the certificate: " + ex.Message, "Error");
             }
         }
 

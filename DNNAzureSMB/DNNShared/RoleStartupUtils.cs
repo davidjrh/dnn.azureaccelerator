@@ -713,7 +713,7 @@ namespace DNNShared
             }
             catch (Exception ex)
             {
-                throw new CompressOperationException("An exception ocurred while compressing the folder contents", ex);
+                throw new CompressOperationException("An exception occurred while compressing the folder contents", ex);
             }
         }
 
@@ -755,7 +755,7 @@ namespace DNNShared
             }
             catch (Exception ex)
             {
-                throw new CompressOperationException("An exception ocurred while compressing the folder contents", ex);
+                throw new CompressOperationException("An exception occurred while compressing the folder contents", ex);
             }
 
         }
@@ -796,7 +796,7 @@ namespace DNNShared
             }
             catch (Exception ex)
             {
-                throw new CompressOperationException("An exception ocurred while unzipping the file", ex);
+                throw new CompressOperationException("An exception occurred while unzipping the file", ex);
             }
 
 

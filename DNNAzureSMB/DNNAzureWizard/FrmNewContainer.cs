@@ -58,7 +58,7 @@ namespace DNNAzureWizard
 #if DEBUG
                 msg += " - Stack trace: " + ex.StackTrace;
 #endif
-            MessageBox.Show(msg, "An exception ocurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(msg, "An exception occurred", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void CmdOkClick(object sender, EventArgs e)
