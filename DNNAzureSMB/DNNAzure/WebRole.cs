@@ -211,6 +211,9 @@ namespace DNNAzure
                             RoleStartupUtils.RestartService("FTPSVC");
                         }
                     }
+
+                    // Ensure the website is started
+                    StartWebsite();
                 }
                 else
                 {
@@ -475,6 +478,7 @@ namespace DNNAzure
                     // Commit all changes
                     serverManager.CommitChanges();
                 }
+
                 Trace.WriteLine("Successfully created the DNNWebSite", "Information");
             }
             catch (Exception ex)
@@ -483,6 +487,28 @@ namespace DNNAzure
                 return false;
             }
             return true;
+        }
+
+        public static void StartWebsite()
+        {
+            try
+            {
+                // FIX - In some cases, the site bindings end in a Event ID 1007 when using Windows Server 2012
+                // See http://technet.microsoft.com/en-us/library/dd316029(v=ws.10).aspx for more info. As workaround, 
+                // we will always start the site
+                using (var serverManager = new ServerManager())
+                {
+                    var site = serverManager.Sites[WebSiteName];
+                    if (site != null)
+                    {
+                        site.Start();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while restarting the DNNWebSite: " + ex.Message);
+            }
         }
 #endregion
 
