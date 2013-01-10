@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<DeploymentTasks>  
+  <Task id="Task0" type="VerifyProvisioning">
+    <Description>Verify provisioned resources</Description>
+    <Comments>This task verifies and waits for the provisioned resources: hosting account, storage account and database server</Comments>
+  </Task>
+  <Task id="Task1" type="UploadCertificate">
+    <Description>Upload certificate to hosted service</Description>
+    <Comments>This task uploads the selected certificate to the hosted service if RDP is enabled</Comments>
+  </Task>
+  <Task id="Task2" type="UploadPackages">
+    <Description>Upload service files to storage</Description>
+    <Comments>This Task uploads the selected service packages and configuration file to Azure storage</Comments>
+  </Task>
+  <Task id="Task3" type="Deploy">
+    <Description>Deploy the package</Description>
+    <Comments>Deploys the selected package into the hosted service</Comments>
+  </Task>
+  <Task id="Task4" type="Install">
+    <Description>Install DotNetNuke</Description>
+    <Comments>Installs DotNetNuke calling the installation URL if Auto-install is checked</Comments>
+  </Task>
+</DeploymentTasks>

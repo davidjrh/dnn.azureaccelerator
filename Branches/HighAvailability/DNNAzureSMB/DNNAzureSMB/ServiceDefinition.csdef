@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceDefinition name="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2012-05.1.7">
+  <WorkerRole name="SMBServer">
+    <Runtime executionContext="elevated">
+    </Runtime>
+    <Imports>
+      <Import moduleName="Diagnostics" />
+      <Import moduleName="Connect" />
+      <Import moduleName="RemoteAccess" />
+      <Import moduleName="RemoteForwarder" />
+    </Imports>
+    <ConfigurationSettings>
+      <Setting name="AcceleratorConnectionString" />
+      <Setting name="driveName" />
+      <Setting name="driveSize" />
+      <Setting name="fileshareUserName" />
+      <Setting name="fileshareUserPassword" />
+      <Setting name="shareName" />
+      <Setting name="driveContainer" />
+      <Setting name="DatabaseConnectionString" />
+      <Setting name="packageContainer" />
+      <Setting name="package" />
+      <Setting name="dnnFolder" />
+      <Setting name="packageUrl" />
+      <Setting name="DBAdminUser" />
+      <Setting name="DBAdminPassword" />
+      <Setting name="packageInstallConfiguration" />
+      <Setting name="InstallationDate" />
+      <Setting name="AddonsUrl" />
+      <Setting name="UpdateService.Source" />
+    </ConfigurationSettings>
+    <LocalResources>
+      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
+    </LocalResources>
+    <Endpoints>
+      <InternalEndpoint name="SMB" protocol="tcp" port="445" />
+    </Endpoints>
+  </WorkerRole>
+  <WebRole name="DNNAzure">
+    <Runtime executionContext="elevated">
+    </Runtime>
+    <Startup>
+      <Task executionContext="elevated" commandLine="scripts\SetupSMTP.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+        </Environment>
+      </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupIISRemoteMgmt.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='IISRemoteManagement.Enabled']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupProducts.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="ENABLED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Enabled']/@value" />
+          </Variable>
+          <Variable name="PRODUCTS">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Products']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
+    </Startup>
+    <Sites>
+      <Site name="Web">
+        <Bindings>
+          <Binding name="HttpIn" endpointName="HttpIn" />
+        </Bindings>
+      </Site>
+    </Sites>
+    <Endpoints>
+      <InputEndpoint name="HttpIn" protocol="http" port="80" />
+      <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
+      <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
+      <InputEndpoint name="FTPData" protocol="tcp" port="20" localPort="20" />
+      <InputEndpoint name="FTPCmd" protocol="tcp" port="21" localPort="21" />
+      <InputEndpoint name="FTPDataPassive" protocol="tcp" port="20000" localPort="20000" />
+    </Endpoints>
+    <Imports>
+      <Import moduleName="Diagnostics" />
+      <Import moduleName="Connect" />
+      <Import moduleName="RemoteAccess" />
+    </Imports>
+    <ConfigurationSettings>
+      <Setting name="fileshareUserName" />
+      <Setting name="fileshareUserPassword" />
+      <Setting name="shareName" />
+      <Setting name="localPath" />
+      <Setting name="dnnFolder" />
+      <Setting name="hostHeaders" />
+      <Setting name="managedRuntimeVersion" />
+      <Setting name="managedPipelineMode" />
+      <Setting name="ShowDeploymentProgressDetails" />
+      <Setting name="appPool.IdleTimeout" />
+      <Setting name="appPool.StartupTimeLimit" />
+      <Setting name="appPool.PingResponseTime" />
+      <Setting name="InstallationDate" />
+      <Setting name="AddonsUrl" />
+      <Setting name="SSL.CertificateThumbprint" />
+      <Setting name="SSL.HostHeader" />
+      <Setting name="SSL.Port" />
+      <Setting name="WebPlatformInstaller.Enabled" />
+      <Setting name="WebPlatformInstaller.Products" />
+      <Setting name="IISRemoteManagement.Enabled" />
+      <Setting name="FTP.Enabled" />
+      <Setting name="FTP.Root.Username" />
+      <Setting name="FTP.Root.EncryptedPassword" />
+      <Setting name="FTP.Portals.Username" />
+      <Setting name="FTP.Portals.EncryptedPassword" />
+      <Setting name="FTP.ExternalIpProvider.Url" />
+      <Setting name="FTP.ExternalIpProvider.RegexPattern" />
+    </ConfigurationSettings>
+    <Certificates>
+      <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA1" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA2" storeLocation="LocalMachine" storeName="My" />
+    </Certificates>
+  </WebRole>
+</ServiceDefinition>
