@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ServiceConfiguration serviceName="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*">
+  <Role name="SMBServer">
+    <!-- At this moment, the SMB Server only support 1 instance -->
+    <Instances count="1" />
+    <ConfigurationSettings>
+      <!-- VHD settings:
+        driveContainer          Container of the VHD on Windows Azure Storage
+        driveName               Name of the VHD (blob) inside the driveContainer
+        driveSize               Size of the drive that will be mounted -->
+      <Setting name="driveContainer" value="azure-accelerator-drives" />      
+      <Setting name="driveName" value="@@VHDBLOBNAME@@" />
+      <Setting name="driveSize" value="@@VHDBLOBSIZE@@" />
+      <Setting name="dnnFolder" value="DotNetNuke" />
+      
+      <!-- Sharing settings (note that the WebRole setgins needs exactly the same values)
+        fileshareUserName       Local user account name that will be created for sharing the drive
+        filesharePassword       Password for the user account
+        shareName               Name of the share
+      -->
+      <Setting name="fileshareUserName" value="fileshareuser" />
+      <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
+      <Setting name="shareName" value="sharerw" />
+      
+      <!-- Storage Connection Strings -->
+      <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=http;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      
+      <!-- SQL Azure Connection String -->
+      <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
+
+      <!-- DNN Package location -->
+      <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
+      <Setting name="package" value="DotNetNuke_Community_06.01.00_Install.zip" />
+
+      <!-- Azure Connect (virtual network) -->
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Refresh" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.WaitForConnectivity" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Upgrade" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.EnableDomainJoin" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainControllerFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainAccountName" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainPassword" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
+    </ConfigurationSettings>
+    <Certificates>
+    </Certificates>
+  </Role>
+  <Role name="DNNAzure">
+    <!-- Set the number of webrole instances that you want create -->
+    <Instances count="1" />
+    <ConfigurationSettings>
+      <!-- Sharing settings (same values as the SMBServer role)
+        fileshareUserName       Local user account name that will be created for sharing the drive
+        filesharePassword       Password for the user account
+        shareName               Name of the share
+        localPath               Letter to asign to the drive
+      -->      
+      <Setting name="fileshareUserName" value="fileshareuser" />
+      <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
+      <Setting name="shareName" value="sharerw" />
+      <Setting name="localPath" value="X:" />
+      
+      <!-- IIS settings
+        dnnFolder               DotNetNuke root folder inside the VHD (remember to not copy the site on the root of the drive. DNN fails on that)
+        hostHeaders             Bindings for the webapplication that will be created (all on port 80 at this time)
+        managedRuntimeVersion   Version of the .NET Framework runtime version for the webapplication
+        managedPipelineMode     Pipeline mode for the webapplication
+      -->      
+      <Setting name="dnnFolder" value="DotNetNuke" />
+      <Setting name="hostHeaders" value="@@HOSTHEADERS@@" />
+      <Setting name="managedRuntimeVersion" value="v4.0" />
+      <Setting name="managedPipelineMode" value="Integrated" />
+
+      <!-- Storage Connection Strings -->
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+
+      <!-- Azure Connect (virtual network) -->
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Refresh" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.WaitForConnectivity" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Upgrade" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.EnableDomainJoin" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainControllerFQDN" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainAccountName" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainPassword" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
+      
+    </ConfigurationSettings>
+    <Certificates>
+    </Certificates>
+  </Role>
+</ServiceConfiguration>
