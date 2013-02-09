@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
-using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using Microsoft.WindowsAzure.ServiceRuntime;
@@ -10,140 +11,240 @@ using DNNShared;
 
 namespace SMBServer
 {
+    /// <summary>
+    /// The SMB Server worker role entry point
+    /// </summary>
     public class WorkerRole : RoleEntryPoint
     {
-        public static string DriveLetter;
-        public static CloudDrive Drive;
 
-        public override void Run()
-        {
-            Trace.TraceInformation("SMBServer entry point called");
+        private static string _drivePath;
+        private static CloudDrive _drive;
 
-            while (true)
-            {
-                Thread.Sleep(10000);
-            }
-        }        
-
-
+        /// <summary>
+        /// Called by Windows Azure to initialize the role instance.
+        /// </summary>
+        /// <returns>
+        /// True if initialization succeeds, False if it fails. The default implementation returns True.
+        /// </returns>
+        /// <remarks>
+        ///   <para>
+        /// Override the OnStart method to run initialization code for your role.
+        ///   </para>
+        ///   <para>
+        /// Before the OnStart method returns, the instance's status is set to Busy and the instance is not available
+        /// for requests via the load balancer.
+        ///   </para>
+        ///   <para>
+        /// If the OnStart method returns false, the instance is immediately stopped. If the method
+        /// returns true, then Windows Azure starts the role by calling the <see cref="M:Microsoft.WindowsAzure.ServiceRuntime.RoleEntryPoint.Run" /> method.
+        ///   </para>
+        ///   <para>
+        /// A web role can include initialization code in the ASP.NET Application_Start method instead of the OnStart method.
+        /// Application_Start is called after the OnStart method.
+        ///   </para>
+        ///   <para>
+        /// Any exception that occurs within the OnStart method is an unhandled exception.
+        ///   </para>
+        /// </remarks>
         public override bool OnStart()
         {
             // Set the maximum number of concurrent connections 
             ServicePointManager.DefaultConnectionLimit = 12;
             
             // Inits the Diagnostic Monitor
-            RoleStartupUtils.ConfigureDiagnosticMonitor();            
+            RoleStartupUtils.ConfigureDiagnosticMonitor();
+
+            // Setup OnChanging event
+            RoleEnvironment.Changing += RoleEnvironmentOnChanging;
             
             try
             {
-                // Mount the drive
-                Drive = RoleStartupUtils.MountCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                // Create windows user accounts for shareing the drive and other FTP related
+                RoleStartupUtils.CreateUserAccounts();
+
+                // Enable SMB traffic through the firewall
+                EnableSMBFirewallTraffic();
+
+                // Setup the drive object
+                _drive = RoleStartupUtils.InitializeCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
                                                         RoleEnvironment.GetConfigurationSettingValue("driveContainer"),
                                                         RoleEnvironment.GetConfigurationSettingValue("driveName"),
                                                         RoleEnvironment.GetConfigurationSettingValue("driveSize"));
-
-                // Create a local account for sharing the drive
-                RoleStartupUtils.CreateUserAccount(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                                                   RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"));
-
-                // To ensure FTP users can access the shared folder
-                if (bool.Parse(RoleStartupUtils.GetSetting("FTP.Enabled", "False")))
-                {
-                    // Create a local account for the FTP root user
-                    RoleStartupUtils.CreateUserAccount(
-                        RoleStartupUtils.GetSetting("FTP.Root.Username"),
-                        RoleStartupUtils.DecryptPassword(RoleStartupUtils.GetSetting("FTP.Root.EncryptedPassword")));
-
-                    if (!string.IsNullOrEmpty(RoleStartupUtils.GetSetting("FTP.Portals.Username")))
-                    {
-                        // Optionally create a local account for the FTP portals user
-                        RoleStartupUtils.CreateUserAccount(
-                            RoleStartupUtils.GetSetting("FTP.Portals.Username"),
-                            RoleStartupUtils.DecryptPassword(
-                                RoleStartupUtils.GetSetting("FTP.Portals.EncryptedPassword")));
-                    }
-                }
-
-                // Enable SMB traffic through the firewall
-                if (RoleStartupUtils.EnableSMBFirewallTraffic() != 0)
-                    goto Exit;
-
-                // Share it using SMB (add permissions for RDP user if it's configured)
-                string rdpUserName = "";
-                try { rdpUserName = RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername"); }
-                catch
-                {
-                    Trace.TraceWarning("No RDP user name was specified. Consider enabling RDP for better maintenance options.");
-                }
-                // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
-                if (!RoleEnvironment.IsEmulated)
-                    RoleStartupUtils.ShareLocalFolder(new[]
-                                                              {
-                                                                 RoleStartupUtils.GetSetting("fileshareUserName"),  
-                                                                 rdpUserName,
-                                                                 RoleStartupUtils.GetSetting("FTP.Root.Username"),  
-                                                                 RoleStartupUtils.GetSetting("FTP.Portals.Username")
-                                                              },
-                                                    Drive.LocalPath,
-                                                    RoleStartupUtils.GetSetting("shareName"));
-
-                // Check for the database existence
-                Trace.TraceInformation("Checking for database existence...");
-                if (!RoleStartupUtils.SetupDatabase(RoleEnvironment.GetConfigurationSettingValue("DBAdminUser"),
-                                            RoleEnvironment.GetConfigurationSettingValue("DBAdminPassword"),
-                                            RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString")))
-                    Trace.TraceError("Error while setting up the database. Check previous messages.");
-
-                // Check for the creation of the Website contents from Azure storage
-                Trace.TraceInformation("Check for website content...");
-                if (!RoleStartupUtils.SetupWebSiteContents(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("package"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("packageUrl")))
-                    Trace.TraceError("Website content could not be prepared. Check previous messages.");
-
-
-                // Setup Database Connection string
-                RoleStartupUtils.SetupWebConfig(Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
-                                                RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"),
-                                                RoleEnvironment.GetConfigurationSettingValue("InstallationDate"),
-                                                RoleStartupUtils.GetSetting("UpdateService.Source"));
-
-                // Setup DotNetNuke.install.config
-                RoleStartupUtils.SetupInstallConfig(
-                                    Path.Combine(new[]
-                                                         {
-                                                             Drive.LocalPath, RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
-                                                             "Install\\DotNetNuke.install.config"
-                                                         }),
-                                    RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                    RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                    RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
-
-                // Setup post install addons (always overwrite)
-                RoleStartupUtils.InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
-                                                Drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));
-
                 
-                Trace.TraceInformation("Exiting SMB Server OnStart");
+                Trace.TraceInformation("Exiting SMB Server OnStart...");
             }
             catch (Exception ex)
             {
-                Trace.TraceError(ex.ToString());
-                Trace.TraceInformation("Exiting");
-                //throw;
+                Trace.TraceError("Fatal error on the OnStart event: {0}", ex);
+                throw;
             }
 
-        Exit:
             return base.OnStart();
         }
 
+        /// <summary>
+        /// Called by Windows Azure after the role instance has been initialized. This method serves as the
+        /// main thread of execution for your role.
+        /// </summary>
+        /// <remarks>
+        ///   <para>
+        /// Override the Run method to implement your own code to manage the role's execution. The Run method should implement
+        /// a long-running thread that carries out operations for the role. The default implementation sleeps for an infinite
+        /// period, blocking return indefinitely.
+        ///   </para>
+        ///   <para>
+        /// The role recycles when the Run method returns.
+        ///   </para>
+        ///   <para>
+        /// Any exception that occurs within the Run method is an unhandled exception.
+        ///   </para>
+        /// </remarks>
+        public override void Run()
+        {
+            Trace.TraceInformation("SMBServer entry point called");
+
+            CompeteForMount();
+        }
+
+
+        /// <summary>
+        /// Competes for the cloud drive lease.
+        /// </summary>
+        private static void CompeteForMount()
+        {
+
+            for (; ; )
+            {
+                var driveMounted = false;
+                try
+                {
+                    Trace.TraceInformation("Competing for mount {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+                    RoleStartupUtils.MountCloudDrive(_drive);
+                    driveMounted = true;
+                    Trace.TraceInformation("{0} Successfully mounted the drive!", RoleEnvironment.CurrentRoleInstance.Id);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Equals("ERROR_LEASE_LOCKED"))
+                    {
+                        //Trace.TraceInformation("{0} could not mount the drive. The lease is locked. Will retry in 5 seconds.",
+                        //                   RoleEnvironment.CurrentRoleInstance.Id);
+                    }
+                    else
+                    {
+                        Trace.TraceWarning("{0} could not mount the drive, Will retry in 5 seconds. Reason: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+                    }
+                }
+
+                if (!driveMounted)
+                {
+                    Thread.Sleep(5000);
+                    continue;   // Compete again for the lease
+                }
+
+                // Shares the drive
+                _drivePath = RoleStartupUtils.ShareDrive(_drive);
+
+                // Setup the website settings
+                RoleStartupUtils.SetupWebSiteSettings(_drive);
+
+                // Now, spin checking if the drive is still accessible.
+                RoleStartupUtils.WaitForMoutingFailure(_drive);
+
+                // Drive is not accessible. Remove the share
+                RoleStartupUtils.DeleteShare(_drivePath);
+            }
+// ReSharper disable FunctionNeverReturns
+        }
+// ReSharper restore FunctionNeverReturns
+
+
+
+        /// <summary>
+        /// Enables the SMB firewall traffic.
+        /// </summary>
+        /// <exception cref="System.Configuration.ConfigurationErrorsException">Could not setup the firewall rules. See previous errors</exception>
+        private static void EnableSMBFirewallTraffic()
+        {
+            if (RoleStartupUtils.EnableSMBFirewallTraffic() != 0)
+            {
+                throw new ConfigurationErrorsException("Could not setup the firewall rules. See previous errors");
+            }
+        }
+
+
+
+
+        /// <summary>
+        /// Called by Windows Azure when the role instance is to be stopped.
+        /// </summary>
+        /// <remarks>
+        ///   <para>
+        /// Override the OnStop method to implement any code your role requires to shut down in an orderly fashion.
+        ///   </para>
+        ///   <para>
+        /// This method must return within certain period of time. If it does not, Windows Azure
+        /// will stop the role instance.
+        ///   </para>
+        ///   <para>
+        /// A web role can include shutdown sequence code in the ASP.NET Application_End method instead of the OnStop method.
+        /// Application_End is called before the Stopping event is raised or the OnStop method is called.
+        ///   </para>
+        ///   <para>
+        /// Any exception that occurs within the OnStop method is an unhandled exception.
+        ///   </para>
+        /// </remarks>
         public override void OnStop()
         {
-            if (Drive != null)
-                Drive.Unmount();
+            try
+            {
+                // Remove the share
+                if (!string.IsNullOrEmpty(_drivePath))
+                {
+                    RoleStartupUtils.DeleteShare(_drivePath);
+
+                    if (_drive != null)
+                    {
+                        Trace.TraceInformation("Unmounting cloud drive on role {0}...",
+                                               RoleEnvironment.CurrentRoleInstance.Id);
+                        _drive.Unmount();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while stopping the role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+            }
+
             base.OnStop();
+        }
+
+        /// <summary>
+        /// This event is called after configuration changes have been submited to Windows Azure but before they have been applied in this instance
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The <see cref="RoleEnvironmentChangingEventArgs" /> instance containing the event data.</param>
+        private static void RoleEnvironmentOnChanging(object sender, RoleEnvironmentChangingEventArgs e)
+        {
+            // Implements the changes after restarting the role instance
+            foreach (RoleEnvironmentConfigurationSettingChange settingChange in e.Changes.Where(x => x is RoleEnvironmentConfigurationSettingChange))
+            {
+                Trace.TraceInformation("Configurations are changing...");
+                switch (settingChange.ConfigurationSettingName)
+                {
+                    case "AcceleratorConnectionString":
+                    case "driveName":
+                    case "driveSize":
+                    case "fileshareUserName":
+                    case "fileshareUserPassword":
+                    case "shareName":
+                    case "driveContainer":
+                        Trace.TraceWarning("The specified configuration changes can't be made on a running instance. Recycling...");
+                        e.Cancel = true;
+                        break;
+                }
+                // TODO Otherwise, handle the Changed event for the rest of parameters
+            }
         }
     }
 }
