@@ -12,6 +12,7 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using DNNShared.Exceptions;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
@@ -28,111 +29,324 @@ namespace DNNShared
     /// </summary>
     public class RoleStartupUtils
     {
+        public const int SleepTimeAfterSuccessfulPolling = 10000;
+        public const int SleepTimeBetweenWriteErrors = 1000;
+        public const int SleepTimeBeforeStartToRemap = 5000;
 
         #region Cloud Drive operations
+
+
+
         /// <summary>
         /// Mounts the VHD as a local drive
         /// </summary>
         /// <returns>A string with the path of the local mounted drive</returns>
-        public static CloudDrive MountCloudDrive(string storageConnectionString, string driveContainerName, string driveName, string driveSize)
+        public static string MountCloudDrive(CloudDrive drive)
         {
-            // Mount the Cloud Drive - Lots of tracing in this part
+            if (drive == null) throw new ArgumentNullException("drive");
 
-            Trace.TraceInformation("Mounting cloud drive - Begin");
-            Trace.TraceInformation("Mounting cloud drive - Accesing acount info");
-            var account = CloudStorageAccount.Parse(storageConnectionString);
-            var blobClient = account.CreateCloudBlobClient();
-
-            Trace.TraceInformation("Mounting cloud drive - Locating VHD container:" + driveContainerName);
-            var driveContainer = blobClient.GetContainerReference(driveContainerName);
-
-            Trace.TraceInformation("Mounting cloud drive - Creating VHD container if not exists");
-            driveContainer.CreateIfNotExist();
-
-            Trace.TraceInformation("Mounting cloud drive - Local cache initialization");
-            var localCache = RoleEnvironment.GetLocalResource("AzureDriveCache");
-            CloudDrive.InitializeCache(localCache.RootPath, localCache.MaximumSizeInMegabytes);
-
-            Trace.TraceInformation("Mounting cloud drive - Creating cloud drive");
-            var drive = new CloudDrive(driveContainer.GetBlobReference(driveName).Uri, account.Credentials);
+            // Mount the Cloud Drive    
+            var driveLetter = drive.Mount(RoleEnvironment.GetLocalResource("AzureDriveCache").MaximumSizeInMegabytes, DriveMountOptions.None);
             try
             {
-                drive.Create(int.Parse(driveSize));
+                AppendLogEntryWithRetries(driveLetter + "\\logs\\MountHistory.log", 5,
+                                          string.Format("Drive mounted by {0}", RoleEnvironment.CurrentRoleInstance.Id));
             }
-            catch (CloudDriveException ex)
+            catch (Exception ex)
             {
-                Trace.TraceWarning(ex.ToString());
-            }            
-
-            Trace.TraceInformation("Mounting cloud drive - Mount drive");
-            string driveLetter = drive.Mount(localCache.MaximumSizeInMegabytes, DriveMountOptions.None);
-
-            return drive;
+                Trace.TraceWarning("Error while writing on the mount history log file on role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+            } 
+            return driveLetter;
         }
 
         /// <summary>
-        /// Maps a Network Drive (SMB Server Share)
+        /// Appends the current date and time to the log file, retrying the operation to avoid false positives
         /// </summary>
-        /// <param name="SMBMode">Indicate if the service is running with a specif worker role as SMB server</param>
-        /// <param name="localPath">Drive name</param>
-        /// <param name="shareName">Share name on the SMB server</param>
-        /// <param name="userName">Username for mapping the network drive</param>
-        /// <param name="password">Password for mapping the network drive</param>
-        /// <returns>True if the mapping successfull</returns>
-        public static bool MapNetworkDrive(bool SMBMode, string localPath, string shareName, string userName, string password)
+        /// <param name="logFilePath">Path to the log file</param>
+        /// <param name="maxAttempts">Maximum attempts to retry the operation</param>
+        /// <param name="message">The message.</param>
+        public static void AppendLogEntryWithRetries(string logFilePath, int maxAttempts, string message = "")
         {
+            if (logFilePath == null) throw new ArgumentNullException("logFilePath");
+            var i = 0;
+            while (i < maxAttempts)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(logFilePath)); // Ensure directory exists
+                    File.AppendAllText(logFilePath, string.Format("{0} - {1}", DateTime.UtcNow, message) + Environment.NewLine);
+                    break;
+                }
+                catch (Exception)
+                {
+                    i++;
+                    if (i >= maxAttempts)
+                    {
+                        throw;
+                    }
+                    Thread.Sleep(SleepTimeBetweenWriteErrors);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Shares the drive.
+        /// </summary>
+        /// <param name="drive">The drive.</param>
+        /// <returns></returns>
+        public static string ShareDrive(CloudDrive drive)
+        {
+            // Modify path to share a specific directory on the drive
+            var drivePath = drive.LocalPath;
+            if (RoleEnvironment.IsEmulated)
+            {
+                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
+                                          RoleEnvironment.GetConfigurationSettingValue("driveName"));
+            }
+
+            // Share it using SMB (add permissions for RDP user if it's configured)
+            var rdpUserName = "";
+            try
+            {
+                rdpUserName =
+                    RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
+            }
+            catch
+            {
+                Trace.TraceWarning("No RDP user name was specified. Consider enabling RDP for better maintenance options.");
+            }
+
+            // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
+            ShareLocalFolder(new[]
+                                    {
+                                        GetSetting("fileshareUserName"),
+                                        rdpUserName,
+                                        GetSetting("FTP.Root.Username"),
+                                        GetSetting("FTP.Portals.Username")
+                                    },
+                                drivePath,
+                                GetSetting("shareName"));
+            return drivePath;
+        }
+
+
+        /// <summary>
+        /// Waits for mouting failure.
+        /// </summary>
+        /// <param name="drive">The drive.</param>
+        public static void WaitForMoutingFailure(CloudDrive drive)
+        {
+            for (; ; )
+            {
+                try
+                {
+                    drive.Mount(RoleEnvironment.GetLocalResource("AzureDriveCache").MaximumSizeInMegabytes, DriveMountOptions.None);
+                    Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    // Go back and remount it
+                    Trace.TraceWarning("Connection to the drive has been lost. Remounting the drive on role {0}. Error: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+                    break;
+                }
+            }    
+        }
+
+
+        /// <summary>
+        /// Initializes the drive.
+        /// </summary>
+        /// <param name="storageConnectionString">The storage connection string.</param>
+        /// <param name="driveContainerName">Name of the drive container.</param>
+        /// <param name="driveName">Name of the drive.</param>
+        /// <param name="driveSize">Size of the drive.</param>
+        /// <returns></returns>
+        public static CloudDrive InitializeCloudDrive(string storageConnectionString, string driveContainerName, string driveName, string driveSize)
+        {
+            try
+            {
+                Trace.TraceInformation("Setting up drive object...");
+                var blobClient = CloudStorageAccount.Parse(storageConnectionString).CreateCloudBlobClient();
+
+                var driveContainer = blobClient.GetContainerReference(driveContainerName);
+                Trace.TraceInformation("Creating VHD container if not exists...");
+                driveContainer.CreateIfNotExist();
+
+                Trace.TraceInformation("Drive local cache initialization...");
+                var localCache = RoleEnvironment.GetLocalResource("AzureDriveCache");
+                CloudDrive.InitializeCache(localCache.RootPath, localCache.MaximumSizeInMegabytes);
+
+                Trace.TraceInformation("Creating cloud drive...");
+                var drive = new CloudDrive(driveContainer.GetBlobReference(driveName).Uri, blobClient.Credentials);
+                try
+                {
+                    drive.CreateIfNotExist(int.Parse(driveSize));
+                }
+                catch (CloudDriveException ex)
+                {
+                    Trace.TraceWarning("Error while creating cloud drive on SMB worker role: {0}", ex);
+                }
+                return drive;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Fatal error while setting up the Drive object: {0}", ex);
+                throw;
+            }
+        }
+
+        public static bool MapNetworkDrive(string localPath, string shareName, string userName, string password, string smbRoleName)
+        {
+
+            // Cleanup stale mounts
+            DeleteMappedNetworkDrive();
+
+            string error;
             int exitCode = 1;
-
-            // The code here mounts the drive shared out by the server worker role
-            // The mounted drive contains DotNetNuke contents and published through the
-            // service definition file
-
+            int i = 1;
+            bool found;
             string machineIP = null;
+
+            Trace.TraceInformation("Mapping network drive {0} on role instance {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
+
             while (exitCode != 0)
             {
-                int i = 0;
-                string error, output;
+                found = false;
+                Trace.TraceInformation("Looking for an available SMB server to map the network drive on role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
 
-                Trace.TraceInformation("Mapping network drive...");
-                RoleInstance server;
-                if (SMBMode)
-                    server = RoleEnvironment.Roles["SMBServer"].Instances[0];
-                else
-                    server = (from r in RoleEnvironment.Roles["DNNAzure"].Instances
-                              where r.Id.EndsWith("_0")
-                              select r).FirstOrDefault();
-                if (server == null)
-                    throw new ApplicationException("Can't find an available role where to map the network drive");
-
-                Trace.TraceInformation("Trying to connect the drive to SMB role instance " + server.Id + ")");
-
-                machineIP = server.InstanceEndpoints["SMB"].IPEndpoint.Address.ToString();
-                machineIP = "\\\\" + machineIP + "\\";
-                exitCode = ExecuteCommand("net.exe", " use " + localPath + " " + machineIP + shareName + " " + password + " /user:"
-                    + userName, out output, out error, 20000);
-
-                if (exitCode != 0)
+                int countServers = RoleEnvironment.Roles[smbRoleName].Instances.Count;
+                for (int instance = 0; instance < countServers; instance++)
                 {
-                    Trace.TraceWarning("Error mapping network drive, retrying in 10 seconds error msg:" + error);
-                    // clean up stale mounts and retry 
-                    Trace.TraceInformation("DNNAzure - Cleaning up stale mounts...");
-                    ExecuteCommand("net.exe", " use " + localPath + "  /delete", out output, out error, 20000);
-                    System.Threading.Thread.Sleep(10000);
+                    var server = RoleEnvironment.Roles[smbRoleName].Instances[instance];
+                    Trace.TraceInformation("Trying to map the network drive to SMB Server {0} on role instance {1}...", server.Id, RoleEnvironment.CurrentRoleInstance.Id);
+                    machineIP = server.InstanceEndpoints["SMB"].IPEndpoint.Address.ToString();
+                    if (RoleEnvironment.IsEmulated)
+                    {
+                        machineIP = "127.0.0.1";
+                    }
+                    machineIP = "\\\\" + machineIP + "\\";
+                    exitCode = ExecuteCommand("net.exe", " use " + localPath + " " + machineIP + shareName + " " + password + " /user:"
+                        + userName, out error, 20000);
+
+                    if (exitCode != 0)
+                    {
+                        Trace.TraceWarning("Error mapping network drive to SMB Server {0} on role instance {1}: {2}", server.Id, RoleEnvironment.CurrentRoleInstance.Id, error);
+                        DeleteMappedNetworkDrive();
+                    }
+                    else
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    Trace.TraceWarning("Error mapping the network drive on role instance {0}: No available SMB server found. Retrying in 5 seconds (attempt {1} of 100)...", RoleEnvironment.CurrentRoleInstance.Id, i);
+                    Thread.Sleep(SleepTimeBeforeStartToRemap);
+
                     i++;
-                    if (i > 100) break;
+                    if (i > 100)
+                    {
+                        break;
+                    }
                 }
             }
 
             if (exitCode == 0)
             {
-                Trace.TraceInformation("Success: mapped network drive" + machineIP + shareName);
+                Trace.TraceInformation("Success: mapped network drive {0} to location {1} on role {2}", localPath, machineIP + shareName, RoleEnvironment.CurrentRoleInstance.Id);
                 return true;
             }
+            Trace.TraceError("Error mapping the network drive on role instance {0}: Could not find an available SMB Server and maximum attemtps reached", RoleEnvironment.CurrentRoleInstance.Id);
             return false;
+        }
+
+
+        public static void DeleteMappedNetworkDrive()
+        {
+            string error;
+            string localPath = RoleEnvironment.GetConfigurationSettingValue("localPath");
+            Trace.TraceInformation("Deleting mapped network drive {0} on worker role {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
+            // clean up stale mounts and retry 
+            if (ExecuteCommand("net.exe", " use " + localPath + " /delete", out error, 20000) != 0)
+            {
+                Trace.TraceInformation("Could not delete {0} on role instance {1}: {2}", localPath, RoleEnvironment.CurrentRoleInstance.Id, error);
+            }
         }
         #endregion
 
         #region DotNetNuke setup utilities
+
+        /// <summary>
+        /// Creates the Windows user accounts for sharing the drive and FTP access
+        /// </summary>
+        public static void CreateUserAccounts()
+        {
+            // Create a local account for sharing the drive
+            CreateUserAccount(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
+                              RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"));
+
+            // To ensure FTP users can access the shared folder
+            if (bool.Parse(GetSetting("FTP.Enabled", "False")))
+            {
+                // Create a local account for the FTP root user
+                CreateUserAccount(GetSetting("FTP.Root.Username"), DecryptPassword(GetSetting("FTP.Root.EncryptedPassword")));
+
+                if (!string.IsNullOrEmpty(GetSetting("FTP.Portals.Username")))
+                {
+                    // Optionally create a local account for the FTP portals user
+                    CreateUserAccount(GetSetting("FTP.Portals.Username"), DecryptPassword(GetSetting("FTP.Portals.EncryptedPassword")));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Setups the web site settings.
+        /// </summary>
+        /// <param name="drive">The drive.</param>
+        public static void SetupWebSiteSettings(CloudDrive drive)
+        {
+            // Check for the database existence
+            Trace.TraceInformation("Checking for database existence...");
+            if (!SetupDatabase(RoleEnvironment.GetConfigurationSettingValue("DBAdminUser"),
+                                        RoleEnvironment.GetConfigurationSettingValue("DBAdminPassword"),
+                                        RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString")))
+                Trace.TraceError("Error while setting up the database. Check previous messages.");
+
+            // Check for the creation of the Website contents from Azure storage
+            Trace.TraceInformation("Check for website content...");
+            if (!SetupWebSiteContents(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                    RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                                                    RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
+                                                    RoleEnvironment.GetConfigurationSettingValue("package"),
+                                                    RoleEnvironment.GetConfigurationSettingValue("packageUrl")))
+                Trace.TraceError("Website content could not be prepared. Check previous messages.");
+
+
+            // Setup Database Connection string
+            SetupWebConfig(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
+                                            RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"),
+                                            RoleEnvironment.GetConfigurationSettingValue("InstallationDate"),
+                                            GetSetting("UpdateService.Source"));
+
+            // Setup DotNetNuke.install.config
+            SetupInstallConfig(
+                                Path.Combine(new[]
+                                                         {
+                                                             drive.LocalPath, RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                             "Install\\DotNetNuke.install.config"
+                                                         }),
+                                RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
+                                RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
+                                RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
+
+            // Setup post install addons (always overwrite)
+            InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
+                                            drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));
+
+        }
 
         /// <summary>
         /// Try to setup the database if not exists
@@ -232,6 +446,8 @@ namespace DNNShared
         /// </summary>
         /// <param name="webConfigPath">Path to the web config file</param>
         /// <param name="databaseConnectionString">Database connection string</param>
+        /// <param name="installationDate"></param>
+        /// <param name="source"></param>
         public static bool SetupWebConfig(string webConfigPath, string databaseConnectionString, string installationDate, string source)
         {
             bool success = false;
@@ -335,8 +551,8 @@ namespace DNNShared
                     Trace.TraceInformation(string.Format("Creating folder '{0}'...", webSitePath));
                     Directory.CreateDirectory(webSitePath);
                 }
-                const string localDNNPackageFilename = "DNNPackage.zip";
-                string packageFile = Path.Combine(Path.GetTempPath(), localDNNPackageFilename);
+                const string localDnnPackageFilename = "DNNPackage.zip";
+                string packageFile = Path.Combine(Path.GetTempPath(), localDnnPackageFilename);
                 // Delete previous failed attemps of web site creation
                 if (File.Exists(packageFile))
                 {
@@ -578,6 +794,7 @@ namespace DNNShared
 
             // Add Windows Azure Trace Listener
             Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
+            Trace.Listeners.Add(new EventLogTraceListener("DotNetNuke"));
 
             // Enable Collection of Crash Dumps
             CrashDumps.EnableCollection(true);
@@ -608,11 +825,7 @@ namespace DNNShared
             // Performance Counters
             var counters = new List<string> {
                 @"\Processor(_Total)\% Processor Time",
-                @"\Memory\Available MBytes",
-                @"\ASP.NET Applications(__Total__)\Requests Total",
-                @"\ASP.NET Applications(__Total__)\Requests/Sec",
-                @"\ASP.NET\Requests Queued",
-            };
+                @"\Memory\Available MBytes"};
 
             counters.ForEach(
                 counter => config.PerformanceCounters.DataSources.Add(
@@ -881,6 +1094,25 @@ namespace DNNShared
             return exitCode;
         }
 
+        /// <summary>
+        /// Deletes the share.
+        /// </summary>
+        /// <param name="sharePath">The share path.</param>
+        /// <returns></returns>
+        public static int DeleteShare(string sharePath)
+        {
+            Trace.TraceInformation("Removing share on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+            string error;
+            int exitCode = ExecuteCommand("net.exe", " share /d " + sharePath, out error, 10000);
+
+            if (exitCode != 0)
+            {
+                //Log error and continue
+                Trace.TraceWarning("Error deleting fileshare on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, error);
+            }
+            return exitCode;
+        }
+
         public static int EnableFTPFirewallTraffic()
         {
             int exitCode = 0;
@@ -925,12 +1157,11 @@ namespace DNNShared
         /// <returns>Returns 0 if success</returns>
         public static int EnableSMBFirewallTraffic()
         {
-            int exitCode = 0;
             //Enable SMB traffic through the firewall
             Trace.TraceInformation("Enabling SMB traffic through the firewall");
 
             string error;
-            exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);  
+            int exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);  
 
             if (UseAdvancedFirewall()) // Is Windows Server 2008 R2? (OS Family == "2" in the service configuration file)
             {
