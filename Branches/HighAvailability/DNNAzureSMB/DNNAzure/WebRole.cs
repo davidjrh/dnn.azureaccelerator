@@ -666,7 +666,7 @@ namespace DNNAzure
                 // Remove the share
                 if (!string.IsNullOrEmpty(_drivePath))
                 {
-                    RoleStartupUtils.DeleteShare(_drivePath);
+                    RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
                     if (_drive != null)
                     {

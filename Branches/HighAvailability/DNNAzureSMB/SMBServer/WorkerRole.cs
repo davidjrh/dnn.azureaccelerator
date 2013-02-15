@@ -152,7 +152,8 @@ namespace SMBServer
                 RoleStartupUtils.WaitForMoutingFailure(_drive);
 
                 // Drive is not accessible. Remove the share
-                RoleStartupUtils.DeleteShare(_drivePath);
+                RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                _drivePath = "";
             }
 // ReSharper disable FunctionNeverReturns
         }
@@ -201,7 +202,7 @@ namespace SMBServer
                 // Remove the share
                 if (!string.IsNullOrEmpty(_drivePath))
                 {
-                    RoleStartupUtils.DeleteShare(_drivePath);
+                    RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
 
                     if (_drive != null)
                     {
