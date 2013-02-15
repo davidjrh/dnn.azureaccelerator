@@ -1097,20 +1097,29 @@ namespace DNNShared
         /// <summary>
         /// Deletes the share.
         /// </summary>
-        /// <param name="sharePath">The share path.</param>
+        /// <param name="shareName">The share name.</param>
         /// <returns></returns>
-        public static int DeleteShare(string sharePath)
+        public static int DeleteShare(string shareName)
         {
-            Trace.TraceInformation("Removing share on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-            string error;
-            int exitCode = ExecuteCommand("net.exe", " share /d " + sharePath, out error, 10000);
-
-            if (exitCode != 0)
+            while (true)
             {
-                //Log error and continue
-                Trace.TraceWarning("Error deleting fileshare on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, error);
+                Trace.TraceInformation("Removing share on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+                string error;
+                int exitCode = ExecuteCommand("net.exe", " share /d " + shareName + " /Y", out error, 10000);
+
+                if (exitCode != 0)
+                {
+                    //Log error and continue
+                    Trace.TraceWarning("Error deleting fileshare on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id,
+                                       error);
+                    Thread.Sleep(SleepTimeBeforeStartToRemap);
+                }
+                else
+                {
+                    Trace.TraceInformation("Successfully deleted the share");
+                    return exitCode;                
+                }                
             }
-            return exitCode;
         }
 
         public static int EnableFTPFirewallTraffic()
