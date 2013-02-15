@@ -1102,12 +1102,13 @@ namespace DNNShared
         public static int DeleteShare(string shareName)
         {
             var i = 0;
+            int exitCode = 0;
             while (i <= 10)
             {
                 i++;
                 Trace.TraceInformation("Removing share on role {0} ({1} of 10}...", RoleEnvironment.CurrentRoleInstance.Id, i);
                 string error;
-                int exitCode = ExecuteCommand("net.exe", " share /d " + shareName + " /Y", out error, 10000);
+                exitCode = ExecuteCommand("net.exe", " share /d " + shareName + " /Y", out error, 10000);
 
                 if (exitCode != 0)
                 {
@@ -1122,6 +1123,7 @@ namespace DNNShared
                     return exitCode;                
                 }
             }
+            return exitCode;
         }
 
         public static int EnableFTPFirewallTraffic()
