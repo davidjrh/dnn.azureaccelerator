@@ -313,7 +313,8 @@ namespace DNNAzure
                 RoleStartupUtils.WaitForMoutingFailure(_drive);
 
                 // Drive is not accessible. Remove the share
-                RoleStartupUtils.DeleteShare(_drivePath);
+                RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                _drivePath = "";
             }
             // ReSharper disable FunctionNeverReturns
         }
