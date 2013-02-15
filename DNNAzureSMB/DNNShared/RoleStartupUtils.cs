@@ -1101,9 +1101,11 @@ namespace DNNShared
         /// <returns></returns>
         public static int DeleteShare(string shareName)
         {
-            while (true)
+            var i = 0;
+            while (i <= 10)
             {
-                Trace.TraceInformation("Removing share on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+                i++;
+                Trace.TraceInformation("Removing share on role {0} ({1} of 10}...", RoleEnvironment.CurrentRoleInstance.Id, i);
                 string error;
                 int exitCode = ExecuteCommand("net.exe", " share /d " + shareName + " /Y", out error, 10000);
 
@@ -1118,7 +1120,7 @@ namespace DNNShared
                 {
                     Trace.TraceInformation("Successfully deleted the share");
                     return exitCode;                
-                }                
+                }
             }
         }
 
