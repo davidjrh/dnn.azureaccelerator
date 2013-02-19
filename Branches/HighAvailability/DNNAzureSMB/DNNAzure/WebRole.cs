@@ -561,6 +561,13 @@ namespace DNNAzure
                                 Trace.TraceError("Can't add SSL binding. The certificate thumbprint '{0}' does not exist in the local machine store", sslThumbprint);
                             }
                         }
+
+                        // Add preload support (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
+                        if (site.ApplicationDefaults.Attributes.Any(x => x.Name == "preloadEnabled"))
+                        {
+                            site.ApplicationDefaults.SetAttributeValue("preloadEnabled", true);
+                        }
+
                     }
 
                     // Creates an application pool with the identity of the user that connects to the SMB Server                    
@@ -585,9 +592,16 @@ namespace DNNAzure
                     appPool.ProcessModel.IdleTimeout = appPoolIdleTimeout;
                     appPool.ProcessModel.StartupTimeLimit = appPoolStartupTimeLimit;
                     appPool.ProcessModel.PingResponseTime = appPoolPingResponseTime;
+                    
 
                     // Enable 32bit modules on Win64
                     appPool.Enable32BitAppOnWin64 = true;
+
+                    // Set start mode to Always running (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
+                    if (appPool.Attributes.Any(x => x.Name == "startMode"))
+                    {
+                        appPool.SetAttributeValue("startMode", 1); // Always running
+                    }
 
                     appPool.ManagedRuntimeVersion = managedRuntimeVersion;
                     appPool.ManagedPipelineMode = managedPipelineMode.ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;
