@@ -26,9 +26,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNShared", "DNNShared\DNNS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Azure.Accelerator", "DotNetNuke.Azure.Accelerator\DotNetNuke.Azure.Accelerator.csproj", "{E0AA0D55-E39F-464F-9974-3E302D3A3598}"
 EndProject
+Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "DNNAzureSingleCached", "DNNAzureSingleCached\DNNAzureSingleCached.ccproj", "{A139D209-EC82-4EE9-9B83-34A4EE6CE344}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 8
+		SccNumberOfProjects = 9
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs22
 		SccLocalPath0 = .
@@ -60,6 +62,10 @@ Global
 		SccProjectTopLevelParentUniqueName7 = DNNAzureSMB.sln
 		SccProjectName7 = DotNetNuke.Azure.Accelerator
 		SccLocalPath7 = DotNetNuke.Azure.Accelerator
+		SccProjectUniqueName8 = DNNAzureSingleCached\\DNNAzureSingleCached.ccproj
+		SccProjectTopLevelParentUniqueName8 = DNNAzureSMB.sln
+		SccProjectName8 = DNNAzureSingleCached
+		SccLocalPath8 = DNNAzureSingleCached
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -142,6 +148,16 @@ Global
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598}.Release|x86.ActiveCfg = Release|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -149,6 +165,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{1512B578-B7DB-4CAD-823F-CDC910A708B7} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
 		{C3C027B3-4B57-49F2-844A-B137A3435CBA} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
 		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
 		{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
 		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
