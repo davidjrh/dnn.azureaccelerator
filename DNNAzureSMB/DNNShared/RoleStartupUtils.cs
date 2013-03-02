@@ -344,8 +344,48 @@ namespace DNNShared
 
             // Setup post install addons (always overwrite)
             InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
-                                            drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));
+                                            drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));            
 
+        }
+
+
+        /// <summary>
+        /// Setups the offline site settings.
+        /// </summary>
+        /// <param name="contentsRoot">The contents root.</param>
+        public static void SetupOfflineSiteSettings(string contentsRoot)
+        {
+            try
+            {
+                Trace.TraceInformation("Setting up offline site contents...");
+                var offlineRoot = contentsRoot + "\\" +
+                                  RoleEnvironment.GetConfigurationSettingValue("AppOffline.Folder");
+                if (!Directory.Exists(offlineRoot))
+                {
+                    Trace.TraceInformation("Initializing offline site contents...");
+                    Directory.CreateDirectory(offlineRoot);
+                }
+
+                var customAppOffline = contentsRoot + "\\" +
+                                       RoleEnvironment.GetConfigurationSettingValue("dnnFolder") +
+                                       "\\Portals\\_default\\App_Offline.htm";
+                var defaultAppOffline = Path.Combine(Environment.CurrentDirectory, "html", "App_Offline.htm");
+
+                if (File.Exists(customAppOffline))
+                {
+                    Trace.TraceInformation("Using custom App_Offline.htm file...");
+                    File.Copy(customAppOffline, Path.Combine(offlineRoot, "App_Offline.htm"), true);
+                }
+                else
+                {
+                    Trace.TraceInformation("Using default App_Offline.htm file...");
+                    File.Copy(defaultAppOffline, Path.Combine(offlineRoot, "App_Offline.htm"), true);                    
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("Error while setting up the offline site contents: {0}", ex);
+            }
         }
 
         /// <summary>
@@ -440,6 +480,65 @@ namespace DNNShared
                 return false;
             }
         }
+
+        public static string GetConnectionStringFromSiteConfig(string webConfigPath)
+        {
+            var webconfig = new ConfigXmlDocument();
+            webconfig.Load(webConfigPath);
+
+            var csNode = webconfig.SelectSingleNode("/configuration/connectionStrings/add[@name='SiteSqlServer']");
+            if (csNode != null && csNode.Attributes["connectionString"] != null)
+            {
+                return csNode.Attributes["connectionString"].Value;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Setups the offline site portal aliases.
+        /// </summary>
+        /// <param name="dbConnectionString">The db connection string.</param>
+        /// <param name="offlinePort">The offline port.</param>
+        /// <param name="offlinePortSsl">The offline port SSL.</param>
+        public static void SetupOfflineSitePortalAliases(string dbConnectionString, int offlinePort, int offlinePortSsl)
+        {
+            try
+            {
+                Trace.TraceInformation("Setting offline site portal aliases...");
+                using (var dbConn = new SqlConnection(dbConnectionString))
+                {
+                    dbConn.Open();
+
+                    // Search portal aliases not including port
+                    var cmd = new SqlCommand("SELECT * FROM dbo.PortalAlias WHERE HTTPAlias LIKE '%.cloudapp.net'", dbConn);
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        while (rdr.Read())
+                        {
+                            Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePort.ToString());
+                            const string sql = "INSERT INTO dbo.PortalAlias ([PortalID],[HTTPAlias],[CreatedByUserID],[CreatedOnDate],[LastModifiedByUserID],[LastModifiedOnDate]) " +
+                                               "VALUES (@PortalID, @HTTPAlias, -1, GETDATE(), -1, GETDATE())";
+                            var cmdIns = new SqlCommand(sql);
+                            cmdIns.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
+                            cmdIns.Parameters.AddWithValue("HTTPAlias", string.Format("{0}:{1}", rdr["HTTPAlias"], offlinePort));
+                            cmdIns.ExecuteNonQuery();
+                            Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePortSsl.ToString());
+                            var cmdInsSsl = new SqlCommand(sql);
+                            cmdInsSsl.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
+                            cmdInsSsl.Parameters.AddWithValue("HTTPAlias", string.Format("{0}:{1}", rdr["HTTPAlias"], offlinePortSsl));
+                            cmdInsSsl.ExecuteNonQuery();
+                        }                   
+                    }
+                   
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while setting the offline site portal aliases: {0}", ex);
+            }
+        }
+
+
 
         /// <summary>
         /// Modifies web.config to setup database connection settings and other appSettings
@@ -1148,6 +1247,7 @@ namespace DNNShared
 
             return exitCode;
         }
+
 
         public static  int RestartService(string serviceName)
         {

@@ -49,7 +49,6 @@
       <Setting name="AddonsUrl" value="" />
       <Setting name="SSL.CertificateThumbprint" value="" />
       <Setting name="SSL.HostHeader" value="" />
-      <Setting name="SSL.Port" value="443" />
       <Setting name="WebPlatformInstaller.Products" value="WDeploy,FTPServer" />
       <Setting name="WebPlatformInstaller.Enabled" value="true" />
       <Setting name="IISRemoteManagement.Enabled" value="true" />
@@ -65,6 +64,8 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.Caching.DiagnosticLevel" value="1" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Caching.CacheSizePercentage" value="30" />
       <Setting name="Microsoft.WindowsAzure.Plugins.Caching.ConfigStoreConnectionString" value="UseDevelopmentStorage=true" />
+      <Setting name="AppOffline.Enabled" value="false" />
+      <Setting name="AppOffline.Folder" value="Offline" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
