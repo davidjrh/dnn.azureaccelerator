@@ -518,12 +518,12 @@ namespace DNNShared
                             Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePort.ToString());
                             const string sql = "INSERT INTO dbo.PortalAlias ([PortalID],[HTTPAlias],[CreatedByUserID],[CreatedOnDate],[LastModifiedByUserID],[LastModifiedOnDate]) " +
                                                "VALUES (@PortalID, @HTTPAlias, -1, GETDATE(), -1, GETDATE())";
-                            var cmdIns = new SqlCommand(sql);
+                            var cmdIns = new SqlCommand(sql, dbConn);
                             cmdIns.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
                             cmdIns.Parameters.AddWithValue("HTTPAlias", string.Format("{0}:{1}", rdr["HTTPAlias"], offlinePort));
                             cmdIns.ExecuteNonQuery();
                             Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePortSsl.ToString());
-                            var cmdInsSsl = new SqlCommand(sql);
+                            var cmdInsSsl = new SqlCommand(sql, dbConn);
                             cmdInsSsl.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
                             cmdInsSsl.Parameters.AddWithValue("HTTPAlias", string.Format("{0}:{1}", rdr["HTTPAlias"], offlinePortSsl));
                             cmdInsSsl.ExecuteNonQuery();
