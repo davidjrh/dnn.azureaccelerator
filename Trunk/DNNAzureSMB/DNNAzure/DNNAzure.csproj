@@ -89,6 +89,9 @@
     <None Include="scripts\ConfigSMTP.vbs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="html\App_Offline.htm">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <Content Include="css\styles.css" />
     <Content Include="default.aspx" />
     <Content Include="images\error.png" />

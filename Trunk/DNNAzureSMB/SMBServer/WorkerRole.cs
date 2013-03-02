@@ -148,6 +148,9 @@ namespace SMBServer
                 // Setup the website settings
                 RoleStartupUtils.SetupWebSiteSettings(_drive);
 
+                // Setup the offline site settings
+                RoleStartupUtils.SetupOfflineSiteSettings(_drive.LocalPath);
+
                 // Now, spin checking if the drive is still accessible.
                 RoleStartupUtils.WaitForMoutingFailure(_drive);
 

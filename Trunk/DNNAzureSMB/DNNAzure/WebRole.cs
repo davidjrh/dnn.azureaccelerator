@@ -17,6 +17,8 @@ namespace DNNAzure
     public class WebRole : RoleEntryPoint
     {
         private const string WebSiteName = "DotNetNuke";
+        private const string OfflineSiteName = "Offline";
+        private const string AppPoolName = "DotNetNukeApp";
 
         private static string _drivePath;
         private static CloudDrive _drive;
@@ -75,6 +77,10 @@ namespace DNNAzure
             // Setup OnChanging event
             RoleEnvironment.Changing += RoleEnvironmentOnChanging;
 
+            // Setup OnChanging event
+            RoleEnvironment.Changed += RoleEnvironmentOnChanged;
+
+
             // Inits the Diagnostic Monitor
             RoleStartupUtils.ConfigureDiagnosticMonitor();
 
@@ -108,6 +114,52 @@ namespace DNNAzure
                 Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
 
             return base.OnStart();
+        }
+
+        /// <summary>
+        /// Roles the environment on changed.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The <see cref="RoleEnvironmentChangedEventArgs" /> instance containing the event data.</param>
+        /// <exception cref="System.NotImplementedException"></exception>
+        private void RoleEnvironmentOnChanged(object sender, RoleEnvironmentChangedEventArgs e)
+        {
+            try
+            {
+                // Implements the changes after restarting the role instance
+                Trace.TraceInformation("Configurations settings changed...");
+                foreach (RoleEnvironmentConfigurationSettingChange settingChange in e.Changes.Where(x => x is RoleEnvironmentConfigurationSettingChange))
+                {
+                    if (settingChange.ConfigurationSettingName == "AppOffline.Enabled")
+                    {
+                        var appOfflineEnabled = bool.Parse(RoleStartupUtils.GetSetting("AppOffline.Enabled"));
+                        Trace.TraceInformation("AppOffline.Enabled has changed to '{0}'. Swapping the sites...", appOfflineEnabled);
+                        // Setup the offline site settings
+                        RoleStartupUtils.SetupOfflineSiteSettings(RoleStartupUtils.GetSetting("localPath"));
+
+                        // Ensure that the portal aliases for the offline site have been created (only needed if the AppOffline.Enabled == "true")
+                        if (appOfflineEnabled)
+                        {
+                            RoleStartupUtils.SetupOfflineSitePortalAliases(RoleStartupUtils.GetSetting("localPath") + "\\"
+                                                                           +
+                                                                           RoleEnvironment.GetConfigurationSettingValue(
+                                                                               "dnnFolder") + "\\web.config",
+                                                                           RoleEnvironment.CurrentRoleInstance.InstanceEndpoints
+                                                                               ["HttpInOffline"].IPEndpoint.Port,
+                                                                           RoleEnvironment.CurrentRoleInstance.InstanceEndpoints
+                                                                               ["HttpsInOffline"].IPEndpoint.Port);
+                        }
+                        // Setup IIS sites
+                        SetupIISSites();
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while processing the new settings: {0}", ex);
+                throw;
+            }
         }
 
 
@@ -177,7 +229,6 @@ namespace DNNAzure
 
                     if (RoleStartupUtils.MapNetworkDrive(localPath, shareName, userName, password, (IsSMBServer?"DNNAzure":"SMBServer")))
                     {
-                        // TODO Move this setup to OnStart
                         // Setup IIS - Website and FTP site
                         SetupIISSites();
 
@@ -215,20 +266,13 @@ namespace DNNAzure
             {
                 if (CreateDNNWebSite(RoleStartupUtils.GetSetting("hostHeaders"),
                                           RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
+                                          RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("AppOffline.Folder"),
                                           RoleStartupUtils.GetSetting("fileshareUserName"),
                                           RoleStartupUtils.GetSetting("fileshareUserPassword"),
-                                          RoleStartupUtils.GetSetting("managedRuntimeVersion"),
-                                          RoleStartupUtils.GetSetting("managedPipelineMode"),
-                                          RoleStartupUtils.GetSetting("appPool.IdleTimeout").ToLower() == "infinite" ?
-                                                                  TimeSpan.Zero :
-                                                                  new TimeSpan(0, int.Parse(RoleStartupUtils.GetSetting("appPool.IdleTimeout")), 0),
-                                        new TimeSpan(0, 0, int.Parse(RoleStartupUtils.GetSetting("appPool.StartupTimeLimit"))),
-                                        new TimeSpan(0, 0, int.Parse(RoleStartupUtils.GetSetting("appPool.PingResponseTime"))),
                                         RoleStartupUtils.GetSetting("SSL.CertificateThumbprint"),
-                                        RoleStartupUtils.GetSetting("SSL.HostHeader"),
-                                        RoleStartupUtils.GetSetting("SSL.Port")
+                                        RoleStartupUtils.GetSetting("SSL.HostHeader")
                                       ))
-                {
+                {                    
                     // Setup FTP
                     if (bool.Parse(RoleStartupUtils.GetSetting("FTP.Enabled", "False")))
                     {
@@ -254,7 +298,8 @@ namespace DNNAzure
                     }
 
                     // Ensure the website is started
-                    StartWebsite();
+                    StartWebsite(WebSiteName);
+                    StartWebsite(OfflineSiteName);
                 }
                 else
                 {
@@ -308,6 +353,9 @@ namespace DNNAzure
 
                 // Setup the website settings
                 RoleStartupUtils.SetupWebSiteSettings(_drive);
+
+                // Setup the offline site settings
+                RoleStartupUtils.SetupOfflineSiteSettings(_drive.LocalPath);
 
                 // Now, spin checking if the drive is still accessible.
                 RoleStartupUtils.WaitForMoutingFailure(_drive);
@@ -480,38 +528,33 @@ namespace DNNAzure
         /// <param name="homePath">Home path of the DNN portal (on the SMB share)</param>
         /// <param name="userName">User name for the application pool identity</param>
         /// <param name="password">Password for the application pool identity </param>
-        /// <param name="managedRuntimeVersion">Runtime version for the application pool</param>
-        /// <param name="managedPipelineMode">Pipeline mode for the application pool</param>
-        /// <param name="appPoolIdleTimeout">Amount of time (in minutes) a worker process will remain idle before it shuts down </param>
-        /// <param name="appPoolStartupTimeLimit">Specifies the time (in seconds) that IIS waits for an application pool to start. </param>
-        /// <param name="appPoolPingResponseTime">Specifies the time (in seconds) that a worker process is given to respond to a health-monitoring ping. After the time limit is exceeded, the WWW service terminates the worker process. </param>
         /// <param name="sslHostHeader">Host header for SSL binding</param>
-        /// <param name="sslPort">Port for SSL binding</param>
         /// <param name="sslThumbprint">Certificate thumbprint of the SSL binding</param>
         /// <returns></returns>
-        private static bool CreateDNNWebSite(string hostHeaders, string homePath, string userName, string password, 
-                                        string managedRuntimeVersion, string managedPipelineMode,
-                                        TimeSpan appPoolIdleTimeout, TimeSpan appPoolStartupTimeLimit,
-                                        TimeSpan appPoolPingResponseTime,
-                                        string sslThumbprint, string sslHostHeader, string sslPort)
+        private static bool CreateDNNWebSite(string hostHeaders, string homePath, string offlinePath, string userName, string password, string sslThumbprint, string sslHostHeader)
         {
             // Create the user account for the Application Pool. 
             Trace.TraceInformation("Creating user account for the Application Pool");
             RoleStartupUtils.CreateUserAccount(userName, password);
-
             
 
             // Build bindings based on HostHeaders
-            Trace.TraceInformation("Creating DNNWebSite with hostHeaders '" + hostHeaders + "'...");
+            Trace.TraceInformation("Creating website...");
             string systemDrive = Environment.SystemDirectory.Substring(0, 2);
             string originalwebSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_Web";
             string[] headers = hostHeaders.Split(';');
-            string protocol = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].Protocol;
+            const string protocol = "http";
             string port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpIn"].IPEndpoint.Port.ToString();
+            string sslPort = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpsIn"].IPEndpoint.Port.ToString();
+            string offlinePort = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpInOffline"].IPEndpoint.Port.ToString();
+            string offlineSslPort = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpsInOffline"].IPEndpoint.Port.ToString();
+            var isOfflineEnabled = bool.Parse(RoleStartupUtils.GetSetting("AppOffline.Enabled", "false"));
 
-            string bindings = protocol + "://" + string.Join(":" + port + "," + protocol + "://", headers) + ":" + port;
-            Trace.TraceInformation("Calculated bindings are: " + bindings);
-            
+            string bindings = protocol + "://" + string.Join(":" + (isOfflineEnabled?offlinePort:port) + "," + protocol + "://", headers) + ":" + (isOfflineEnabled?offlinePort:port);
+            var localIpAddress = RoleStartupUtils.GetFirstIPv4LocalNetworkAddress();
+            if (localIpAddress == "")
+                localIpAddress = "*"; 
+            Trace.TraceInformation("Calculated bindings are: " + bindings);            
             
             // Creates the DNN WebSite 
             try
@@ -524,91 +567,46 @@ namespace DNNAzure
                     {
                         webroleSite.Bindings.Clear();
                         webroleSite.Bindings.Add(string.Format("*:{0}:admin.dnndev.me", port), protocol);
-                    }
-                    serverManager.CommitChanges();
+
+                        serverManager.CommitChanges();
+                    }                    
                 }
 
                 using (var serverManager = new ServerManager())
                 {
                     
-                    var site = serverManager.Sites[WebSiteName];
-                    if (site == null)
+                    // Create website "DotNetNuke"
+                    var site = CreateSite(serverManager, WebSiteName, homePath, protocol, localIpAddress, isOfflineEnabled, offlinePort, port, headers);
+
+                    // Create website "Offline"
+                    var offlineSite = CreateSite(serverManager, OfflineSiteName, offlinePath, protocol, localIpAddress, !isOfflineEnabled, offlinePort, port, headers);
+
+                    // Add SSL binding
+                    if (!string.IsNullOrEmpty(sslThumbprint))
                     {
-                        Trace.TraceInformation("Creating DNNWebSite (SiteName=" + WebSiteName + ";protocol=" + protocol + ";Bindings=" + "*:" + port + ":" + headers[0] + ";HomePath=" + homePath);
-                        var localIPAddress = RoleStartupUtils.GetFirstIPv4LocalNetworkAddress();
-                        if (localIPAddress == "")
-                            localIPAddress = "*"; 
-                        site = serverManager.Sites.Add(WebSiteName, protocol, localIPAddress + ":" + port + ":" + headers[0], homePath);
+                        Trace.TraceInformation("Adding SSL binding using certificate '{0}' on port '{1}'...", sslThumbprint, sslPort);
+                        var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+                        store.Open(OpenFlags.OpenExistingOnly);
+                        var certificate = store.Certificates.Find(X509FindType.FindByThumbprint, sslThumbprint, true);
 
-                        for (int i = 1; i < headers.Length; i++)
-                            site.Bindings.Add(localIPAddress + ":" + port + ":" + headers[i], protocol);
-
-                        // Add SSL binding
-                        if (!string.IsNullOrEmpty(sslThumbprint))
+                        if (certificate != null && certificate.Count > 0)
                         {
-                            Trace.TraceInformation("Adding SSL binding using certificate '{0}' on port '{1}'...", sslThumbprint, sslPort);
-                            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-                            store.Open(OpenFlags.OpenExistingOnly);
-                            var certificate = store.Certificates.Find(X509FindType.FindByThumbprint, sslThumbprint, true);
-
-                            if (certificate != null && certificate.Count > 0)
-                            {
-                                site.Bindings.Add(localIPAddress + ":" + sslPort + ":" + sslHostHeader, certificate[0].GetCertHash(),
-                                                  "My");
-                            }
-                            else
-                            {
-                                Trace.TraceError("Can't add SSL binding. The certificate thumbprint '{0}' does not exist in the local machine store", sslThumbprint);
-                            }
+                            site.Bindings.Add(localIpAddress + ":" + sslPort + ":" + sslHostHeader, certificate[0].GetCertHash(), "My");
+                            offlineSite.Bindings.Add(localIpAddress + ":" + offlineSslPort + ":" + sslHostHeader, certificate[0].GetCertHash(), "My");
                         }
-
-                        // Add preload support (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
-                        if (site.ApplicationDefaults.Attributes.Any(x => x.Name == "preloadEnabled"))
+                        else
                         {
-                            site.ApplicationDefaults.SetAttributeValue("preloadEnabled", true);
+                            Trace.TraceError("Can't add SSL binding. The certificate thumbprint '{0}' does not exist in the local machine store", sslThumbprint);
                         }
-
                     }
 
-                    // Creates an application pool with the identity of the user that connects to the SMB Server                    
-                    string appPoolName = "DotNetNukeApp";
-
-                    var appPool = serverManager.ApplicationPools[appPoolName];
-                    if (appPool == null)
-                    {
-                        Trace.TraceInformation("Creating application pool...");
-                        appPool = serverManager.ApplicationPools.Add(appPoolName);
-                    }
-                    else
-                    {
-                        Trace.TraceInformation("Updating application pool...");
-                    }
-
-                    appPool.ProcessModel.IdentityType = ProcessModelIdentityType.SpecificUser;
-                    appPool.ProcessModel.UserName = "localhost\\" + userName;
-                    appPool.ProcessModel.Password = password;
-
-                    // Setup limits
-                    appPool.ProcessModel.IdleTimeout = appPoolIdleTimeout;
-                    appPool.ProcessModel.StartupTimeLimit = appPoolStartupTimeLimit;
-                    appPool.ProcessModel.PingResponseTime = appPoolPingResponseTime;
-                    
-
-                    // Enable 32bit modules on Win64
-                    appPool.Enable32BitAppOnWin64 = true;
-
-                    // Set start mode to Always running (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
-                    if (appPool.Attributes.Any(x => x.Name == "startMode"))
-                    {
-                        appPool.SetAttributeValue("startMode", 1); // Always running
-                    }
-
-                    appPool.ManagedRuntimeVersion = managedRuntimeVersion;
-                    appPool.ManagedPipelineMode = managedPipelineMode.ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;
+                    // Creates an application pool with the identity of the user that connects to the SMB Server                                        
+                    CreateApplicationPool(serverManager, userName, password);
 
                     // Sets the application pool
                     Trace.TraceInformation("Setting application pool to the website...");
-                    serverManager.Sites[WebSiteName].ApplicationDefaults.ApplicationPoolName = appPoolName;
+                    site.ApplicationDefaults.ApplicationPoolName = AppPoolName;
+                    offlineSite.ApplicationDefaults.ApplicationPoolName = AppPoolName;
 
                     // Commit all changes
                     serverManager.CommitChanges();
@@ -624,10 +622,79 @@ namespace DNNAzure
             return true;
         }
 
+        private static void CreateApplicationPool(ServerManager serverManager, string userName, string password)
+        {
+            var appPool = serverManager.ApplicationPools[AppPoolName];
+            if (appPool == null)
+            {
+                Trace.TraceInformation("Creating application pool...");
+                appPool = serverManager.ApplicationPools.Add(AppPoolName);
+            }
+            else
+            {
+                Trace.TraceInformation("Updating application pool...");
+            }
+
+            appPool.ProcessModel.IdentityType = ProcessModelIdentityType.SpecificUser;
+            appPool.ProcessModel.UserName = "localhost\\" + userName;
+            appPool.ProcessModel.Password = password;
+
+            // Setup limits
+            appPool.ProcessModel.IdleTimeout = RoleStartupUtils.GetSetting("appPool.IdleTimeout").ToLower() == "infinite" ?
+                                                                  TimeSpan.Zero :
+                                                                  new TimeSpan(0, int.Parse(RoleStartupUtils.GetSetting("appPool.IdleTimeout")), 0);
+            appPool.ProcessModel.StartupTimeLimit = new TimeSpan(0, 0, int.Parse(RoleStartupUtils.GetSetting("appPool.StartupTimeLimit")));
+            appPool.ProcessModel.PingResponseTime = new TimeSpan(0, 0, int.Parse(RoleStartupUtils.GetSetting("appPool.PingResponseTime")));
+
+
+            // Enable 32bit modules on Win64
+            appPool.Enable32BitAppOnWin64 = true;
+
+            // Set start mode to Always running (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
+            if (appPool.Attributes.Any(x => x.Name == "startMode"))
+            {
+                appPool.SetAttributeValue("startMode", 1); // Always running
+            }
+
+            appPool.ManagedRuntimeVersion = RoleStartupUtils.GetSetting("managedRuntimeVersion");
+            appPool.ManagedPipelineMode = RoleStartupUtils.GetSetting("managedPipelineMode").ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;            
+        }
+
+        private static Site CreateSite(ServerManager serverManager, string webSiteName, string homePath, string protocol, string localIpAddress,
+                                       bool isOffline, string offlinePort, string port, string[] headers)
+        {
+            // Creates or updates the DotNetNuke site
+            var site = serverManager.Sites[webSiteName];
+            if (site == null)
+            {
+                Trace.TraceInformation("Creating website " + webSiteName + "...");
+                site = serverManager.Sites.Add(webSiteName, protocol,
+                                               localIpAddress + ":" + (isOffline ? offlinePort : port) + ":" + headers[0],
+                                               homePath);
+            }
+            else
+            {
+                Trace.TraceInformation("Updating website " + webSiteName + "...");
+                site.Bindings.Clear();
+                site.Bindings.Add(localIpAddress + ":" + (isOffline ? offlinePort : port) + ":", protocol);
+            }
+
+            // Setup header bindings
+            for (var i = 1; i < headers.Length; i++)
+                site.Bindings.Add(localIpAddress + ":" + (isOffline ? offlinePort : port) + ":" + headers[i], protocol);
+
+            // Add preload support (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
+            if (site.ApplicationDefaults.Attributes.Any(x => x.Name == "preloadEnabled"))
+            {
+                site.ApplicationDefaults.SetAttributeValue("preloadEnabled", true);
+            }
+            return site;
+        }
+
         /// <summary>
         /// Starts the website.
         /// </summary>
-        public static void StartWebsite()
+        public static void StartWebsite(string siteName)
         {
             try
             {
@@ -636,7 +703,7 @@ namespace DNNAzure
                 // we will always start the site
                 using (var serverManager = new ServerManager())
                 {
-                    var site = serverManager.Sites[WebSiteName];
+                    var site = serverManager.Sites[siteName];
                     if (site != null)
                     {
                         site.Start();
@@ -720,11 +787,11 @@ namespace DNNAzure
                         if (IsSMBServer)    
                         {
                             Trace.TraceWarning("The specified configuration changes can't be made on a running instance. Recycling...");
-                            e.Cancel = true;                            
+                            e.Cancel = true;
+                            return;
                         }
                         break;
-                }
-                // TODO Otherwise, handle the Changed event for the rest of parameters
+                }                
             }
         }
     }
