@@ -140,10 +140,10 @@ namespace DNNAzure
                         // Ensure that the portal aliases for the offline site have been created (only needed if the AppOffline.Enabled == "true")
                         if (appOfflineEnabled)
                         {
-                            RoleStartupUtils.SetupOfflineSitePortalAliases(RoleStartupUtils.GetSetting("localPath") + "\\"
+                            RoleStartupUtils.SetupOfflineSitePortalAliases(RoleStartupUtils.GetConnectionStringFromSiteConfig(RoleStartupUtils.GetSetting("localPath") + "\\"
                                                                            +
                                                                            RoleEnvironment.GetConfigurationSettingValue(
-                                                                               "dnnFolder") + "\\web.config",
+                                                                               "dnnFolder") + "\\web.config"),
                                                                            RoleEnvironment.CurrentRoleInstance.InstanceEndpoints
                                                                                ["HttpInOffline"].IPEndpoint.Port,
                                                                            RoleEnvironment.CurrentRoleInstance.InstanceEndpoints
