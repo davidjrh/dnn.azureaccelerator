@@ -510,27 +510,45 @@ namespace DNNShared
                     dbConn.Open();
 
                     // Search portal aliases not including port
-                    var cmd = new SqlCommand("SELECT * FROM dbo.PortalAlias WHERE HTTPAlias LIKE '%.cloudapp.net'", dbConn);
+                    var cmd = new SqlCommand("SELECT PortalID, HTTPAlias FROM dbo.PortalAlias WHERE HTTPAlias NOT LIKE '%:%'", dbConn);
                     using (var rdr = cmd.ExecuteReader())
                     {
                         while (rdr.Read())
                         {
-                            Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePort.ToString());
-                            const string sql = "INSERT INTO dbo.PortalAlias ([PortalID],[HTTPAlias],[CreatedByUserID],[CreatedOnDate],[LastModifiedByUserID],[LastModifiedOnDate]) " +
-                                               "VALUES (@PortalID, @HTTPAlias, -1, GETDATE(), -1, GETDATE())";
-                            var cmdIns = new SqlCommand(sql, dbConn);
-                            cmdIns.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
-                            cmdIns.Parameters.AddWithValue("HTTPAlias", string.Format("{0}:{1}", rdr["HTTPAlias"], offlinePort));
-                            cmdIns.ExecuteNonQuery();
-                            Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePortSsl.ToString());
-                            var cmdInsSsl = new SqlCommand(sql, dbConn);
-                            cmdInsSsl.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
-                            cmdInsSsl.Parameters.AddWithValue("HTTPAlias", string.Format("{0}:{1}", rdr["HTTPAlias"], offlinePortSsl));
-                            cmdInsSsl.ExecuteNonQuery();
-                        }                   
+                            var httpAlias = new UriBuilder((string)rdr["HTTPAlias"]) { Port = offlinePort }.ToString().Replace("http://", "");
+                            var httpAliasSsl = new UriBuilder((string)rdr["HTTPAlias"]) { Port = offlinePortSsl }.ToString().Replace("http://", "");
+                            if (httpAlias.EndsWith("/")) httpAlias = httpAlias.Substring(0, httpAlias.Length - 1);
+                            if (httpAliasSsl.EndsWith("/")) httpAliasSsl = httpAliasSsl.Substring(0, httpAliasSsl.Length - 1);
+
+                            using (var dbConn2 = new SqlConnection(dbConnectionString))
+                            {
+                                dbConn2.Open();
+                                const string sql = "INSERT INTO dbo.PortalAlias ([PortalID],[HTTPAlias],[CreatedByUserID],[CreatedOnDate],[LastModifiedByUserID],[LastModifiedOnDate]) " +
+                                                   "VALUES (@PortalID, @HTTPAlias, -1, GETDATE(), -1, GETDATE())";
+
+                                if (!HttpAliasExists(dbConn2, (int)rdr["PortalID"], httpAlias))
+                                {
+                                    Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePort.ToString());
+                                    var cmdIns = new SqlCommand(sql, dbConn2);
+                                    cmdIns.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
+                                    cmdIns.Parameters.AddWithValue("HTTPAlias", httpAlias);
+                                    cmdIns.ExecuteNonQuery();
+                                }
+
+                                if (!HttpAliasExists(dbConn2, (int)rdr["PortalID"], httpAliasSsl.ToString()))
+                                {
+                                    Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePortSsl.ToString());
+                                    var cmdInsSsl = new SqlCommand(sql, dbConn2);
+                                    cmdInsSsl.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
+                                    cmdInsSsl.Parameters.AddWithValue("HTTPAlias", httpAliasSsl.ToString());
+                                    cmdInsSsl.ExecuteNonQuery();
+                                }
+                            }
+                        }
                     }
-                   
+
                 }
+
             }
             catch (Exception ex)
             {
@@ -538,7 +556,13 @@ namespace DNNShared
             }
         }
 
-
+        private static bool HttpAliasExists(SqlConnection dbConn, int portalId, string httpAlias)
+        {
+            var cmd = new SqlCommand("SELECT COUNT(HTTPAlias) FROM PortalAlias WHERE PortalID=@PortalID AND HTTPAlias=@HTTPAlias", dbConn);
+            cmd.Parameters.AddWithValue("PortalID", portalId);
+            cmd.Parameters.AddWithValue("HTTPAlias", httpAlias);
+            return (int)cmd.ExecuteScalar() != 0;
+        }
 
         /// <summary>
         /// Modifies web.config to setup database connection settings and other appSettings
