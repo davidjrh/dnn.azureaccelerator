@@ -140,14 +140,9 @@ namespace DNNAzure
                         // Ensure that the portal aliases for the offline site have been created (only needed if the AppOffline.Enabled == "true")
                         if (appOfflineEnabled)
                         {
-                            RoleStartupUtils.SetupOfflineSitePortalAliases(RoleStartupUtils.GetConnectionStringFromSiteConfig(RoleStartupUtils.GetSetting("localPath") + "\\"
-                                                                           +
-                                                                           RoleEnvironment.GetConfigurationSettingValue(
-                                                                               "dnnFolder") + "\\web.config"),
-                                                                           RoleEnvironment.CurrentRoleInstance.InstanceEndpoints
-                                                                               ["HttpInOffline"].IPEndpoint.Port,
-                                                                           RoleEnvironment.CurrentRoleInstance.InstanceEndpoints
-                                                                               ["HttpsInOffline"].IPEndpoint.Port);
+                            RoleStartupUtils.SetupOfflineSitePortalAliases(RoleStartupUtils.GetSetting("localPath") + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
+                                                                           RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpInOffline"].IPEndpoint.Port,
+                                                                           RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpsInOffline"].IPEndpoint.Port);
                         }
                         // Setup IIS sites
                         SetupIISSites();
@@ -418,16 +413,24 @@ namespace DNNAzure
                 {
                     var site = serverManager.Sites[ftpSiteName];
                     if (site == null)
-                    {                        
+                    {
                         var localIpAddress = RoleStartupUtils.GetFirstIPv4LocalNetworkAddress();
                         if (localIpAddress == "")
                             localIpAddress = "*";
                         var binding = localIpAddress + ":" + port + ":";
-                        Trace.TraceInformation("Creating FTP (SiteName={0}; Protocol={1}; Bindings={2}; RootPath={3}; PortalsPath={4}", ftpSiteName, "ftp", binding, siteRoot, portalsRoot);
+                        Trace.TraceInformation(
+                            "Creating FTP (SiteName={0}; Protocol={1}; Bindings={2}; RootPath={3}; PortalsPath={4}",
+                            ftpSiteName, "ftp", binding, siteRoot, portalsRoot);
                         site = serverManager.Sites.Add(ftpSiteName, protocol, localIpAddress + ":" + port + ":", ftproot);
 
                         for (int i = 1; i < headers.Length; i++)
                             site.Bindings.Add(localIpAddress + ":" + port + ":" + headers[i], protocol);
+                    }
+                    else
+                    {
+                        // TODO Rebuild the site permissions below and don't exit here
+                        Trace.TraceInformation("FTP site was already configured");
+                        return true;
                     }
 
                     // Enable basic authentication

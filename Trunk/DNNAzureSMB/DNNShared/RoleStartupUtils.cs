@@ -500,11 +500,14 @@ namespace DNNShared
         /// <param name="dbConnectionString">The db connection string.</param>
         /// <param name="offlinePort">The offline port.</param>
         /// <param name="offlinePortSsl">The offline port SSL.</param>
-        public static void SetupOfflineSitePortalAliases(string dbConnectionString, int offlinePort, int offlinePortSsl)
+        public static void SetupOfflineSitePortalAliases(string webConfigPath, int offlinePort, int offlinePortSsl)
         {
             try
             {
                 Trace.TraceInformation("Setting offline site portal aliases...");
+                bool aliasAdded = false;
+
+                var dbConnectionString = GetConnectionStringFromSiteConfig(webConfigPath);
                 using (var dbConn = new SqlConnection(dbConnectionString))
                 {
                     dbConn.Open();
@@ -533,20 +536,27 @@ namespace DNNShared
                                     cmdIns.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
                                     cmdIns.Parameters.AddWithValue("HTTPAlias", httpAlias);
                                     cmdIns.ExecuteNonQuery();
+                                    aliasAdded = true;
                                 }
 
-                                if (!HttpAliasExists(dbConn2, (int)rdr["PortalID"], httpAliasSsl.ToString()))
+                                if (GetSetting("SSL.CertificateThumbprint") != "" && !HttpAliasExists(dbConn2, (int)rdr["PortalID"], httpAliasSsl))
                                 {
                                     Trace.TraceInformation("Adding portal alias '{0}'...", rdr["HTTPAlias"] + ":" + offlinePortSsl.ToString());
                                     var cmdInsSsl = new SqlCommand(sql, dbConn2);
                                     cmdInsSsl.Parameters.AddWithValue("PortalID", rdr["PortalID"]);
-                                    cmdInsSsl.Parameters.AddWithValue("HTTPAlias", httpAliasSsl.ToString());
+                                    cmdInsSsl.Parameters.AddWithValue("HTTPAlias", httpAliasSsl);
                                     cmdInsSsl.ExecuteNonQuery();
+                                    aliasAdded = true;
                                 }
                             }
                         }
                     }
+                }
 
+                // If any alias was added, touch the web.config file to reload the aliases
+                if (aliasAdded)
+                {
+                    TouchFile(webConfigPath);
                 }
 
             }
@@ -554,6 +564,12 @@ namespace DNNShared
             {
                 Trace.TraceError("Error while setting the offline site portal aliases: {0}", ex);
             }
+        }
+
+        public static void TouchFile(string filePath)
+        {
+            var webConfigPath = filePath;
+            File.SetLastWriteTime(webConfigPath, DateTime.Now);
         }
 
         private static bool HttpAliasExists(SqlConnection dbConn, int portalId, string httpAlias)
