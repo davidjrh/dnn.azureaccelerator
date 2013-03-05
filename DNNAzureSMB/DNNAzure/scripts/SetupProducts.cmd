@@ -10,3 +10,5 @@ WebpiCmd.exe /Install /Products:%PRODUCTS% /AcceptEula /Log:wpiinstalllog.txt
 reg add "hku\.default\software\microsoft\windows\currentversion\explorer\user shell folders" /v "Local AppData" /t REG_EXPAND_SZ /d %%USERPROFILE%%\AppData\Local /f
 
 :SKIP
+
+EXIT /B 0

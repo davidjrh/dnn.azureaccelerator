@@ -6,3 +6,5 @@ powershell .\SetupSMTP.ps1
 cscript ConfigSMTP.vbs
 
 :SKIP
+
+EXIT /B 0

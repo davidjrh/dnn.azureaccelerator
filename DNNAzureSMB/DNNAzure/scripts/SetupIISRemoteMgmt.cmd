@@ -6,3 +6,5 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WebManagement\Server /v EnableRemo
 net start wmsvc >> SetupIISRemoteMgmt_log.txt 2>> SetupIISRemoteMgmt_err.txt
 
 :SKIP
+
+EXIT /B 0
