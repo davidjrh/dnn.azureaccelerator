@@ -137,11 +137,22 @@ namespace DNNShared
         /// <param name="drive">The drive.</param>
         public static void WaitForMoutingFailure(CloudDrive drive)
         {
+            var drivePath = drive.LocalPath;
+            if (RoleEnvironment.IsEmulated)
+            {
+                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
+                                          RoleEnvironment.GetConfigurationSettingValue("driveName"));
+            }
+
             for (; ; )
             {
                 try
                 {
-                    drive.Mount(RoleEnvironment.GetLocalResource("AzureDriveCache").MaximumSizeInMegabytes, DriveMountOptions.None);
+                    var logFileName = drivePath + @"\logs\MountStatus.log";
+                    AppendLogEntryWithRetries(logFileName, 5,
+                                              string.Format("Role {0} has the lease",
+                                                            RoleEnvironment.CurrentRoleInstance.Id));
                     Thread.Sleep(5000);
                 }
                 catch (Exception ex)
