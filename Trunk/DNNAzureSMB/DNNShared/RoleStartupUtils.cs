@@ -1256,7 +1256,7 @@ namespace DNNShared
             while (i <= 10)
             {
                 i++;
-                Trace.TraceInformation("Removing share on role {0} ({1} of 10}...", RoleEnvironment.CurrentRoleInstance.Id, i);
+                Trace.TraceInformation("Removing share on role {0} ({1} of 10)...", RoleEnvironment.CurrentRoleInstance.Id, i);
                 string error;
                 exitCode = ExecuteCommand("net.exe", " share /d " + shareName + " /Y", out error, 10000);
 
