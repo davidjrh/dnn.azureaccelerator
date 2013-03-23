@@ -1377,7 +1377,7 @@ namespace DNNAzureWizard
                 Deploy(task, packageUri, deploymentName, serviceConfiguration);
 
                 // Wait for deployment
-                WaitForDeployment(task, int.Parse(GetSetting("AsyncDeployInstancesTimeout", "900")));
+                WaitForDeployment(task, int.Parse(GetSetting("AsyncDeployInstancesTimeout", "1800")));
 
             }
             catch (Exception ex)
