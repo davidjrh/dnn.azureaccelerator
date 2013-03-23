@@ -47,12 +47,12 @@
       <Setting name="appPool.PingResponseTime" value="180" />
       <Setting name="InstallationDate" value="" />
       <Setting name="AddonsUrl" value="" />
-      <Setting name="SSL.CertificateThumbprint" value="" />
+      <Setting name="SSL.CertificateThumbprint" value="@@SSLTHUMBPRINT@@" />
       <Setting name="SSL.HostHeader" value="" />
       <Setting name="WebPlatformInstaller.Products" value="@@WPIPRODUCTS@@" />
       <Setting name="WebPlatformInstaller.Enabled" value="true" />
       <Setting name="IISRemoteManagement.Enabled" value="@@REMOTEMGMTENABLED@@" />
-      <Setting name="FTP.Enabled" value="@@FTPENABLED@@" />
+      <Setting name="FTP.Enabled" value="@@FTPSERVERENABLED@@" />
       <Setting name="FTP.Root.Username" value="@@FTPROOTUSERNAME@@" />
       <Setting name="FTP.Root.EncryptedPassword" value="@@FTPROOTPASSWORD@@" />
       <Setting name="FTP.Portals.Username" value="@@FTPPORTALSUSERNAME@@" />
@@ -69,9 +69,9 @@
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
-      <Certificate name="SSL" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
-      <Certificate name="SSL.CA1" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
-      <Certificate name="SSL.CA2" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL" thumbprint="00DEAD557BEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA1" thumbprint="00DEAD557CA1BEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA2" thumbprint="00DEAD557CA2BEEF00" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
 </ServiceConfiguration>

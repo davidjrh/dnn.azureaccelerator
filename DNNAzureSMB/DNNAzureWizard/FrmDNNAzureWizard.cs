@@ -60,10 +60,11 @@ namespace DNNAzureWizard
             TabSQLAzureSettings = 5,
             TabRDPAzureSettings = 6,
             TabConnectSettings = 7,
-            TabPackages = 8,
-            TabSummary = 9,
-            TabUploading = 10,
-            TabFinish = 11
+            TabSSL = 8,
+            TabPackages = 9,
+            TabSummary = 10,
+            TabUploading = 11,
+            TabFinish = 12
         }
         #endregion
 
@@ -403,18 +404,15 @@ namespace DNNAzureWizard
 
         private void ChkEnableRDPCheckedChanged(object sender, EventArgs e)
         {
-            pnlRDP.Enabled = chkEnableRDP.Checked;
-            foreach (Control ctl in pnlRDP.Controls)
+            try
             {
-                ctl.Enabled = pnlRDP.Enabled;
-                errProv.SetError(ctl, null);
+                // Reload packages
+                ReloadDeploymentPackages();
             }
-            if (!chkEnableRDP.Checked)
-                cboCertificates.SelectedItem = null;
-            cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
-
-            // Reload packages
-            ReloadDeploymentPackages();
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
         }
 
         private void CmdViewCertificateClick(object sender, EventArgs e)
@@ -749,7 +747,8 @@ namespace DNNAzureWizard
                 p.Dock = DockStyle.Fill;
                 p.Visible = false;
             }
-            ChkEnableRDPCheckedChanged(null, null);
+            chkEnableRemoteMgmt_CheckedChanged(null, null);
+            chkEnableSSL_CheckedChanged(null, null);
             ChkAzureConnectCheckedChanged(null, null);
             cboEnvironment.SelectedIndex = 0;
         }
@@ -782,6 +781,8 @@ namespace DNNAzureWizard
                     return ValidateRDPSettings();
                 case (int)WizardTabs.TabConnectSettings: // Virtual Network tab
                     return ValidateConnectSettings();
+                case (int)WizardTabs.TabSSL: // SSL tab
+                    return ValidateSSLSettings();            
                 case (int)WizardTabs.TabPackages: // Deployment packages
                     bool validated = ValidatePackagesSelectionSettings();
                     txtConfig.Text = GetSettingsSummary();
@@ -792,7 +793,7 @@ namespace DNNAzureWizard
                         return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
                     }
                     _certificatePassword = "";
-                    if (chkEnableRDP.Checked)
+                    if (chkEnableRemoteMgmt.Checked)
                     {
                         var frm = new FrmCertificatePassword();
                         if (frm.ShowDialog() != DialogResult.OK)
@@ -828,7 +829,7 @@ namespace DNNAzureWizard
             bool invalidInput = false;
             if (optSubscription.Checked)
             {
-                CboSubscriptionsSelectedIndexChanged(cboSubscriptions, null);
+                CboSubscriptionsValidating(cboSubscriptions, null);
                 invalidInput = errProv.GetError(cboSubscriptions).Length != 0;
             }
             return !invalidInput;
@@ -846,10 +847,22 @@ namespace DNNAzureWizard
             return !invalidInput;
         }
 
+        private bool ValidateSSLSettings()
+        {
+            bool invalidInput = false;
+            if (chkEnableSSL.Checked)
+            {
+                txtSSLCertificateValidating(txtSSLCertificate, null);
+                if (pnlSSL.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
+                    invalidInput = true;
+            }
+            return !invalidInput;            
+        }
+
         private bool ValidateRDPSettings()
         {
             bool invalidInput = false;
-            if (chkEnableRDP.Checked)
+            if (chkEnableRemoteMgmt.Checked)
             {
                 TxtRDPUserValidating(txtRDPUser, null);
                 TxtRDPPasswordValidating(txtRDPPassword, null);
@@ -888,9 +901,9 @@ namespace DNNAzureWizard
             summary.AppendLine("- DB password: <not shown>");
             summary.AppendLine("");
 
-            summary.AppendLine("RDP SETTINGS:");
-            summary.AppendLine("- RDP enabled: " + (chkEnableRDP.Checked ? "true" : "false"));
-            if (chkEnableRDP.Checked)
+            summary.AppendLine("REMOTE MANANGEMENT SETTINGS:");
+            summary.AppendLine("- Remote Management enabled: " + (chkEnableRemoteMgmt.Checked ? "true" : "false"));
+            if (chkEnableRemoteMgmt.Checked)
             {
                 summary.AppendLine("- Certificate Friendly Name: " + Certificate.FriendlyName);
                 summary.AppendLine("- Certificate Issued By: " + Certificate.Issuer);
@@ -898,14 +911,19 @@ namespace DNNAzureWizard
                 summary.AppendLine("- User name: " + txtRDPUser.Text);
 
 #if DEBUG
-                    summary.AppendLine("- Password: " + EncryptWithCertificate(txtRDPPassword.Text, Certificate));
+                summary.AppendLine("- Password: " + EncryptWithCertificate(txtRDPPassword.Text, Certificate));
 #else
                 summary.AppendLine("- Password: <not shown>");
 #endif
                 summary.AppendLine("- Expires: " + cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
+                if (chkEnableRDP.Checked)
+                {
+                    summary.AppendLine("- RDP enabled: " + (chkEnableRDP.Checked ? "true" : "false"));
+                }
                 summary.AppendLine("- Web Deploy enabled: " + (chkWebDeploy.Checked ? "true" : "false"));
+                summary.AppendLine("- FTP enabled: " + (chkWebDeploy.Checked ? "true" : "false"));
+                summary.AppendLine("");                
             }
-            summary.AppendLine("");
 
             summary.AppendLine("VIRTUAL NETWORK SETTINGS:");
             summary.AppendLine("- Azure Connect enabled: " + (chkAzureConnect.Checked ? "true" : "false"));
@@ -1011,7 +1029,7 @@ namespace DNNAzureWizard
             cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", (optSubscription.Checked ? txtVHDDriveSize.Text.Trim() : txtVHDSize.Text.Trim()));
 
             // Replace the tokens - RDP settings
-            if (chkEnableRDP.Checked)
+            if (chkEnableRemoteMgmt.Checked && chkEnableRDP.Checked)
             {
                 cfgStr = cfgStr.Replace("@@RDPENABLED@@", "true");
                 cfgStr = cfgStr.Replace("@@RDPUSERNAME@@", txtRDPUser.Text.Trim());
@@ -1026,34 +1044,58 @@ namespace DNNAzureWizard
                 cfgStr = cfgStr.Replace("@@RDPEXPIRATIONDATE@@", DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
             }
 
-            // Replace the tokens - WebDeploy settings
-            if (chkEnableRDP.Checked && chkWebDeploy.Checked)
+            // Replace the tokens - WebDeploy and FTP settings
+            var WPIProducts = "";
+            if (chkEnableRemoteMgmt.Checked)
             {
-                cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "true");
-                cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", "WDeploy");
+                if (chkWebDeploy.Checked)
+                {
+                    cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "true");
+                    WPIProducts = "WDeploy";
+                }
+                if (chkEnableFTP.Checked)
+                {
+                    cfgStr = cfgStr.Replace("@@FTPSERVERENABLED@@", "true");
+                    cfgStr = cfgStr.Replace("@@FTPROOTUSERNAME@@", txtRDPUser.Text.Trim());
+                    cfgStr = cfgStr.Replace("@@FTPROOTPASSWORD@@", EncryptWithCertificate(txtRDPPassword.Text, Certificate));                    
+                    WPIProducts += (WPIProducts == "" ? "," : "") + "FTPServer";
+                }
             }
-            else
-            {
-                cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "false");
-                cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", "");
-            }
-            
+            cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "false");
+            cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", WPIProducts);
+            cfgStr = cfgStr.Replace("@@FTPSERVERENABLED@@", "false");
+            cfgStr = cfgStr.Replace("@@FTPROOTUSERNAME@@", "");
+            cfgStr = cfgStr.Replace("@@FTPROOTPASSWORD@@", "");
+            cfgStr = cfgStr.Replace("@@FTPPORTALSUSERNAME@@", "");
+            cfgStr = cfgStr.Replace("@@FTPPORTALSPASSWORD@@", "");
 
             // Replace the tokens - Virtual Network settings
             cfgStr = cfgStr.Replace("@@CONNECTACTIVATIONTOKEN@@", chkAzureConnect.Checked ? txtConnectActivationToken.Text.Trim() : "");
 
             // Replace the tokens - Certificate settings
-            if (chkEnableRDP.Checked && (Certificate != null))
+            if (chkEnableSSL.Checked)
+            {
+                cfgStr = cfgStr.Replace("@@SSLTHUMBPRINT@@", ((X509Certificate2) cmdViewSSL.Tag).Thumbprint);
+                cfgStr = cfgStr.Replace("00DEAD557BEEF00", ((X509Certificate2)cmdViewSSL.Tag).Thumbprint);
+                for (var i = 0; i < lstCASSLCertificates.Items.Count; i++)
+                {
+                    cfgStr = cfgStr.Replace(string.Format("00DEAD557CA{0}BEEF00", i+1), ((X509Certificate2)lstCASSLCertificates.Items[i].Tag).Thumbprint);                    
+                }
+            }
+            if (chkEnableRemoteMgmt.Checked && (Certificate != null))
             {
                 cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", Certificate.Thumbprint);
                 cfgStr = cfgStr.Replace("00DEADBEEF00", Certificate.Thumbprint);
-            }                
-            else
-            {
-                cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", "");
-                cfgStr = cfgStr.Replace("00DEADBEEF00", "");
+                cfgStr = cfgStr.Replace("00DEAD557BEEF00", Certificate.Thumbprint);
+                cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", Certificate.Thumbprint);
+                cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", Certificate.Thumbprint);
             }
-                
+            cfgStr = cfgStr.Replace("@@SSLTHUMBPRINT@@", "");
+            cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", "");
+            cfgStr = cfgStr.Replace("00DEADBEEF00", "");
+            cfgStr = cfgStr.Replace("00DEAD557BEEF00", "");
+            cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", "");
+            cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", "");
 
 
             return cfgStr;
@@ -1121,7 +1163,7 @@ namespace DNNAzureWizard
                         {
                             var li = new ListViewItem(new[] { selectSingleNode.InnerText, "Pending" }) { Tag = task, UseItemStyleForSubItems = false };
                             var addTask = true;
-                            if (task.Attributes != null && task.Attributes["type"].InnerText == "UploadCertificate" && !chkEnableRDP.Checked)
+                            if (task.Attributes != null && task.Attributes["type"].InnerText == "UploadCertificate" && (!chkEnableRemoteMgmt.Checked && !chkEnableSSL.Checked))
                                 addTask = false;
                             if (task.Attributes != null && task.Attributes["type"].InnerText == "Install" && !chkAutoInstall.Checked)
                                 addTask = false;
@@ -1567,15 +1609,44 @@ namespace DNNAzureWizard
         {
             try
             {
-                task.SubItems[1].Text = "Uploading certificate...";
-                byte[] certData = Certificate.Export(X509ContentType.Pfx, "TempPassword");
-                ServiceManager.AddCertificates(Subscription.SubscriptionId, cboHostingService.Text,
-                                               new CertificateFile
-                                               {
-                                                   CertificateFormat = "pfx",
-                                                   Data = Convert.ToBase64String(certData),
-                                                   Password = "TempPassword"
-                                               });
+                if (chkEnableRemoteMgmt.Checked)
+                {
+                    task.SubItems[1].Text = "Uploading Remote Management certificate...";
+                    byte[] certData = Certificate.Export(X509ContentType.Pfx, "TempPassword");
+                    ServiceManager.AddCertificates(Subscription.SubscriptionId, cboHostingService.Text,
+                                                   new CertificateFile
+                                                   {
+                                                       CertificateFormat = "pfx",
+                                                       Data = Convert.ToBase64String(certData),
+                                                       Password = "TempPassword"
+                                                   });                    
+                }
+                if (chkEnableSSL.Checked)
+                {
+                    task.SubItems[1].Text = "Uploading SSL certificates...";
+                    var cert = (X509Certificate2) cmdViewSSL.Tag;
+                    byte[] certData = cert.Export(X509ContentType.Pfx, "TempPassword");
+                    ServiceManager.AddCertificates(Subscription.SubscriptionId, cboHostingService.Text,
+                                                   new CertificateFile
+                                                   {
+                                                       CertificateFormat = "pfx",
+                                                       Data = Convert.ToBase64String(certData),
+                                                       Password = "TempPassword"
+                                                   });
+                    foreach (ListViewItem item in lstCASSLCertificates.Items)
+                    {
+                        var certCA = (X509Certificate2)item.Tag;
+                        byte[] certCAData = certCA.Export(X509ContentType.Pfx, "TempPassword");
+                        ServiceManager.AddCertificates(Subscription.SubscriptionId, cboHostingService.Text,
+                                                       new CertificateFile
+                                                       {
+                                                           CertificateFormat = "pfx",
+                                                           Data = Convert.ToBase64String(certCAData),
+                                                           Password = "TempPassword"
+                                                       });
+                    }
+                }
+
             }
             catch (Exception ex)
             {
@@ -1776,15 +1847,24 @@ namespace DNNAzureWizard
 
             _uploadBlockSize = Convert.ToInt32(ConfigurationManager.AppSettings["UploadBlockSize"]);
 
+            chkEnableRemoteMgmt.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["RemoteMgmtEnabled"]);
+            chkEnableRemoteMgmt_CheckedChanged(null,null);
+
             chkEnableRDP.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["RDPEnabled"]);
             txtRDPUser.Text = ConfigurationManager.AppSettings["RDPUser"];
             txtRDPPassword.Text = ConfigurationManager.AppSettings["RDPPassword"];
             txtRDPConfirmPassword.Text = txtRDPPassword.Text;
             ChkEnableRDPCheckedChanged(null, null);
 
+            chkWebDeploy.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["WebDeployEnabled"]);
+            chkEnableFTP.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["FTPEnabled"]);
+
             chkAzureConnect.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["ConnectEnabled"]);
             txtConnectActivationToken.Text = ConfigurationManager.AppSettings["ConnectActivationToken"];
             ChkAzureConnectCheckedChanged(null, null);
+
+            chkEnableSSL.Checked = Convert.ToBoolean(ConfigurationManager.AppSettings["SSL.Enabled"]);
+            chkEnableSSL_CheckedChanged(null, null);
 
             cboRDPExpirationDate.Value = DateTime.Now.Date.AddYears(1);
         }
@@ -2535,6 +2615,8 @@ namespace DNNAzureWizard
         }
         #endregion
 
+        #region SSL Settings 
+
         private void cboDNNVersion_SelectedIndexChanged(object sender, EventArgs e)
         {
             try
@@ -2565,8 +2647,7 @@ namespace DNNAzureWizard
         {
             try
             {
-                const string downloadPackagesURL = "http://dnnazureaccelerator.codeplex.com/releases";
-                Process.Start(downloadPackagesURL);                
+                ReloadDeploymentPackages();
             }
             catch (Exception ex)
             {
@@ -2586,5 +2667,196 @@ namespace DNNAzureWizard
             }
         }
 
+        private void chkEnableSSL_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                pnlSSL.Enabled = chkEnableSSL.Checked;
+                foreach (Control ctl in pnlSSL.Controls)
+                {
+                    ctl.Enabled = pnlSSL.Enabled;
+                    errProv.SetError(ctl, null);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void cmdOpenSSL_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (dlgSSLFile.ShowDialog(this) == DialogResult.OK)
+                {
+                    txtSSLCertificate.Text = string.Empty;
+                    cmdViewSSL.Tag = null;
+                    if (File.Exists(dlgSSLFile.FileName))
+                    {
+                        var ext = Path.GetExtension(dlgSSLFile.FileName);
+                        if (ext != ".cer" && ext != ".pfx") throw new Exception("Only .cer and .pfx files can be specified");
+
+                        if (X509Certificate2.GetCertContentType(dlgSSLFile.FileName) != X509ContentType.Cert &&
+                            X509Certificate2.GetCertContentType(dlgSSLFile.FileName) != X509ContentType.Pfx)
+                        {
+                            throw new Exception("The certificate is not valid: .cer and .pfx files can be specified");
+                        }      
+
+                        var cert = OpenX509Certificate(dlgSSLFile.FileName);
+                        if (cert == null) return;
+                        if (!cert.HasPrivateKey)
+                        {
+                            throw new Exception("The certificate is not valid: you must use a certificate which includes the private key for SSL binding");
+                        }                        
+
+                        txtSSLCertificate.Text = string.Format("{0}, Thumbprint={1}", cert.Subject, cert.GetCertHashString());
+                        txtSSLCertificate.Tag = dlgSSLFile.FileName;
+                        cmdViewSSL.Tag = cert;
+                    }
+                }
+            }            
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private X509Certificate2 OpenX509Certificate(string filename, string password = "")
+        {
+            X509Certificate2 cert = null;
+            try
+            {
+                cert = new X509Certificate2(filename, password);                      
+            }
+            catch (System.Security.Cryptography.CryptographicException cex)
+            {
+                if (password == "")
+                {
+                    var frmPass = new FrmCertificatePassword {Message = "Type the certificate password:"};
+                    if (frmPass.ShowDialog() != DialogResult.OK || frmPass.Password == string.Empty)
+                        return null;
+                    return OpenX509Certificate(filename, frmPass.Password);
+                }                
+                throw new Exception(string.Format("Can not read the certificate file. Ensure that the certificate file is valid: {0}", cex.Message));                    
+            }
+            return cert;
+        }
+
+        private void cmdViewSSL_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (cmdViewSSL.Tag is X509Certificate2)
+                {                    
+                    X509Certificate2UI.DisplayCertificate((X509Certificate2) cmdViewSSL.Tag, this.Handle);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void cmdAddSSL_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (dlgSSLFile.ShowDialog(this) == DialogResult.OK)
+                {
+                    if (File.Exists(dlgSSLFile.FileName))
+                    {
+                        var ext = Path.GetExtension(dlgSSLFile.FileName);
+                        if (ext != ".cer" && ext != ".pfx") throw new Exception("Only .cer and .pfx files can be specified");
+
+                        if (X509Certificate2.GetCertContentType(dlgSSLFile.FileName) != X509ContentType.Cert &&
+                            X509Certificate2.GetCertContentType(dlgSSLFile.FileName) != X509ContentType.Pfx)
+                        {
+                            throw new Exception("The certificate is not valid: .cer and .pfx files can be specified");
+                        }
+
+                        var cert = OpenX509Certificate(dlgSSLFile.FileName);
+                        if (cert == null) return;
+
+                        if (lstCASSLCertificates.Items.Cast<ListViewItem>().Any(it => ((X509Certificate2) it.Tag).Thumbprint == cert.Thumbprint))
+                        {
+                            // The certificate is on the list
+                            return;
+                        }
+
+                        var item = new ListViewItem(cert.Subject);
+                        item.SubItems.Add(cert.Thumbprint).Tag = dlgSSLFile.FileName;
+                        item.Tag = cert;
+                        lstCASSLCertificates.Items.Add(item);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void lstCASSLCertificates_DoubleClick(object sender, EventArgs e)
+        {
+            try
+            {
+                if (lstCASSLCertificates.SelectedItems.Count > 0)
+                {
+                    X509Certificate2UI.DisplayCertificate((X509Certificate2) lstCASSLCertificates.SelectedItems[0].Tag, this.Handle);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        private void cmdRemoveSSL_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (lstCASSLCertificates.SelectedItems.Count > 0)
+                {
+                    lstCASSLCertificates.SelectedItems[0].Remove();
+                }                
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
+        void txtSSLCertificateValidating(object sender, CancelEventArgs e)
+        {
+            
+            string error = null;
+            if (string.IsNullOrEmpty((string) txtSSLCertificate.Tag))
+            {
+                error = "You must specify a certificate for https binding";
+            }
+            errProv.SetError((Control)sender, error);
+        }
+
+        private void chkEnableRemoteMgmt_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                pnlRDP.Enabled = chkEnableRemoteMgmt.Checked;
+                foreach (Control ctl in pnlRDP.Controls)
+                {
+                    ctl.Enabled = pnlRDP.Enabled;
+                    errProv.SetError(ctl, null);
+                }
+                if (!chkEnableRemoteMgmt.Checked)
+                    cboCertificates.SelectedItem = null;
+                cmdViewCertificate.Enabled = pnlRDP.Enabled && Certificate != null;
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+        #endregion
     }
 }

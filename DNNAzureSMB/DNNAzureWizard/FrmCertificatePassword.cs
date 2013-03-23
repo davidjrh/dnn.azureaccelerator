@@ -17,6 +17,7 @@ namespace DNNAzureWizard
         }
 
         public string Password { get { return txtPassword.Text; } }
+        public string Message { get { return lblMessage.Text; } set { lblMessage.Text = value; } }
 
         private void FrmCertificatePassword_Load(object sender, EventArgs e)
         {

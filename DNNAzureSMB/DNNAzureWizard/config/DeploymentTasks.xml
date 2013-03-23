@@ -5,8 +5,8 @@
     <Comments>This task verifies and waits for the provisioned resources: hosting account, storage account and database server</Comments>
   </Task>
   <Task id="Task1" type="UploadCertificate">
-    <Description>Upload certificate to hosted service</Description>
-    <Comments>This task uploads the selected certificate to the hosted service if RDP is enabled</Comments>
+    <Description>Upload certificates to hosted service</Description>
+    <Comments>This task uploads the selected certificate to the hosted service if RDP or SSL is enabled</Comments>
   </Task>
   <Task id="Task2" type="UploadPackages">
     <Description>Upload service files to storage</Description>
