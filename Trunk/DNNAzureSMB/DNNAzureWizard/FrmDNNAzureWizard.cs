@@ -708,20 +708,38 @@ namespace DNNAzureWizard
             ReloadX509Certificates();
             RefreshDotNetNukeDownloadUrlsAsync();
         }
+
+        private void SetDefaultSubscription()
+        {
+            if (File.Exists(PublishSettingsFilename))
+            {
+                foreach (var subscription in PublishSettings.Subscriptions)
+                {
+                    subscription.Default = subscription.Name == cboSubscriptions.Text;
+                }
+                PublishSettings.Save(PublishSettingsFilename);
+            }
+        }
         private void RefreshSubscriptions()
         {
             cboSubscriptions.Items.Clear();
+            var selIndex = 0;
             if (File.Exists(PublishSettingsFilename))
             {
                 PublishSettings = new PublishSettings(XDocument.Load(PublishSettingsFilename));
                 foreach (var subscription in PublishSettings.Subscriptions)
-                    cboSubscriptions.Items.Add(subscription);
-
+                {
+                    var index = cboSubscriptions.Items.Add(subscription);
+                    if (subscription.Default)
+                    {
+                        selIndex = index;
+                    }
+                }
             }
             if (cboSubscriptions.Items.Count == 0)
                 cboSubscriptions.Items.Add("");
             cboSubscriptions.Items.Add(ImportPublishSettings);
-            cboSubscriptions.SelectedIndex = 0;
+            cboSubscriptions.SelectedIndex = selIndex;
         }
 
         private static void LogException(Exception ex)
@@ -770,7 +788,12 @@ namespace DNNAzureWizard
                 case (int)WizardTabs.TabHome: // Home tab, nothing to validate
                     return true;
                 case (int)WizardTabs.TabDeploymentType: // Deployment type selection
-                    return ValidateDeploymentType();
+                    var dtValid = ValidateDeploymentType();
+                    if (dtValid && optSubscription.Checked)
+                    {
+                        SetDefaultSubscription();
+                    }
+                    return dtValid;
                 case (int)WizardTabs.TabHostedServices: // Hosted services
                     return ValidateHostingServices();
                 case (int)WizardTabs.TabSQLAzureSettings: // SQL Azure tab
@@ -901,7 +924,7 @@ namespace DNNAzureWizard
             summary.AppendLine("- DB password: <not shown>");
             summary.AppendLine("");
 
-            summary.AppendLine("REMOTE MANANGEMENT SETTINGS:");
+            summary.AppendLine("REMOTE MANAGEMENT SETTINGS:");
             summary.AppendLine("- Remote Management enabled: " + (chkEnableRemoteMgmt.Checked ? "true" : "false"));
             if (chkEnableRemoteMgmt.Checked)
             {
@@ -932,6 +955,21 @@ namespace DNNAzureWizard
                 summary.AppendLine("- Activation Token: " + txtConnectActivationToken.Text.Trim());
             }
             summary.AppendLine("");
+
+            summary.AppendLine("SSL SETTINGS:");
+            summary.AppendLine("- SSL enabled: " + (chkEnableSSL.Checked ? "true" : "false"));
+            if (chkEnableSSL.Checked)
+            {
+                var cert = (X509Certificate2) cmdViewSSL.Tag;
+                summary.AppendLine(string.Format("- SSL Certificate: {0}, Thumbprint={1}", cert.Subject, cert.Thumbprint ));
+                for (var i = 0; i < lstCASSLCertificates.Items.Count; i++)
+                {
+                    var certCA = (X509Certificate2)lstCASSLCertificates.Items[i].Tag;
+                    summary.AppendLine(string.Format("- CA Certificate {0}: {1}, Thumbprint={2}", (i + 1), certCA.Subject, certCA.Thumbprint));
+                }
+            }
+            summary.AppendLine("");
+
 
             summary.AppendLine("SELECTED PACKAGE:");
             foreach (ListViewItem li in lstPackages.Items)
@@ -1433,7 +1471,21 @@ namespace DNNAzureWizard
                     deployment.RoleInstanceList.Count(x => x.InstanceStatus != RoleInstanceStatus.Ready);
 
                 if (pollTimeoutInSeconds > 0 && count > pollTimeoutInSeconds)
-                    break;
+                    break;                
+                if (deployment.RoleInstanceList.Count == 0)
+                {
+                    task.SubItems[1].Text = string.Format("{0}...", deployment.Status);
+                }
+                else
+                {
+                    var insStatus = "";
+                    foreach (var instance in deployment.RoleInstanceList)
+                    {
+                        if (insStatus != "") insStatus += ", ";
+                        insStatus += string.Format("{0}: {1}", instance.InstanceName, instance.InstanceStatus);
+                    }
+                    task.SubItems[1].Text = string.Format("{0} ({1})...", deployment.Status, insStatus);
+                }
                 Thread.Sleep(5000);
                 count += 5;
             }
@@ -1891,6 +1943,12 @@ namespace DNNAzureWizard
                         {
                             var li = new ListViewItem(new[] { selectSingleNode.InnerText, singleNode.InnerText }) { Tag = doc.SelectSingleNode("ServicePackage") };
                             lstPackages.Items.Add(li);
+                            if (lstPackages.SelectedItems.Count == 0 &&
+                                Path.GetFileNameWithoutExtension(filedef.FullName).ToLower() ==
+                                ConfigurationManager.AppSettings["DefaultPackageName"].ToLower())
+                            {
+                                li.Selected = true;
+                            }
                         }
                     }
                 }
@@ -2727,7 +2785,7 @@ namespace DNNAzureWizard
             X509Certificate2 cert = null;
             try
             {
-                cert = new X509Certificate2(filename, password);                      
+                cert = new X509Certificate2(filename, password, X509KeyStorageFlags.Exportable);                      
             }
             catch (System.Security.Cryptography.CryptographicException cex)
             {
