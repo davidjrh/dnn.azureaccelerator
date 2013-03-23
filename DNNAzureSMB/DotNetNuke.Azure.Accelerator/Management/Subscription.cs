@@ -9,5 +9,6 @@ namespace DotNetNuke.Azure.Accelerator.Management
     {
         public string SubscriptionId { get; set; }
         public string Name { get; set; }
+        public bool Default { get; set; }
     }
 }
