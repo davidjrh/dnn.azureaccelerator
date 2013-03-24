@@ -1427,7 +1427,7 @@ namespace DNNShared
 
             //Create the user account    
             Trace.TraceInformation("Creating user account '{0}'...", userName);
-            int exitCode = ExecuteCommand("net.exe", string.Format("user {0} {1} /expires:never /add", userName, password), out error, 10000);
+            int exitCode = ExecuteCommand("net.exe", string.Format("user {0} {1} /expires:never /add /Y", userName, password), out error, 10000);
             if (exitCode != 0)
             {
                 //Log error and continue since the user account may already exist
