@@ -296,6 +296,10 @@ namespace DNNAzureWizard
                                             y.PackageName == DotNetNukePackage.DNN_CE || y.PackageName == DotNetNukePackage.DNN_PE)
                                             .OrderByDescending(x => x.Version))
                 {
+                    // Removed the version 07.00.04 from the list, since is not SQL Azure compatible. See
+                    // http://support.dotnetnuke.com/project/DNN/2/item/25569 for more info
+                    if (versionInfo.Version == "070004") continue;
+
                     cboDNNVersion.Items.Add(new DotNetNukePackage
                                         {
                                             PackageName = versionInfo.PackageName,
