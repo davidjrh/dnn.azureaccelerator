@@ -296,9 +296,9 @@ namespace DNNAzureWizard
                                             y.PackageName == DotNetNukePackage.DNN_CE || y.PackageName == DotNetNukePackage.DNN_PE)
                                             .OrderByDescending(x => x.Version))
                 {
-                    // Removed the version 07.00.04 from the list, since is not SQL Azure compatible. See
-                    // http://support.dotnetnuke.com/project/DNN/2/item/25569 for more info
-                    if (versionInfo.Version == "070004") continue;
+                    //// Removed the version 07.00.04 from the list, since is not SQL Azure compatible. See
+                    //// http://support.dotnetnuke.com/project/DNN/2/item/25569 for more info
+                    //if (versionInfo.Version == "070004") continue;
 
                     cboDNNVersion.Items.Add(new DotNetNukePackage
                                         {
@@ -1130,14 +1130,14 @@ namespace DNNAzureWizard
                 cfgStr = cfgStr.Replace("00DEADBEEF00", Certificate.Thumbprint);
                 cfgStr = cfgStr.Replace("00DEAD557BEEF00", Certificate.Thumbprint);
                 cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", Certificate.Thumbprint);
-                cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", Certificate.Thumbprint);
+                cfgStr = cfgStr.Replace("00DEAD557CA2BEEF00", Certificate.Thumbprint);
             }
             cfgStr = cfgStr.Replace("@@SSLTHUMBPRINT@@", "");
             cfgStr = cfgStr.Replace("@@RDPTHUMBPRINT@@", "");
             cfgStr = cfgStr.Replace("00DEADBEEF00", "");
             cfgStr = cfgStr.Replace("00DEAD557BEEF00", "");
             cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", "");
-            cfgStr = cfgStr.Replace("00DEAD557CA1BEEF00", "");
+            cfgStr = cfgStr.Replace("00DEAD557CA2BEEF00", "");
 
 
             return cfgStr;
