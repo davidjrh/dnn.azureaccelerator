@@ -1096,7 +1096,7 @@ namespace DNNAzureWizard
                     cfgStr = cfgStr.Replace("@@FTPSERVERENABLED@@", "true");
                     cfgStr = cfgStr.Replace("@@FTPROOTUSERNAME@@", txtRDPUser.Text.Trim());
                     cfgStr = cfgStr.Replace("@@FTPROOTPASSWORD@@", EncryptWithCertificate(txtRDPPassword.Text, Certificate));                    
-                    WPIProducts += (WPIProducts == "" ? "," : "") + "FTPServer";
+                    WPIProducts += (WPIProducts != "" ? "," : "") + "FTPServer";
                 }
             }
             cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "false");
