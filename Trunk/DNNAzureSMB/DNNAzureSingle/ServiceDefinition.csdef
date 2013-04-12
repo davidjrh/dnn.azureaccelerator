@@ -48,12 +48,28 @@
       <InputEndpoint name="HttpIn" protocol="http" port="80" />
       <InternalEndpoint name="SMB" protocol="tcp" port="445" />
       <InputEndpoint name="HttpsIn" protocol="tcp" port="443" localPort="443" />
-      <InputEndpoint name="RemoteMgmt" protocol="tcp" port="8172" localPort="8172" />
-      <InputEndpoint name="FTPData" protocol="tcp" port="20" localPort="20" />
-      <InputEndpoint name="FTPCmd" protocol="tcp" port="21" localPort="21" />
-      <InputEndpoint name="FTPDataPassive" protocol="tcp" port="20000" localPort="20000" />
       <InputEndpoint name="HttpInOffline" protocol="http" port="12242" localPort="12242" />
       <InputEndpoint name="HttpsInOffline" protocol="http" port="12252" localPort="12252" />
+      <InstanceInputEndpoint name="RemoteMgmt" protocol="tcp" localPort="8172">
+        <AllocatePublicPortFrom>
+          <FixedPortRange max="8192" min="8172" />
+        </AllocatePublicPortFrom>
+      </InstanceInputEndpoint>
+      <InstanceInputEndpoint name="FTPData" protocol="tcp" localPort="20">
+        <AllocatePublicPortFrom>
+          <FixedPortRange max="12380" min="12360" />
+        </AllocatePublicPortFrom>
+      </InstanceInputEndpoint>
+      <InstanceInputEndpoint name="FTPCmd" protocol="tcp" localPort="21">
+        <AllocatePublicPortFrom>
+          <FixedPortRange max="12280" min="12260" />
+        </AllocatePublicPortFrom>
+      </InstanceInputEndpoint>
+      <InstanceInputEndpoint name="FTPDataPassive" protocol="tcp" localPort="20000">
+        <AllocatePublicPortFrom>
+          <FixedPortRange max="20020" min="20000" />
+        </AllocatePublicPortFrom>
+      </InstanceInputEndpoint>
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
