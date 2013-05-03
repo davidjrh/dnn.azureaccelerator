@@ -1303,7 +1303,7 @@ namespace DNNShared
         public static  int RestartService(string serviceName)
         {
             int exitCode = 0;
-            Trace.TraceInformation("Restarting service {0}...");
+            Trace.TraceInformation("Restarting service {0}...", serviceName);
             string error;
             exitCode |= ExecuteCommand("net.exe", "stop " + serviceName, out error, 10000);
             exitCode |= ExecuteCommand("net.exe", "start " + serviceName, out error, 10000);
