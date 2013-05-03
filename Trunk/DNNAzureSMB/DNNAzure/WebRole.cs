@@ -357,7 +357,19 @@ namespace DNNAzure
 
                 // Drive is not accessible. Remove the share
                 RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                try
+                {
+                    Trace.TraceInformation("Unmounting cloud drive on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+                    _drive.Unmount();
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning("Error while unmounting the cloud drive on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);                    
+                }
                 _drivePath = "";
+                _drive = null;
+
+                RoleStartupUtils.DeleteMappedNetworkDrive();
             }
             // ReSharper disable FunctionNeverReturns
         }
