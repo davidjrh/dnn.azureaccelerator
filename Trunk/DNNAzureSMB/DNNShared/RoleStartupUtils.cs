@@ -10,10 +10,12 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using DNNShared.Exceptions;
+using DNNShared.Utils;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
 using Microsoft.WindowsAzure;
@@ -207,84 +209,114 @@ namespace DNNShared
             }
         }
 
-        public static bool MapNetworkDrive(string localPath, string shareName, string userName, string password, string smbRoleName)
+        public static bool CreateSymbolicLink(string localPath, string shareName, string userName, string password, string smbRoleName)
         {
 
             // Cleanup stale mounts
-            DeleteMappedNetworkDrive();
+            DeleteSymbolicLink(localPath);
 
-            string error;
-            int exitCode = 1;
             int i = 1;
             bool found;
             string machineIP = null;
 
-            Trace.TraceInformation("Mapping network drive {0} on role instance {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
+            Trace.TraceInformation("Creating symbolic link {0} on role instance {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
 
-            while (exitCode != 0)
+
+
+            while (true)
             {
                 found = false;
-                Trace.TraceInformation("Looking for an available SMB server to map the network drive on role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+                Trace.TraceInformation("Looking for an available SMB server to create the symbolic link on role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
 
                 int countServers = RoleEnvironment.Roles[smbRoleName].Instances.Count;
                 for (int instance = 0; instance < countServers; instance++)
                 {
                     var server = RoleEnvironment.Roles[smbRoleName].Instances[instance];
-                    Trace.TraceInformation("Trying to map the network drive to SMB Server {0} on role instance {1}...", server.Id, RoleEnvironment.CurrentRoleInstance.Id);
+                    Trace.TraceInformation("Trying to create symbolic link to SMB Server {0} on role instance {1}...", server.Id, RoleEnvironment.CurrentRoleInstance.Id);
                     machineIP = server.InstanceEndpoints["SMB"].IPEndpoint.Address.ToString();
                     if (RoleEnvironment.IsEmulated)
                     {
                         machineIP = "127.0.0.1";
                     }
                     machineIP = "\\\\" + machineIP + "\\";
-                    exitCode = ExecuteCommand("net.exe", " use " + localPath + " " + machineIP + shareName + " " + password + " /user:"
-                        + userName, out error, 20000);
+                    var target = machineIP + shareName;
 
-                    if (exitCode != 0)
-                    {
-                        Trace.TraceWarning("Error mapping network drive to SMB Server {0} on role instance {1}: {2}", server.Id, RoleEnvironment.CurrentRoleInstance.Id, error);
-                        DeleteMappedNetworkDrive();
+                    try
+                    {                        
+                        if (Directory.Exists(target))
+                        {
+                            SymbolicLink.CreateDirectoryLink(localPath, target);
+                            Trace.TraceInformation(
+                                "Created symbolic link {0} to SMB Server {1} on role instance {2}. Verifying...",
+                                localPath, server.Id, RoleEnvironment.CurrentRoleInstance.Id);
+
+                            if (!Directory.Exists(localPath))
+                                throw new IOException(string.Format("Directory {0} not found", localPath));
+
+                            if (!SymbolicLink.Exists(localPath))
+                                throw new IOException(string.Format("Symbolic link {0} not found", localPath));
+
+                            var currentTarget = SymbolicLink.GetTarget(localPath);
+                            if (currentTarget != target)
+                                throw new IOException(
+                                    string.Format("Symbolic link {0} targets {1} and does not match {2}", localPath,
+                                                  currentTarget, target));
+
+                            found = true;
+                            break;
+                        }
+                        else
+                        {
+                            Trace.TraceInformation("Shared folder {0} does not exist on role {1}. Trying next role instance...", target, server.Id);
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        found = true;
-                        break;
+                        Trace.TraceWarning("Error creating symbolic link to SMB Server {0} on role instance {1}: {2}", server.Id, RoleEnvironment.CurrentRoleInstance.Id, ex);
+                        DeleteSymbolicLink(localPath);                        
                     }
                 }
 
                 if (!found)
                 {
-                    Trace.TraceWarning("Error mapping the network drive on role instance {0}: No available SMB server found. Retrying in 5 seconds (attempt {1} of 100)...", RoleEnvironment.CurrentRoleInstance.Id, i);
+                    Trace.TraceWarning("Error creating the symbolic link on role instance {0}: No available SMB server found. Retrying in 5 seconds (attempt {1} of 1000)...", RoleEnvironment.CurrentRoleInstance.Id, i);
                     Thread.Sleep(SleepTimeBeforeStartToRemap);
 
                     i++;
-                    if (i > 100)
+                    if (i > 1000)
                     {
                         break;
                     }
                 }
+                else
+                    break;
             }
 
-            if (exitCode == 0)
+            if (found)
             {
-                Trace.TraceInformation("Success: mapped network drive {0} to location {1} on role {2}", localPath, machineIP + shareName, RoleEnvironment.CurrentRoleInstance.Id);
+                Trace.TraceInformation("Success: created symbolic link {0} to location {1} on role {2}", localPath, machineIP + shareName, RoleEnvironment.CurrentRoleInstance.Id);
                 return true;
             }
-            Trace.TraceError("Error mapping the network drive on role instance {0}: Could not find an available SMB Server and maximum attemtps reached", RoleEnvironment.CurrentRoleInstance.Id);
+            Trace.TraceError("Error creating symbolic link on role instance {0}: Could not find an available SMB Server and maximum attemtps reached", RoleEnvironment.CurrentRoleInstance.Id);
             return false;
         }
 
 
-        public static void DeleteMappedNetworkDrive()
+        public static void DeleteSymbolicLink(string localPath)
         {
-            string error;
-            string localPath = RoleEnvironment.GetConfigurationSettingValue("localPath");
-            Trace.TraceInformation("Deleting mapped network drive {0} on worker role {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
-            // clean up stale mounts and retry 
-            if (ExecuteCommand("net.exe", " use " + localPath + " /delete", out error, 20000) != 0)
+            try
             {
-                Trace.TraceInformation("Could not delete {0} on role instance {1}: {2}", localPath, RoleEnvironment.CurrentRoleInstance.Id, error);
+                if (Directory.Exists(localPath))
+                {
+                    Trace.TraceInformation("Deleting symbolic link {0} on worker role {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
+                    Directory.Delete(localPath);
+                }
             }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error while deleting symbolic link {0} on worker role {1}: {2}", localPath, RoleEnvironment.CurrentRoleInstance.Id, ex);
+            }
+            string error;
         }
         #endregion
 
@@ -1635,6 +1667,52 @@ namespace DNNShared
                 Trace.TraceError(string.Format("Error while downloading addons file '{0}': {1}", addonsUrl, ex));
                 return false;
             }            
+        }
+
+        #endregion
+
+        #region Impersonation
+        private const int LOGON32_LOGON_INTERACTIVE = 2;
+        private const int LOGON32_PROVIDER_DEFAULT = 0;
+
+        [DllImport("advapi32.dll")]
+        public static extern int LogonUserA(String lpszUserName, String lpszDomain, String lpszPassword, int dwLogonType, int dwLogonProvider, ref IntPtr phToken);
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern int DuplicateToken(IntPtr hToken, int impersonationLevel, ref IntPtr hNewToken);
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool RevertToSelf();
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern bool CloseHandle(IntPtr handle);
+
+        public static WindowsImpersonationContext ImpersonateValidUser(String userName, String domain, String password)
+        {
+            WindowsIdentity tempWindowsIdentity;
+            IntPtr token = IntPtr.Zero;
+            IntPtr tokenDuplicate = IntPtr.Zero;
+
+            if (RevertToSelf())
+            {
+                if (LogonUserA(userName, domain, password, LOGON32_LOGON_INTERACTIVE,
+                    LOGON32_PROVIDER_DEFAULT, ref token) != 0)
+                {
+                    if (DuplicateToken(token, 2, ref tokenDuplicate) != 0)
+                    {
+                        tempWindowsIdentity = new WindowsIdentity(tokenDuplicate);
+                        WindowsImpersonationContext impersonationContext = tempWindowsIdentity.Impersonate();
+                        if (impersonationContext != null)
+                        {
+                            CloseHandle(token);
+                            CloseHandle(tokenDuplicate);
+                            return impersonationContext;
+                        }
+                    }
+                }
+            }
+            if (token != IntPtr.Zero)
+                CloseHandle(token);
+            if (tokenDuplicate != IntPtr.Zero)
+                CloseHandle(tokenDuplicate);
+            return null;
         }
 
         #endregion
