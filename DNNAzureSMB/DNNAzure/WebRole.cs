@@ -19,6 +19,7 @@ namespace DNNAzure
         private const string WebSiteName = "DotNetNuke";
         private const string OfflineSiteName = "Offline";
         private const string AppPoolName = "DotNetNukeApp";
+        private const string SitesRoot = "sitesroot";
 
         private static string _drivePath;
         private static CloudDrive _drive;
@@ -39,6 +40,14 @@ namespace DNNAzure
                     return RoleEnvironment.Roles.All(x => x.Key != "SMBServer");  
                 }
                 catch { return true; }                
+            }
+        }
+
+        private static string LocalPath
+        {
+            get
+            {
+                return Path.Combine(RoleEnvironment.GetLocalResource("SitesRoot").RootPath, SitesRoot);
             }
         }
 
@@ -135,12 +144,12 @@ namespace DNNAzure
                         var appOfflineEnabled = bool.Parse(RoleStartupUtils.GetSetting("AppOffline.Enabled"));
                         Trace.TraceInformation("AppOffline.Enabled has changed to '{0}'. Swapping the sites...", appOfflineEnabled);
                         // Setup the offline site settings
-                        RoleStartupUtils.SetupOfflineSiteSettings(RoleStartupUtils.GetSetting("localPath"));
+                        RoleStartupUtils.SetupOfflineSiteSettings(LocalPath);
 
                         // Ensure that the portal aliases for the offline site have been created (only needed if the AppOffline.Enabled == "true")
                         if (appOfflineEnabled)
                         {
-                            RoleStartupUtils.SetupOfflineSitePortalAliases(RoleStartupUtils.GetSetting("localPath") + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
+                            RoleStartupUtils.SetupOfflineSitePortalAliases(LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
                                                                            RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpInOffline"].IPEndpoint.Port,
                                                                            RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpsInOffline"].IPEndpoint.Port);
                         }
@@ -208,21 +217,30 @@ namespace DNNAzure
         private void SetupNetworkDriveAndWebsite()
         {
             Trace.TraceInformation("Setting up network drive and website...");
-            string localPath = RoleEnvironment.GetConfigurationSettingValue("localPath");
             string shareName = RoleEnvironment.GetConfigurationSettingValue("shareName");
-            string userName = RoleEnvironment.GetConfigurationSettingValue("fileshareUserName");
-            string password = RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword");
+            var userName = RoleStartupUtils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
+            var password =
+                RoleStartupUtils.DecryptPassword(
+                    RoleStartupUtils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword"));
 
-            string logDir = localPath + "\\" + "logs";
+            string logDir = Path.Combine(LocalPath, "logs");
             string fileName = RoleEnvironment.CurrentRoleInstance.Id + ".txt";
             string logFilePath = Path.Combine(logDir, fileName);
+
+            Trace.TraceInformation("Impersonating with user {0}...", userName);
+            var impersonationContext = RoleStartupUtils.ImpersonateValidUser(userName, "", password);
+            if (impersonationContext == null)
+            {
+                Trace.TraceError("Fatal error: could not impersonate user {0}.", userName);
+                return;
+            }
 
             while (true)
             {
                 try
                 {
 
-                    if (RoleStartupUtils.MapNetworkDrive(localPath, shareName, userName, password, (IsSMBServer?"DNNAzure":"SMBServer")))
+                    if (RoleStartupUtils.CreateSymbolicLink(LocalPath, shareName, userName, password, (IsSMBServer?"DNNAzure":"SMBServer")))
                     {
                         // Setup IIS - Website and FTP site
                         SetupIISSites();
@@ -245,7 +263,7 @@ namespace DNNAzure
                     Thread.Sleep(RoleStartupUtils.SleepTimeBeforeStartToRemap);
                 }
             }
-           
+
 // ReSharper disable FunctionNeverReturns
         }
 // ReSharper restore FunctionNeverReturns
@@ -260,8 +278,8 @@ namespace DNNAzure
             try
             {
                 if (CreateDNNWebSite(RoleStartupUtils.GetSetting("hostHeaders"),
-                                          RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
-                                          RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("AppOffline.Folder"),
+                                          Path.Combine(LocalPath, RoleStartupUtils.GetSetting("dnnFolder")),
+                                          Path.Combine(LocalPath, RoleStartupUtils.GetSetting("AppOffline.Folder")),
                                           RoleStartupUtils.GetSetting("fileshareUserName"),
                                           RoleStartupUtils.GetSetting("fileshareUserPassword"),
                                         RoleStartupUtils.GetSetting("SSL.CertificateThumbprint"),
@@ -280,8 +298,8 @@ namespace DNNAzure
                         CreateDNNFTPSite(RoleStartupUtils.GetSetting("hostHeaders"),
                                          RoleStartupUtils.GetSetting("FTP.Root.Username"),
                                          RoleStartupUtils.GetSetting("FTP.Portals.Username"),
-                                         RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"),
-                                         Path.Combine(RoleStartupUtils.GetSetting("localPath") + "\\" + RoleStartupUtils.GetSetting("dnnFolder"), "Portals"),
+                                         Path.Combine(LocalPath, RoleStartupUtils.GetSetting("dnnFolder")),
+                                         Path.Combine(Path.Combine(LocalPath, RoleStartupUtils.GetSetting("dnnFolder")), "Portals"),
                                          WebSiteName,
                                          externalIP,
                                          RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port,
@@ -368,8 +386,6 @@ namespace DNNAzure
                 }
                 _drivePath = "";
                 _drive = null;
-
-                RoleStartupUtils.DeleteMappedNetworkDrive();
             }
             // ReSharper disable FunctionNeverReturns
         }
@@ -756,8 +772,8 @@ namespace DNNAzure
             try
             {
                 Trace.TraceInformation("Stopping worker role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-                // clean up network drives
-                RoleStartupUtils.DeleteMappedNetworkDrive();
+                // clean up directory link
+                RoleStartupUtils.DeleteSymbolicLink(LocalPath);
 
                 // Remove the share
                 if (!string.IsNullOrEmpty(_drivePath))

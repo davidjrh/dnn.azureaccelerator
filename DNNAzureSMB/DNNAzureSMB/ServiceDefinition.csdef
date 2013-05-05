@@ -146,5 +146,9 @@
       <Certificate name="SSL.CA1" storeLocation="LocalMachine" storeName="My" />
       <Certificate name="SSL.CA2" storeLocation="LocalMachine" storeName="My" />
     </Certificates>
+    <LocalResources>
+      <LocalStorage name="WebPITemp" cleanOnRoleRecycle="true" sizeInMB="500" />
+      <LocalStorage name="SitesRoot" cleanOnRoleRecycle="true" sizeInMB="100" />
+    </LocalResources>
   </WebRole>
 </ServiceDefinition>
