@@ -524,17 +524,30 @@ namespace DNNShared
             }
         }
 
-        public static string GetConnectionStringFromSiteConfig(string webConfigPath)
+        public static SqlConnectionSettings GetSqlConnectionSettings(string webConfigPath)
         {
+            var settings = new SqlConnectionSettings();
             var webconfig = new ConfigXmlDocument();
             webconfig.Load(webConfigPath);
 
             var csNode = webconfig.SelectSingleNode("/configuration/connectionStrings/add[@name='SiteSqlServer']");
-            if (csNode != null && csNode.Attributes["connectionString"] != null)
+            if (csNode != null)
             {
-                return csNode.Attributes["connectionString"].Value;
+                if (csNode.Attributes["connectionString"] != null)
+                {
+                    settings.ConnectionString = csNode.Attributes["connectionString"].Value;
+                }
+                if (csNode.Attributes["databaseOwner"] != null)
+                {
+                    settings.DatabaseOwner = csNode.Attributes["databaseOwner"].Value;
+                }
+                if (csNode.Attributes["objectQualifier"] != null)
+                {
+                    settings.ObjectQualifier = csNode.Attributes["objectQualifier"].Value;
+                }
+
             }
-            return string.Empty;
+            return settings;
         }
 
         /// <summary>
@@ -550,13 +563,17 @@ namespace DNNShared
                 Trace.TraceInformation("Setting offline site portal aliases...");
                 bool aliasAdded = false;
 
-                var dbConnectionString = GetConnectionStringFromSiteConfig(webConfigPath);
-                using (var dbConn = new SqlConnection(dbConnectionString))
+                var dbSettings = GetSqlConnectionSettings(webConfigPath);
+                using (var dbConn = new SqlConnection(dbSettings.ConnectionString))
                 {
                     dbConn.Open();
 
                     // Search portal aliases not including port
-                    var cmd = new SqlCommand("SELECT PortalID, HTTPAlias FROM dbo.PortalAlias WHERE HTTPAlias NOT LIKE '%:%'", dbConn);
+                    var cmd =
+                        new SqlCommand(
+                            string.Format(
+                                "SELECT PortalID, HTTPAlias FROM [{0}].[{1}PortalAlias] WHERE HTTPAlias NOT LIKE '%:%'",
+                                dbSettings.DatabaseOwner, dbSettings.ObjectQualifier), dbConn);
                     using (var rdr = cmd.ExecuteReader())
                     {
                         while (rdr.Read())
@@ -566,11 +583,11 @@ namespace DNNShared
                             if (httpAlias.EndsWith("/")) httpAlias = httpAlias.Substring(0, httpAlias.Length - 1);
                             if (httpAliasSsl.EndsWith("/")) httpAliasSsl = httpAliasSsl.Substring(0, httpAliasSsl.Length - 1);
 
-                            using (var dbConn2 = new SqlConnection(dbConnectionString))
+                            using (var dbConn2 = new SqlConnection(dbSettings.ConnectionString))
                             {
                                 dbConn2.Open();
-                                const string sql = "INSERT INTO dbo.PortalAlias ([PortalID],[HTTPAlias],[CreatedByUserID],[CreatedOnDate],[LastModifiedByUserID],[LastModifiedOnDate]) " +
-                                                   "VALUES (@PortalID, @HTTPAlias, -1, GETDATE(), -1, GETDATE())";
+                                var sql = string.Format("INSERT INTO [{0}].[{1}PortalAlias] ([PortalID],[HTTPAlias],[CreatedByUserID],[CreatedOnDate],[LastModifiedByUserID],[LastModifiedOnDate]) " +
+                                                   "VALUES (@PortalID, @HTTPAlias, -1, GETDATE(), -1, GETDATE())", dbSettings.DatabaseOwner, dbSettings.ObjectQualifier);
 
                                 if (!HttpAliasExists(dbConn2, (int)rdr["PortalID"], httpAlias))
                                 {
