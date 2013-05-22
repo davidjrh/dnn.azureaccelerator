@@ -79,6 +79,7 @@
     <Compile Include="Exceptions\CompressOperationException.cs" />
     <Compile Include="RoleStartupUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils\SqlConnectionSettings.cs" />
     <Compile Include="Utils\SymbolicLink.cs" />
     <Compile Include="Utils\SymbolicLinkReparseData.cs" />
   </ItemGroup>
