@@ -345,6 +345,8 @@ namespace DotNetNuke.Azure.Accelerator.Management
                                 {
                                     new Location {Name = "North Central US"},
                                     new Location {Name = "South Central US"},
+                                    new Location {Name = "West US"},
+                                    new Location {Name = "East US"},
                                     new Location {Name = "North Europe"},
                                     new Location {Name = "West Europe"},
                                     new Location {Name = "East Asia"},
