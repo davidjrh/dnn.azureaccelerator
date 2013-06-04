@@ -1105,6 +1105,7 @@ namespace DNNAzureWizard
             }
             cfgStr = cfgStr.Replace("@@REMOTEMGMTENABLED@@", "false");
             cfgStr = cfgStr.Replace("@@WPIPRODUCTS@@", WPIProducts);
+            cfgStr = cfgStr.Replace("@@WPICUSTOMFEED@@", ""); // TODO Add UI to specify custom feed URL
             cfgStr = cfgStr.Replace("@@FTPSERVERENABLED@@", "false");
             cfgStr = cfgStr.Replace("@@FTPROOTUSERNAME@@", "");
             cfgStr = cfgStr.Replace("@@FTPROOTPASSWORD@@", "");

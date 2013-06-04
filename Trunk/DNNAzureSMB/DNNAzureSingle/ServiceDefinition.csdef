@@ -32,6 +32,9 @@
           <Variable name="PRODUCTS">
             <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.Products']/@value" />
           </Variable>
+          <Variable name="CUSTOMFEED">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='WebPlatformInstaller.CustomFeed']/@value" />
+          </Variable>
         </Environment>
       </Task>
     </Startup>
@@ -119,6 +122,7 @@
       <Setting name="UpdateService.Source" />
       <Setting name="AppOffline.Enabled" />
       <Setting name="AppOffline.Folder" />
+      <Setting name="WebPlatformInstaller.CustomFeed" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
