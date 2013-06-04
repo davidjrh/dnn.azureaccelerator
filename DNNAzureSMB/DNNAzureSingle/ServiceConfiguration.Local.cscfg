@@ -62,6 +62,7 @@
       <Setting name="UpdateService.Source" value="" />
       <Setting name="AppOffline.Enabled" value="false" />
       <Setting name="AppOffline.Folder" value="Offline" />
+      <Setting name="WebPlatformInstaller.CustomFeed" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
