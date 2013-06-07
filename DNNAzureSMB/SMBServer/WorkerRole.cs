@@ -8,7 +8,6 @@ using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using DNNShared;
 
-
 namespace SMBServer
 {
     /// <summary>
@@ -52,7 +51,7 @@ namespace SMBServer
             ServicePointManager.DefaultConnectionLimit = 12;
             
             // Inits the Diagnostic Monitor
-            RoleStartupUtils.ConfigureDiagnosticMonitor();
+            Utils.ConfigureDiagnosticMonitor();
 
             // Setup OnChanging event
             RoleEnvironment.Changing += RoleEnvironmentOnChanging;
@@ -60,16 +59,16 @@ namespace SMBServer
             try
             {
                 // Create windows user accounts for shareing the drive and other FTP related
-                RoleStartupUtils.CreateUserAccounts();
+                Utils.CreateUserAccounts();
 
                 // Enable SMB traffic through the firewall
                 EnableSMBFirewallTraffic();
 
                 // Setup the drive object
-                _drive = RoleStartupUtils.InitializeCloudDrive(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("driveContainer"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("driveName"),
-                                                        RoleEnvironment.GetConfigurationSettingValue("driveSize"));
+                _drive = Utils.InitializeCloudDrive(Utils.GetSetting("AcceleratorConnectionString"),
+                                                        Utils.GetSetting("driveContainer"),
+                                                        Utils.GetSetting("driveName"),
+                                                        Utils.GetSetting("driveSize"));
                 
                 Trace.TraceInformation("Exiting SMB Server OnStart...");
             }
@@ -119,7 +118,7 @@ namespace SMBServer
                 try
                 {
                     Trace.TraceInformation("Competing for mount {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-                    RoleStartupUtils.MountCloudDrive(_drive);
+                    Utils.MountCloudDrive(_drive);
                     driveMounted = true;
                     Trace.TraceInformation("{0} Successfully mounted the drive!", RoleEnvironment.CurrentRoleInstance.Id);
                 }
@@ -143,19 +142,19 @@ namespace SMBServer
                 }
 
                 // Shares the drive
-                _drivePath = RoleStartupUtils.ShareDrive(_drive);
+                _drivePath = Utils.ShareDrive(_drive);
 
                 // Setup the website settings
-                RoleStartupUtils.SetupWebSiteSettings(_drive);
+                Utils.SetupWebSiteSettings(_drive);
 
                 // Setup the offline site settings
-                RoleStartupUtils.SetupOfflineSiteSettings(_drive.LocalPath);
+                Utils.SetupOfflineSiteSettings(_drive.LocalPath);
 
                 // Now, spin checking if the drive is still accessible.
-                RoleStartupUtils.WaitForMoutingFailure(_drive);
+                Utils.WaitForMoutingFailure(_drive);
 
                 // Drive is not accessible. Remove the share
-                RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                Utils.DeleteShare(Utils.GetSetting("shareName"));
                 try
                 {
                     Trace.TraceInformation("Unmounting cloud drive on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
@@ -180,7 +179,7 @@ namespace SMBServer
         /// <exception cref="System.Configuration.ConfigurationErrorsException">Could not setup the firewall rules. See previous errors</exception>
         private static void EnableSMBFirewallTraffic()
         {
-            if (RoleStartupUtils.EnableSMBFirewallTraffic() != 0)
+            if (Utils.EnableSMBFirewallTraffic() != 0)
             {
                 throw new ConfigurationErrorsException("Could not setup the firewall rules. See previous errors");
             }
@@ -215,7 +214,7 @@ namespace SMBServer
                 // Remove the share
                 if (!string.IsNullOrEmpty(_drivePath))
                 {
-                    RoleStartupUtils.DeleteShare(RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                    Utils.DeleteShare(Utils.GetSetting("shareName"));
 
                     if (_drive != null)
                     {

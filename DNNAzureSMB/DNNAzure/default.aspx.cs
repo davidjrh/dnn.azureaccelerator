@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Web;
-using System.Web.UI;
 using System.Web.UI.WebControls;
+using DNNShared;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.WindowsAzure;
@@ -17,16 +15,14 @@ namespace DNNAzure
             bool showDetails = false;
             try
             {
-                showDetails = RoleEnvironment.IsEmulated
-                              || Request.UserHostName.ToLower() == "localhost"
-                              || Request.UserHostName.ToLower() == "admin.dnndev.me"
-                              || bool.Parse(RoleEnvironment.GetConfigurationSettingValue("ShowDeploymentProgressDetails"));
-                if (!IsPostBack && showDetails)
-                {
-                    grdLog.RowDataBound += GrdLogOnRowDataBound;
-                    RefreshLog();
-                }
-                    
+                if (Request.UserHostName != null)
+                    showDetails = RoleEnvironment.IsEmulated
+                                  || Request.UserHostName.ToLower() == "localhost"
+                                  || Request.UserHostName.ToLower() == "admin.dnndev.me"
+                                  || bool.Parse(Utils.GetSetting("ShowDeploymentProgressDetails"));
+                if (IsPostBack || !showDetails) return;
+                grdLog.RowDataBound += GrdLogOnRowDataBound;
+                RefreshLog();
             }
             catch (Exception ex)
             {
@@ -61,8 +57,7 @@ namespace DNNAzure
         private void RefreshLog()
         {
             var azureConnectionString =
-                RoleEnvironment.GetConfigurationSettingValue(
-                    "Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString");
+                Utils.GetSetting("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString");
 
             var account = CloudStorageAccount.Parse(azureConnectionString);
             var tableClient = account.CreateCloudTableClient();
