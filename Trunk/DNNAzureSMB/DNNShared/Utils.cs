@@ -1,4 +1,5 @@
-﻿using System;
+﻿#region Usings
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
@@ -15,7 +16,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using DNNShared.Exceptions;
-using DNNShared.Utils;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
 using Microsoft.WindowsAzure;
@@ -23,13 +23,14 @@ using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using System.Configuration;
+#endregion
 
 namespace DNNShared
 {
     /// <summary>
     /// Role startup utilities
     /// </summary>
-    public class RoleStartupUtils
+    public class Utils
     {
         public const int SleepTimeAfterSuccessfulPolling = 10000;
         public const int SleepTimeBetweenWriteErrors = 1000;
@@ -104,7 +105,7 @@ namespace DNNShared
             {
                 drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                                           @"dftmp\wadd\devstoreaccount1\drivecontainer",
-                                          RoleEnvironment.GetConfigurationSettingValue("driveName"));
+                                          GetSetting("driveName"));
             }
 
             // Share it using SMB (add permissions for RDP user if it's configured)
@@ -112,7 +113,7 @@ namespace DNNShared
             try
             {
                 rdpUserName =
-                    RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
+                    GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
             }
             catch
             {
@@ -144,7 +145,7 @@ namespace DNNShared
             {
                 drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                                           @"dftmp\wadd\devstoreaccount1\drivecontainer",
-                                          RoleEnvironment.GetConfigurationSettingValue("driveName"));
+                                          GetSetting("driveName"));
             }
 
             for (; ; )
@@ -328,8 +329,8 @@ namespace DNNShared
         public static void CreateUserAccounts()
         {
             // Create a local account for sharing the drive
-            CreateUserAccount(RoleEnvironment.GetConfigurationSettingValue("fileshareUserName"),
-                              RoleEnvironment.GetConfigurationSettingValue("fileshareUserPassword"));
+            CreateUserAccount(GetSetting("fileshareUserName"),
+                              GetSetting("fileshareUserPassword"));
 
             // To ensure FTP users can access the shared folder
             if (bool.Parse(GetSetting("FTP.Enabled", "False")))
@@ -353,41 +354,41 @@ namespace DNNShared
         {
             // Check for the database existence
             Trace.TraceInformation("Checking for database existence...");
-            if (!SetupDatabase(RoleEnvironment.GetConfigurationSettingValue("DBAdminUser"),
-                                        RoleEnvironment.GetConfigurationSettingValue("DBAdminPassword"),
-                                        RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString")))
+            if (!SetupDatabase(GetSetting("DBAdminUser"),
+                                        GetSetting("DBAdminPassword"),
+                                        GetSetting("DatabaseConnectionString")))
                 Trace.TraceError("Error while setting up the database. Check previous messages.");
 
             // Check for the creation of the Website contents from Azure storage
             Trace.TraceInformation("Check for website content...");
-            if (!SetupWebSiteContents(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
-                                                    RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                                    RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                                    RoleEnvironment.GetConfigurationSettingValue("package"),
-                                                    RoleEnvironment.GetConfigurationSettingValue("packageUrl")))
+            if (!SetupWebSiteContents(drive.LocalPath + "\\" + GetSetting("dnnFolder"),
+                                                    GetSetting("AcceleratorConnectionString"),
+                                                    GetSetting("packageContainer"),
+                                                    GetSetting("package"),
+                                                    GetSetting("packageUrl")))
                 Trace.TraceError("Website content could not be prepared. Check previous messages.");
 
 
             // Setup Database Connection string
-            SetupWebConfig(drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder") + "\\web.config",
-                                            RoleEnvironment.GetConfigurationSettingValue("DatabaseConnectionString"),
-                                            RoleEnvironment.GetConfigurationSettingValue("InstallationDate"),
+            SetupWebConfig(drive.LocalPath + "\\" + GetSetting("dnnFolder") + "\\web.config",
+                                            GetSetting("DatabaseConnectionString"),
+                                            GetSetting("InstallationDate"),
                                             GetSetting("UpdateService.Source"));
 
             // Setup DotNetNuke.install.config
             SetupInstallConfig(
                                 Path.Combine(new[]
                                                          {
-                                                             drive.LocalPath, RoleEnvironment.GetConfigurationSettingValue("dnnFolder"),
+                                                             drive.LocalPath, GetSetting("dnnFolder"),
                                                              "Install\\DotNetNuke.install.config"
                                                          }),
-                                RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"),
-                                RoleEnvironment.GetConfigurationSettingValue("packageContainer"),
-                                RoleEnvironment.GetConfigurationSettingValue("packageInstallConfiguration"));
+                                GetSetting("AcceleratorConnectionString"),
+                                GetSetting("packageContainer"),
+                                GetSetting("packageInstallConfiguration"));
 
             // Setup post install addons (always overwrite)
-            InstallAddons(RoleEnvironment.GetConfigurationSettingValue("AddonsUrl"),
-                                            drive.LocalPath + "\\" + RoleEnvironment.GetConfigurationSettingValue("dnnFolder"));            
+            InstallAddons(GetSetting("AddonsUrl"),
+                                            drive.LocalPath + "\\" + GetSetting("dnnFolder"));            
 
         }
 
@@ -402,7 +403,7 @@ namespace DNNShared
             {
                 Trace.TraceInformation("Setting up offline site contents...");
                 var offlineRoot = contentsRoot + "\\" +
-                                  RoleEnvironment.GetConfigurationSettingValue("AppOffline.Folder");
+                                  GetSetting("AppOffline.Folder");
                 if (!Directory.Exists(offlineRoot))
                 {
                     Trace.TraceInformation("Initializing offline site contents...");
@@ -410,7 +411,7 @@ namespace DNNShared
                 }
 
                 var customAppOffline = contentsRoot + "\\" +
-                                       RoleEnvironment.GetConfigurationSettingValue("dnnFolder") +
+                                       GetSetting("dnnFolder") +
                                        "\\Portals\\_default\\App_Offline.htm";
                 var defaultAppOffline = Path.Combine(Environment.CurrentDirectory, "html", "App_Offline.htm");
 
@@ -887,14 +888,23 @@ namespace DNNShared
 
         public static string GetSetting(string key, string defaultValue = "")
         {
-            try
+            if (RoleEnvironment.IsAvailable)
             {
-                if (RoleEnvironment.IsAvailable)
+                //try
+                //{
+                //        var prefix = RoleEnvironment.GetConfigurationSettingValue("Prefix");
+                //        return RoleEnvironment.GetConfigurationSettingValue(prefix + key);
+                //}
+                //catch (RoleEnvironmentException)  // The configuration setting that was being retrieved does not exist.
+                //{}
+                try
+                {
                     return RoleEnvironment.GetConfigurationSettingValue(key);
+                }
+                catch (RoleEnvironmentException)  // The configuration setting that was being retrieved does not exist.
+                {}
             }
-            catch (RoleEnvironmentException)  // The configuration setting that was being retrieved does not exist.
-            {
-            }
+
             return ConfigurationManager.AppSettings.AllKeys.Contains(key) ? ConfigurationManager.AppSettings[key] : defaultValue;
         }
 

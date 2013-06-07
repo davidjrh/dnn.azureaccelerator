@@ -1,4 +1,4 @@
-﻿namespace DNNShared.Utils
+namespace DNNShared
 {
     public class SqlConnectionSettings
     {
