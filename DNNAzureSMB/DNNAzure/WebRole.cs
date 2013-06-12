@@ -679,7 +679,10 @@ namespace DNNAzure
 
 
             // Enable 32bit modules on Win64
-            appPool.Enable32BitAppOnWin64 = true;
+            if (bool.Parse(Utils.GetSetting("appPool.Enable32bitApps", "false")))
+            {
+                appPool.Enable32BitAppOnWin64 = true;    
+            }            
 
             // Set start mode to Always running (IIS 8) - see http://blogs.msdn.com/b/vijaysk/archive/2012/10/11/iis-8-what-s-new-website-settings.aspx
             if (appPool.Attributes.Any(x => x.Name == "startMode"))
