@@ -4,6 +4,13 @@
     <Runtime executionContext="elevated">
     </Runtime>
     <Startup>
+      <Task executionContext="elevated" commandLine="scripts\SetupSiteRoot.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+        </Environment>
+      </Task>
       <Task executionContext="elevated" commandLine="scripts\SetupSMTP.cmd" taskType="simple">
         <Environment>
           <Variable name="EMULATED">
