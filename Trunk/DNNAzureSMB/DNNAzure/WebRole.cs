@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
@@ -19,7 +21,7 @@ namespace DNNAzure
         private const string WebSiteName = "DotNetNuke";
         private const string OfflineSiteName = "Offline";
         private const string AppPoolName = "DotNetNukeApp";
-        private const string SitesRoot = "sitesroot";
+        private const string SitesRoot = "root";
 
         private static string _drivePath;
         private static CloudDrive _drive;
@@ -47,7 +49,9 @@ namespace DNNAzure
         {
             get
             {
-                return Path.Combine(RoleEnvironment.GetLocalResource("SitesRoot").RootPath, SitesRoot);
+                // To avoid the "Path too long" issue, we are going to use the folder short path name. This gives us an additional 56 characters.
+                // Thiis is in combination with the SetupSiteRoot.cmd startup task
+                return Path.Combine(@"C:\Resources\Directory\Sites", SitesRoot);
             }
         }
 
