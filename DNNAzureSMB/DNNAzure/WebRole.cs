@@ -26,6 +26,18 @@ namespace DNNAzure
         private static string _drivePath;
         private static CloudDrive _drive;
 
+        private volatile bool _busy = true;
+        private bool Busy
+        {
+            get { return _busy; }
+            set
+            {
+                _busy = value;
+                Trace.TraceInformation(_busy ? "Role instance {0} is going Busy" : "Role instance {0} is going Ready",
+                                       RoleEnvironment.CurrentRoleInstance.Id);
+            }
+        }
+
         /// <summary>
         /// Gets a value indicating whether this instance is SMB server.
         /// </summary>
@@ -87,10 +99,13 @@ namespace DNNAzure
             // Set the maximum number of concurrent connections 
             ServicePointManager.DefaultConnectionLimit = 12;
 
+            // Setup OnStatuscheck event
+            RoleEnvironment.StatusCheck += RoleEnvironmentOnStatusCheck;
+
             // Setup OnChanging event
             RoleEnvironment.Changing += RoleEnvironmentOnChanging;
 
-            // Setup OnChanging event
+            // Setup OnChanged event
             RoleEnvironment.Changed += RoleEnvironmentOnChanged;
 
 
@@ -241,13 +256,17 @@ namespace DNNAzure
 
             while (true)
             {
+                // Change the instance status to Busy
+                Busy = true;
                 try
                 {
-
                     if (Utils.CreateSymbolicLink(LocalPath, shareName, userName, password, (IsSMBServer?"DNNAzure":"SMBServer")))
                     {
                         // Setup IIS - Website and FTP site
                         SetupIISSites();
+
+                        // Change the status to Ready
+                        Busy = false;
 
                         while (true)
                         {
@@ -779,6 +798,10 @@ namespace DNNAzure
             try
             {
                 Trace.TraceInformation("Stopping worker role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
+
+                // Change the status to Busy
+                Busy = true;
+
                 // clean up directory link
                 Utils.DeleteSymbolicLink(LocalPath);
 
@@ -830,6 +853,19 @@ namespace DNNAzure
                         }
                         break;
                 }                
+            }
+        }
+
+        /// <summary>
+        /// Roles the environment on status check.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="roleInstanceStatusCheckEventArgs">The <see cref="RoleInstanceStatusCheckEventArgs"/> instance containing the event data.</param>
+        private void RoleEnvironmentOnStatusCheck(object sender, RoleInstanceStatusCheckEventArgs roleInstanceStatusCheckEventArgs)
+        {
+            if (this._busy)
+            {
+                roleInstanceStatusCheckEventArgs.SetBusy();
             }
         }
     }
