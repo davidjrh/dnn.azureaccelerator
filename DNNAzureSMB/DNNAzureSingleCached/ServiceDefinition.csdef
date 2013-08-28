@@ -85,7 +85,6 @@
       <Import moduleName="Diagnostics" />
       <Import moduleName="RemoteAccess" />
       <Import moduleName="RemoteForwarder" />
-      <Import moduleName="Connect" />
       <Import moduleName="Caching" />
     </Imports>
     <ConfigurationSettings>
