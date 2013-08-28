@@ -18,6 +18,7 @@ namespace SMBServer
 
         private static string _drivePath;
         private static CloudDrive _drive;
+        private static bool _driveMounted;
 
         /// <summary>
         /// Called by Windows Azure to initialize the role instance.
@@ -114,12 +115,13 @@ namespace SMBServer
 
             for (; ; )
             {
-                var driveMounted = false;
+                _driveMounted = false;
+                _drivePath = "";
                 try
                 {
                     Trace.TraceInformation("Competing for mount {0}...", RoleEnvironment.CurrentRoleInstance.Id);
                     Utils.MountCloudDrive(_drive);
-                    driveMounted = true;
+                    _driveMounted = true;
                     Trace.TraceInformation("{0} Successfully mounted the drive!", RoleEnvironment.CurrentRoleInstance.Id);
                 }
                 catch (Exception ex)
@@ -135,7 +137,7 @@ namespace SMBServer
                     }
                 }
 
-                if (!driveMounted)
+                if (!_driveMounted)
                 {
                     Thread.Sleep(5000);
                     continue;   // Compete again for the lease
@@ -164,8 +166,6 @@ namespace SMBServer
                 {
                     Trace.TraceWarning("Error while unmounting the cloud drive on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
                 }
-                _drivePath = "";
-                _drive = null;
             }
 // ReSharper disable FunctionNeverReturns
         }
@@ -215,12 +215,18 @@ namespace SMBServer
                 if (!string.IsNullOrEmpty(_drivePath))
                 {
                     Utils.DeleteShare(Utils.GetSetting("shareName"));
+                }
 
-                    if (_drive != null)
+                if (_driveMounted && _drive != null)
+                {
+                    try
                     {
-                        Trace.TraceInformation("Unmounting cloud drive on role {0}...",
-                                               RoleEnvironment.CurrentRoleInstance.Id);
+                        Trace.TraceInformation("Unmounting cloud drive on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
                         _drive.Unmount();
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceWarning("Error while unmounting the cloud drive on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
                     }
                 }
             }
