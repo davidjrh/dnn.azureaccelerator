@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
@@ -73,6 +74,15 @@ namespace DNNAzureWizard
         private string _certificatePassword;
         private string ServiceConfigurationFile { get; set; }
         private string ServicePackageFile { get; set; }
+
+        [DllImport("wininet.dll")]
+        private static extern bool InternetGetConnectedState(out int description, int reservedValue);
+
+        private static bool IsConnectedToInternet()
+        {
+            int desc;
+            return InternetGetConnectedState(out desc, 0);
+        }
 
         public FrmDNNAzureWizard()
         {
@@ -236,7 +246,7 @@ namespace DNNAzureWizard
                 Directory.CreateDirectory(dlgFolder.SelectedPath);
             var serviceFile = Path.Combine(dlgFolder.SelectedPath, Path.GetFileName(sourceConfigurationFile));
             var packageFile = Path.Combine(dlgFolder.SelectedPath, Path.GetFileName(sourcePackageFile));
-            var certificateFile = Path.Combine(dlgFolder.SelectedPath, "DotNetNuke.pfx");
+            var certificateFile = Path.Combine(dlgFolder.SelectedPath, "DNN.pfx");
 
             // Delete previous exports
             txtLogFinal.Text += "\r\nDeleting previous files...";
@@ -290,28 +300,31 @@ namespace DNNAzureWizard
             try
             {
                 cboDNNVersion.Items.Clear();
-                var updateSvc = new DNN.UpdateService.UpdateService();
-                var versions = updateSvc.GetVersions();
-                foreach (var versionInfo in versions.Where(y => 
-                                            y.PackageName == DotNetNukePackage.DNN_CE || y.PackageName == DotNetNukePackage.DNN_PE)
-                                            .OrderByDescending(x => x.Version))
+                if (IsConnectedToInternet())
                 {
-                    //// Removed the version 07.00.04 from the list, since is not SQL Azure compatible. See
-                    //// http://support.dotnetnuke.com/project/DNN/2/item/25569 for more info
-                    //if (versionInfo.Version == "070004") continue;
+                    var updateSvc = new DNN.UpdateService.UpdateService();
+                    var versions = updateSvc.GetVersions();
+                    foreach (var versionInfo in versions.Where(y =>
+                                                y.PackageName == DotNetNukePackage.DNN_CE || y.PackageName == DotNetNukePackage.DNN_PE)
+                                                .OrderByDescending(x => x.Version))
+                    {
+                        //// Removed the version 07.00.04 from the list, since is not SQL Azure compatible. See
+                        //// http://support.dotnetnuke.com/project/DNN/2/item/25569 for more info
+                        //if (versionInfo.Version == "070004") continue;
 
-                    cboDNNVersion.Items.Add(new DotNetNukePackage
-                                        {
-                                            PackageName = versionInfo.PackageName,
-                                            Version = versionInfo.Version,
-                                            DownloadUrl = versionInfo.DownloadURL,
-                                            Latest = cboDNNVersion.Items.Count == 0
-                                        });       
-                    
+                        cboDNNVersion.Items.Add(new DotNetNukePackage
+                        {
+                            PackageName = versionInfo.PackageName,
+                            Version = versionInfo.Version,
+                            DownloadUrl = versionInfo.DownloadURL,
+                            Latest = cboDNNVersion.Items.Count == 0
+                        });
+
+                    }
+                    if (cboDNNVersion.Items.Count == 0)
+                        cboDNNVersion.Items.Add("");
                 }
 
-                if (cboDNNVersion.Items.Count == 0)
-                    cboDNNVersion.Items.Add("");
                 cboDNNVersion.Items.Add(CustomLabel);
                 cboDNNVersion.SelectedIndex = 0;
                 
@@ -711,6 +724,16 @@ namespace DNNAzureWizard
             ReloadDeploymentPackages();
             ReloadX509Certificates();
             RefreshDotNetNukeDownloadUrlsAsync();
+
+            if (!IsConnectedToInternet())
+            {
+                optSubscription.Enabled = false;
+                cboSubscriptions.Enabled = false;
+                optExport.Checked = true;
+                MessageBox.Show(
+                    "There is no Internet connection available. The option to directly publish on Azure Platform has been disabled.", caption: "No Internet connection", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Warning);
+            }
+            
         }
 
         private void SetDefaultSubscription()
@@ -758,6 +781,7 @@ namespace DNNAzureWizard
         }
         private void ShowPage(int pageNumber)
         {
+            WindowsAzureLogo.Visible = pageNumber != (int) WizardTabs.TabHome;
             foreach (Panel p in pnl.Controls)
                 p.Visible = p.Name == "pnl" + pageNumber;
             btnBack.Enabled = pageNumber > 1;
@@ -786,7 +810,7 @@ namespace DNNAzureWizard
             ShowPage(ActivePageIndex() + steps);
         }
         private bool ValidateStep()
-        {
+        {            
             switch (ActivePageIndex())
             {
                 case (int)WizardTabs.TabHome: // Home tab, nothing to validate
@@ -817,7 +841,7 @@ namespace DNNAzureWizard
                 case (int)WizardTabs.TabSummary:
                     if (optSubscription.Checked)
                     {
-                        return (MessageBox.Show("The wizard will begin now to deploy DotNetNuke on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
+                        return (MessageBox.Show("The wizard will begin now to deploy DNN on Windows Azure with the specified settings. Are you sure that you want to continue?", "Deploy", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
                     }
                     _certificatePassword = "";
                     if (chkEnableRemoteMgmt.Checked)
@@ -979,10 +1003,10 @@ namespace DNNAzureWizard
             foreach (ListViewItem li in lstPackages.Items)
                 if (li.Selected)
                     summary.AppendLine("- " + li.Text);
-            summary.AppendLine("- DotNetNuke package location: " + txtDNNUrl.Text.Trim());
+            summary.AppendLine("- DNN package location: " + txtDNNUrl.Text.Trim());
             if (optSubscription.Checked)
             {
-                summary.AppendLine("- Auto-install DotNetNuke with defaults: " + (chkAutoInstall.Checked ? "true" : "false"));
+                summary.AppendLine("- Auto-install DNN with defaults: " + (chkAutoInstall.Checked ? "true" : "false"));
             }
             return summary.ToString();
         }
@@ -1030,7 +1054,7 @@ namespace DNNAzureWizard
 
             if (!Regex.Match(txtDNNUrl.Text.Trim(), ValidUrlRegex).Success)
             {
-                error = "The DotNetNuke package Url is not valid";
+                error = "The DNN package Url is not valid";
             }
             errProv.SetError((Control)sender, error);
         }
@@ -1370,7 +1394,7 @@ namespace DNNAzureWizard
                         Path.Combine(new[] { Environment.CurrentDirectory, "packages", ServiceConfigurationFile }));
 
                 var deploymentName =
-                    "DotNetNuke - " +
+                    "DNN - " +
                     DateTime.UtcNow.ToString(CultureInfo.InvariantCulture);
                 deploymentName =
                     deploymentName.Replace("/", "").Replace(":", "").Replace(" ", "").Replace("-", "").ToLower();
