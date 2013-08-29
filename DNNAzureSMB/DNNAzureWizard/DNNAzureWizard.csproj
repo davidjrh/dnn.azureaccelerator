@@ -57,7 +57,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>DotNetNuke.ico</ApplicationIcon>
+    <ApplicationIcon>DNN.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="HtmlAgilityPack, Version=1.4.0.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
@@ -135,6 +135,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.map</DependentUpon>
     </Compile>
+    <None Include="Resources\Reporting.png" />
+    <None Include="Resources\Blob.png" />
+    <None Include="Resources\Cancel.png" />
+    <None Include="Resources\CloudService.png" />
     <EmbeddedResource Include="FrmCertificatePassword.resx">
       <DependentUpon>FrmCertificatePassword.cs</DependentUpon>
     </EmbeddedResource>
@@ -167,8 +171,13 @@
       <DesignTime>True</DesignTime>
     </Compile>
     <None Include="app.config" />
-    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.cscfg" />
-    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.cspkg" />
+    <Content Include="DNN.ico" />
+    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.cscfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.cspkg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -192,7 +201,9 @@
     <Content Include="assemblies\HtmlAgilityPack.XML" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.dll" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.xml" />
-    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.xml" />
+    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="Web References\DNN.UpdateService\azurepackages.disco" />
     <None Include="Resources\icon-warning.gif" />
     <None Include="utils\makecert.exe">
@@ -204,7 +215,6 @@
     <None Include="config\DeploymentTasks.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="DotNetNuke.ico" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">
