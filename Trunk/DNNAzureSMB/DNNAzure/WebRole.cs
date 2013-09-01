@@ -98,7 +98,7 @@ namespace DNNAzure
         {
 
             // Set the maximum number of concurrent connections 
-            ServicePointManager.DefaultConnectionLimit = 12;
+            ServicePointManager.DefaultConnectionLimit = int.Parse(Utils.GetSetting("DefaultConnectionLimit", "1000"));
 
             // Setup OnStatuscheck event
             RoleEnvironment.StatusCheck += RoleEnvironmentOnStatusCheck;

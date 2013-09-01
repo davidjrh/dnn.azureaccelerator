@@ -49,7 +49,7 @@ namespace SMBServer
         public override bool OnStart()
         {
             // Set the maximum number of concurrent connections 
-            ServicePointManager.DefaultConnectionLimit = 12;
+            ServicePointManager.DefaultConnectionLimit = int.Parse(Utils.GetSetting("DefaultConnectionLimit", "1000"));
             
             // Inits the Diagnostic Monitor
             Utils.ConfigureDiagnosticMonitor();
