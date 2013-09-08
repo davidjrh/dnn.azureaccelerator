@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ServicePackage>
+  <Name>DNN Azure Single and Small 2013 Q3</Name>
+  <Description>This package offers the capability of working on HA mode, while the VHD is mounted by a webworker. All the instances are Small.</Description>
+  <ConfigurationFile>DNNAzureSingleAndSmall_2013Q3.cscfg</ConfigurationFile>
+  <PackageFile>DNNAzureSingleAndSmall_2013Q3.cspkg</PackageFile>
+  <RDPEnabled>true</RDPEnabled>
+</ServicePackage>

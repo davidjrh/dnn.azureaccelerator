@@ -135,6 +135,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.map</DependentUpon>
     </Compile>
+    <Content Include="packages\DNNAzureSingleAndSmall_2013Q3.xml" />
+    <None Include="packages\DNNAzureSingleAndSmall_2013Q3.cscfg" />
+    <None Include="packages\DNNAzureSingleAndSmall_2013Q3.cspkg" />
     <None Include="Resources\Reporting.png" />
     <None Include="Resources\Blob.png" />
     <None Include="Resources\Cancel.png" />
@@ -170,14 +173,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <Content Include="DNN.ico" />
-    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.cscfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.cspkg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -201,9 +200,6 @@
     <Content Include="assemblies\HtmlAgilityPack.XML" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.dll" />
     <Content Include="assemblies\Microsoft.WindowsAzure.StorageClient.xml" />
-    <Content Include="packages\DNNAzureSingleAndSmall_RDP_6_4.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <None Include="Web References\DNN.UpdateService\azurepackages.disco" />
     <None Include="Resources\icon-warning.gif" />
     <None Include="utils\makecert.exe">

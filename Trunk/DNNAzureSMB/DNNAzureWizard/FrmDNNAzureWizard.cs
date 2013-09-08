@@ -1559,59 +1559,83 @@ namespace DNNAzureWizard
         public bool InstallDotNetNuke(ListViewItem task)
         {
             var success = false;
-            try
+            int retries404 = 0;
+            while (retries404 < 10)
             {
-                task.SubItems[1].Text = "Installing...";
-                Application.DoEvents();
 
-                var deployment = ServiceManager.GetDeploymentBySlot(Subscription.SubscriptionId, cboHostingService.Text,
-                                                                    cboEnvironment.Text);
-
-                // used to build entire input
-                var sb = new StringBuilder();
-
-                // used on each read operation
-                var buf = new byte[8192];
-
-                // prepare the web page we will be asking for
-                var request = (HttpWebRequest)WebRequest.Create(string.Format("{0}/install/install.aspx?mode=install", deployment.Url.ToString()));
-
-                // execute the request
-                var response = (HttpWebResponse)request.GetResponse();
-
-                // we will read data via the response stream
-                Stream resStream = response.GetResponseStream();
-
-                int count;
-                do
+                try
                 {
-                    // fill the buffer with data
-                    count = resStream.Read(buf, 0, buf.Length);
-                    // make sure we read some data
-                    if (count != 0)
-                        sb.Append(Encoding.ASCII.GetString(buf, 0, count));
-                }
-                while (count > 0); // any more data to read?
+                    task.SubItems[1].Text = "Installing...";
+                    Application.DoEvents();
 
-                string result = sb.ToString();
-                if (result.Trim() == string.Empty)
-                    throw new CancelException("No response from the installation process. Make sure that the site is pending for install and that the destination database is empty.");
-                GenerateLogFromHtml(result);
-                if (result.IndexOf("Successfully Installed Site 0", StringComparison.Ordinal) > 0)
-                {
-                    success = true;
-                    txtLOG.Text += "\r\nInstallation successfull!";
-                }
-                else
-                {
-                    txtLOG.Text += "\r\nInstallation Error!";
-                }
+                    var deployment = ServiceManager.GetDeploymentBySlot(Subscription.SubscriptionId,
+                                                                        cboHostingService.Text,
+                                                                        cboEnvironment.Text);
 
-                Process.Start(deployment.Url.ToString());
-            }
-            catch (Exception ex)
-            {
-                throw new CancelException(ex.Message);
+                    // used to build entire input
+                    var sb = new StringBuilder();
+
+                    // used on each read operation
+                    var buf = new byte[8192];
+
+                    // prepare the web page we will be asking for
+                    var request =
+                        (HttpWebRequest)
+                        WebRequest.Create(string.Format("{0}/install/install.aspx?mode=install",
+                                                        deployment.Url.ToString()));
+                    request.Timeout = 1000*int.Parse(GetSetting("InstallTimeout", "2350"));
+
+                    // execute the request
+                    var response = (HttpWebResponse) request.GetResponse();
+
+                    // we will read data via the response stream
+                    using (var resStream = response.GetResponseStream())
+                    {
+                        int count;
+                        do
+                        {
+                            // fill the buffer with data
+                            count = resStream.Read(buf, 0, buf.Length);
+                            // make sure we read some data
+                            if (count != 0)
+                                sb.Append(Encoding.ASCII.GetString(buf, 0, count));
+                        } while (count > 0); // any more data to read?
+                        resStream.Close();
+                    }
+
+                    var result = sb.ToString();
+                    if (result.Trim() == string.Empty)
+                        throw new CancelException(
+                            "No response from the installation process. Make sure that the site is pending for install and that the destination database is empty.");
+                    GenerateLogFromHtml(result);
+                    if (result.IndexOf("Successfully Installed Site 0", StringComparison.Ordinal) > 0)
+                    {
+                        success = true;
+                        txtLOG.Text += "\r\nInstallation successfull!";
+                    }
+                    else
+                    {
+                        txtLOG.Text += "\r\nInstallation Error!";
+                    }
+
+                    Process.Start(deployment.Url.ToString());
+                    break;
+                }
+                catch (WebException webex)
+                {
+                    // If the connection fails (normally a 404 error, a connection error, etc. just retry in a few seconds to allow the device 
+                    // to startup services
+                    retries404++;
+                    if (retries404 == 10)
+                    {
+                        throw new CancelException(webex.Message);
+                    }
+                    Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    throw new CancelException(ex.Message);
+                }
             }
 
             return success;
