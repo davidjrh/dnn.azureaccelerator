@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="3" osVersion="*" schemaVersion="2012-05.1.7">
+<ServiceConfiguration serviceName="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="3" osVersion="*" schemaVersion="2013-03.2.0">
   <Role name="SMBServer">
     <Instances count="1" />
     <ConfigurationSettings>
@@ -18,18 +18,6 @@
       <Setting name="packageUrl" value="@@PACKAGEURL@@" />
       <Setting name="DBAdminUser" value="@@DBADMINUSER@@" />
       <Setting name="DBAdminPassword" value="@@DBADMINPASSWORD@@" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Refresh" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.WaitForConnectivity" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Upgrade" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.EnableDomainJoin" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainFQDN" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainControllerFQDN" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainAccountName" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainPassword" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
@@ -57,18 +45,6 @@
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
       <Setting name="managedRuntimeVersion" value="v4.0" />
       <Setting name="managedPipelineMode" value="Integrated" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.ActivationToken" value="@@CONNECTACTIVATIONTOKEN@@" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Refresh" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.WaitForConnectivity" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Upgrade" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.EnableDomainJoin" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainFQDN" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainControllerFQDN" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainAccountName" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainPassword" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainOU" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.Administrators" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.Connect.DomainSiteName" value="" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
