@@ -125,6 +125,9 @@ namespace DNNAzureWizard
             {
                 switch (ActivePageIndex())
                 {
+                    case (int) WizardTabs.TabSSL:
+                        MoveSteps(-2);
+                        break;
                     case (int)WizardTabs.TabFinish:
                         btnOK.Text = "Next >";
                         btnCancel.Enabled = true;
@@ -166,6 +169,9 @@ namespace DNNAzureWizard
                 {
                     switch (ActivePageIndex())
                     {
+                        case (int)WizardTabs.TabRDPAzureSettings:
+                            MoveSteps(2);
+                            break;
                         case (int)WizardTabs.TabDeploymentType:
                             MoveSteps(!optSubscription.Checked ? 2 : 1);
                             break;
@@ -888,14 +894,15 @@ namespace DNNAzureWizard
 
         private bool ValidateConnectSettings()
         {
-            bool invalidInput = false;
-            if (chkAzureConnect.Checked)
-            {
-                TxtConnectActivationTokenValidating(txtConnectActivationToken, null);
-                if (pnlAzureConnect.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
-                    invalidInput = true;
-            }
-            return !invalidInput;
+            return true;
+            //bool invalidInput = false;
+            //if (chkAzureConnect.Checked)
+            //{
+            //    TxtConnectActivationTokenValidating(txtConnectActivationToken, null);
+            //    if (pnlAzureConnect.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
+            //        invalidInput = true;
+            //}
+            //return !invalidInput;
         }
 
         private bool ValidateSSLSettings()
