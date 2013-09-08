@@ -1,11 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceDefinition name="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2012-05.1.7">
+<ServiceDefinition name="DNNAzureSMB" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2013-03.2.0">
   <WorkerRole name="SMBServer">
-    <Runtime executionContext="elevated">
-    </Runtime>
+    <Runtime executionContext="elevated"></Runtime>
     <Imports>
       <Import moduleName="Diagnostics" />
-      <Import moduleName="Connect" />
       <Import moduleName="RemoteAccess" />
       <Import moduleName="RemoteForwarder" />
     </Imports>
@@ -38,8 +36,7 @@
     </Endpoints>
   </WorkerRole>
   <WebRole name="DNNAzure">
-    <Runtime executionContext="elevated">
-    </Runtime>
+    <Runtime executionContext="elevated"></Runtime>
     <Startup>
       <Task executionContext="elevated" commandLine="scripts\SetupSiteRoot.cmd" taskType="simple">
         <Environment>
@@ -118,7 +115,6 @@
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
-      <Import moduleName="Connect" />
       <Import moduleName="RemoteAccess" />
     </Imports>
     <ConfigurationSettings>
