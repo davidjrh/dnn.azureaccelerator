@@ -109,6 +109,12 @@
     <None Include="scripts\Microsoft.Web.PlatformInstaller.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="scripts\SetupExternalTasks.cmd">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="scripts\SetupExternalTasks.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="scripts\SetupSiteRoot.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

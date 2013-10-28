@@ -44,6 +44,16 @@
           </Variable>
         </Environment>
       </Task>
+      <Task executionContext="elevated" commandLine="scripts\SetupExternalTasks.cmd" taskType="simple">
+        <Environment>
+          <Variable name="EMULATED">
+            <RoleInstanceValue xpath="/RoleEnvironment/Deployment/@emulated" />
+          </Variable>
+          <Variable name="EXTERNALTASKURL">
+            <RoleInstanceValue xpath="/RoleEnvironment/CurrentInstance/ConfigurationSettings/ConfigurationSetting[@name='Startup.ExternalTasks']/@value" />
+          </Variable>
+        </Environment>
+      </Task>
     </Startup>
     <Sites>
       <Site name="Web">
@@ -131,6 +141,7 @@
       <Setting name="WebPlatformInstaller.CustomFeed" />
       <Setting name="appPool.Enable32bitApps" />
       <Setting name="Plugins.Url" />
+      <Setting name="Startup.ExternalTasks" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
