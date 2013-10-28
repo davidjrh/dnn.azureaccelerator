@@ -4,15 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.Web.Administration;
 using DNNShared;
-
 
 namespace DNNAzure
 {
@@ -67,6 +64,18 @@ namespace DNNAzure
                 return Path.Combine(@"C:\Resources\Directory\Sites", SitesRoot);
             }
         }
+
+        private PluginsManager _plugins;
+        private PluginsManager Plugins
+        {
+            get
+            {
+                if (_plugins == null)
+                    _plugins = new PluginsManager(Utils.GetSetting("Plugins.Url"));
+                return _plugins;
+            }
+        }
+
 
         /// <summary>
         /// Called by Windows Azure to initialize the role instance.
@@ -142,6 +151,8 @@ namespace DNNAzure
             else
                 Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
 
+            Plugins.OnStart();
+
             return base.OnStart();
         }
 
@@ -157,6 +168,9 @@ namespace DNNAzure
             {
                 // Implements the changes after restarting the role instance
                 Trace.TraceInformation("Configurations settings changed...");
+
+                Plugins.RoleEnvironmentOnChanged(sender, e);
+
                 foreach (RoleEnvironmentConfigurationSettingChange settingChange in e.Changes.Where(x => x is RoleEnvironmentConfigurationSettingChange))
                 {
                     if (settingChange.ConfigurationSettingName == "AppOffline.Enabled")
@@ -268,6 +282,9 @@ namespace DNNAzure
 
                         // Change the status to Ready
                         Busy = false;
+
+                        // Inform the plugins that the site is up and running
+                        Plugins.OnSiteReady();
 
                         while (true)
                         {
@@ -799,6 +816,8 @@ namespace DNNAzure
             {
                 Trace.TraceInformation("Stopping worker role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
 
+                Plugins.OnStop();
+
                 // Change the status to Busy
                 Busy = true;
 
@@ -836,8 +855,11 @@ namespace DNNAzure
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The <see cref="RoleEnvironmentChangingEventArgs" /> instance containing the event data.</param>
-        private static void RoleEnvironmentOnChanging(object sender, RoleEnvironmentChangingEventArgs e)
+        private void RoleEnvironmentOnChanging(object sender, RoleEnvironmentChangingEventArgs e)
         {
+            
+            Plugins.RoleEnvironmentOnChanging(sender, e);
+
             // Implements the changes after restarting the role instance
             foreach (RoleEnvironmentConfigurationSettingChange settingChange in e.Changes.Where(x => x is RoleEnvironmentConfigurationSettingChange))
             {
@@ -869,6 +891,8 @@ namespace DNNAzure
         /// <param name="roleInstanceStatusCheckEventArgs">The <see cref="RoleInstanceStatusCheckEventArgs"/> instance containing the event data.</param>
         private void RoleEnvironmentOnStatusCheck(object sender, RoleInstanceStatusCheckEventArgs roleInstanceStatusCheckEventArgs)
         {
+            Plugins.RoleEnvironmentOnStatusCheck(sender, roleInstanceStatusCheckEventArgs);
+
             if (_busy)
             {
                 roleInstanceStatusCheckEventArgs.SetBusy();

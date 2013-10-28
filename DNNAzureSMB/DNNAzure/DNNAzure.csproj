@@ -133,6 +133,10 @@
       <Project>{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}</Project>
       <Name>DNNShared</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DotNetNuke.Azure.Accelerator.Plugins\DotNetNuke.Azure.Accelerator.Plugins.csproj">
+      <Project>{2a19b314-74bf-4cd4-b3fa-6c1095af4cc4}</Project>
+      <Name>DotNetNuke.Azure.Accelerator.Plugins</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
