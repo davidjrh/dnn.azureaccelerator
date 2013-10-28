@@ -880,6 +880,10 @@ namespace DNNAzure
                             return;
                         }
                         break;
+                    case "Startup.ExternalTasks":
+                        Trace.TraceWarning("The specified configuration changes can't be made on a running instance. Recycling...");
+                        e.Cancel = true;
+                        return;
                 }                
             }
         }
