@@ -1641,7 +1641,7 @@ namespace DNNShared
                     Trace.TraceWarning(string.Format("Deleting previous addons file '{0}'...", addonsFile));
                     File.Delete(addonsFile);
                 }                
-                if (!DownloadAddons(addonsFile, addonsUrl))
+                if (!DownloadFile(addonsFile, addonsUrl))
                     return false;
                 
                 // Unzip downloaded file
@@ -1670,9 +1670,9 @@ namespace DNNShared
             }
         }
 
-        private static bool DownloadAddons(string destinationFile, string addonsUrl)
+        public static bool DownloadFile(string destinationFile, string url)
         {
-            if (string.IsNullOrEmpty(addonsUrl))
+            if (string.IsNullOrEmpty(url))
             {
                 return false;
             }
@@ -1683,15 +1683,15 @@ namespace DNNShared
             {
                 // Create a new WebClient instance.
                 var myWebClient = new WebClient();
-                Trace.TraceInformation(string.Format("Downloading addons file '{0}' from '{1}'...", destinationFile, addonsUrl));
+                Trace.TraceInformation(string.Format("Downloading addons file '{0}' from '{1}'...", destinationFile, url));
                 // Download the Web resource and save it into the current filesystem folder.
-                myWebClient.DownloadFile(addonsUrl, destinationFile);
-                Trace.TraceInformation("Successfully downloaded addons file \"{0}\" from \"{1}\"", destinationFile, addonsUrl);
+                myWebClient.DownloadFile(url, destinationFile);
+                Trace.TraceInformation("Successfully downloaded addons file \"{0}\" from \"{1}\"", destinationFile, url);
                 return true;
             }
             catch (Exception ex)
             {
-                Trace.TraceError(string.Format("Error while downloading addons file '{0}': {1}", addonsUrl, ex));
+                Trace.TraceError(string.Format("Error while downloading addons file '{0}': {1}", url, ex));
                 return false;
             }            
         }
