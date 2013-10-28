@@ -28,7 +28,7 @@
       <Setting name="AddonsUrl" value="" />
       <Setting name="UpdateService.Source" value="" />
       <Setting name="AppOffline.Folder" value="Offline" />
-      <Setting name="Plugins.Url" value="https://dnnclouddev.blob.core.windows.net/public/AzureWebRequestCachingProviderFix.zip" />
+      <Setting name="Plugins.Url" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
