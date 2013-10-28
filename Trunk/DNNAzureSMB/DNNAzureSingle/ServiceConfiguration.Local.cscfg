@@ -53,6 +53,7 @@
       <Setting name="WebPlatformInstaller.CustomFeed" value="" />
       <Setting name="appPool.Enable32bitApps" value="false" />
       <Setting name="Plugins.Url" value="" />
+      <Setting name="Startup.ExternalTasks" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
