@@ -13,5 +13,8 @@
     <DeploymentStorageServiceLabel>ipista</DeploymentStorageServiceLabel>
     <DeploymentLabel>DNNAzureSMB - 6/8/2011 3:04:14 AM</DeploymentLabel>
     <DeploymentPromptBeforeDeleting>True</DeploymentPromptBeforeDeleting>
+    <PackageProfile>Cloud</PackageProfile>
+    <PackageSolutionConfiguration>Release</PackageSolutionConfiguration>
+    <PackageEnableRemoteDesktop>False</PackageEnableRemoteDesktop>
   </PropertyGroup>
 </Project>
