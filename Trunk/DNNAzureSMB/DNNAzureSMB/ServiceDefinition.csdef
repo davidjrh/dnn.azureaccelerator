@@ -163,6 +163,7 @@
       <Setting name="appPool.Enable32bitApps" />
       <Setting name="Plugins.Url" />
       <Setting name="Startup.ExternalTasks" />
+      <Setting name="Startup.ExternalTasks.KeyValueSettings" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />

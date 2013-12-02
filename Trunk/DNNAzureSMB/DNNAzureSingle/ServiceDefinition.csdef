@@ -142,6 +142,7 @@
       <Setting name="appPool.Enable32bitApps" />
       <Setting name="Plugins.Url" />
       <Setting name="Startup.ExternalTasks" />
+      <Setting name="Startup.ExternalTasks.KeyValueSettings" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
