@@ -33,6 +33,7 @@ if ($localFolder -eq "") {
 # Create folder if does not exist
 Write-Log "Creating folder $localFolder"
 New-Item -ItemType Directory -Force -Path $localFolder
+cd $localFolder
 
 
 $file = "$localFolder\ExternalTasks.cmd"
