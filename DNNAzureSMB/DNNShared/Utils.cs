@@ -135,40 +135,6 @@ namespace DNNShared
 
 
         /// <summary>
-        /// Waits for mouting failure.
-        /// </summary>
-        /// <param name="drive">The drive.</param>
-        public static void WaitForMoutingFailure(CloudDrive drive)
-        {
-            var drivePath = drive.LocalPath;
-            if (RoleEnvironment.IsEmulated)
-            {
-                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
-                                          GetSetting("driveName"));
-            }
-
-            for (; ; )
-            {
-                try
-                {
-                    var logFileName = drivePath + @"\logs\MountStatus.log";
-                    AppendLogEntryWithRetries(logFileName, 5,
-                                              string.Format("Role {0} has the lease",
-                                                            RoleEnvironment.CurrentRoleInstance.Id));
-                    Thread.Sleep(5000);
-                }
-                catch (Exception ex)
-                {
-                    // Go back and remount it
-                    Trace.TraceWarning("Connection to the drive has been lost. Remounting the drive on role {0}. Error: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    break;
-                }
-            }    
-        }
-
-
-        /// <summary>
         /// Initializes the drive.
         /// </summary>
         /// <param name="storageConnectionString">The storage connection string.</param>

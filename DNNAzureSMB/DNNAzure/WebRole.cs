@@ -36,6 +36,9 @@ namespace DNNAzure
             }
         }
 
+        private volatile bool _onStopCalled = false;
+        private volatile bool _returnedFromRunMethod = false;
+
         /// <summary>
         /// Gets a value indicating whether this instance is SMB server.
         /// </summary>
@@ -68,12 +71,7 @@ namespace DNNAzure
         private PluginsManager _plugins;
         private PluginsManager Plugins
         {
-            get
-            {
-                if (_plugins == null)
-                    _plugins = new PluginsManager(Utils.GetSetting("Plugins.Url"));
-                return _plugins;
-            }
+            get { return _plugins ?? (_plugins = new PluginsManager(Utils.GetSetting("Plugins.Url"))); }
         }
 
 
@@ -370,13 +368,24 @@ namespace DNNAzure
         /// <summary>
         /// Competes for the cloud drive lease.
         /// </summary>
-        private static void CompeteForMount()
+        private void CompeteForMount()
         {
 
             for (; ; )
             {
                 _driveMounted = false;
                 _drivePath = "";
+
+                if (_onStopCalled)
+                {
+                    Trace.TraceInformation("onStopCalled WorkerRole");
+                    // Cleanup resources
+                    OnStopCleanup();
+                    _returnedFromRunMethod = true;
+                    return;
+                }
+
+
                 try
                 {
                     Trace.TraceInformation("Competing for mount {0}...", RoleEnvironment.CurrentRoleInstance.Id);
@@ -413,7 +422,12 @@ namespace DNNAzure
                 Utils.SetupOfflineSiteSettings(_drive.LocalPath);
 
                 // Now, spin checking if the drive is still accessible.
-                Utils.WaitForMoutingFailure(_drive);
+                WaitForMoutingFailure(_drive);
+
+                if (_returnedFromRunMethod)
+                {
+                    return;
+                }
 
                 // Drive is not accessible. Remove the share
                 Utils.DeleteShare(Utils.GetSetting("shareName"));
@@ -431,6 +445,50 @@ namespace DNNAzure
         }
         // ReSharper restore FunctionNeverReturns
 
+
+
+        /// <summary>
+        /// Waits for mouting failure.
+        /// </summary>
+        /// <param name="drive">The drive.</param>
+        /// <returns>Returns true if there was a mounting failure; false if the </returns>
+        public void WaitForMoutingFailure(CloudDrive drive)
+        {
+            var drivePath = drive.LocalPath;
+            if (RoleEnvironment.IsEmulated)
+            {
+                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
+                                          Utils.GetSetting("driveName"));
+            }
+
+            for (; ; )
+            {
+                if (_onStopCalled)
+                {
+                    Trace.TraceInformation("onStopCalled WorkerRole");
+                    // Cleanup resources
+                    OnStopCleanup();
+                    _returnedFromRunMethod = true;
+                    return;
+                }
+
+                try
+                {
+                    var logFileName = drivePath + @"\logs\MountStatus.log";
+                    Utils.AppendLogEntryWithRetries(logFileName, 5,
+                                              string.Format("Role {0} has the lease",
+                                                            RoleEnvironment.CurrentRoleInstance.Id));
+                    Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    // Go back and remount it
+                    Trace.TraceWarning("Connection to the drive has been lost. Remounting the drive on role {0}. Error: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+                    break;
+                }
+            }
+        }
 
         /// <summary>
         /// Enables the SMB firewall traffic.
@@ -812,14 +870,26 @@ namespace DNNAzure
         /// </remarks>
         public override void OnStop()
         {
+            _onStopCalled = true;
+            Trace.TraceInformation("OnStop called from Worker Role.");
+            while (_returnedFromRunMethod == false)
+            {
+                Trace.TraceInformation("Waiting for returnedFromRunMethod");
+                Thread.Sleep(1000);
+            }
+            Trace.TraceInformation("returnedFromRunMethod is true, so restarting");
+        }
+
+        private void OnStopCleanup()
+        {
             try
             {
                 Trace.TraceInformation("Stopping worker role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
 
-                Plugins.OnStop();
-
                 // Change the status to Busy
                 Busy = true;
+
+                Plugins.OnStop();
 
                 // clean up directory link
                 Utils.DeleteSymbolicLink(LocalPath);
@@ -840,14 +910,15 @@ namespace DNNAzure
                     catch (Exception ex)
                     {
                         Trace.TraceWarning("Error while unmounting the cloud drive on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    }                    
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Trace.TraceError("Error while stopping the role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-            }
-            base.OnStop();
+            }            
+            // At least we will have the trace events in the event viewer
+            Trace.Flush();
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -19,6 +20,9 @@ namespace SMBServer
         private static string _drivePath;
         private static CloudDrive _drive;
         private static bool _driveMounted;
+
+        private volatile bool _onStopCalled = false;
+        private volatile bool _returnedFromRunMethod = false;
 
         /// <summary>
         /// Called by Windows Azure to initialize the role instance.
@@ -110,13 +114,23 @@ namespace SMBServer
         /// <summary>
         /// Competes for the cloud drive lease.
         /// </summary>
-        private static void CompeteForMount()
+        private void CompeteForMount()
         {
 
             for (; ; )
             {
                 _driveMounted = false;
                 _drivePath = "";
+                
+                if (_onStopCalled)
+                {
+                    Trace.TraceInformation("onStopCalled WorkerRole");
+                    // Cleanup resources
+                    OnStopCleanup();
+                    _returnedFromRunMethod = true;
+                    return;
+                }
+
                 try
                 {
                     Trace.TraceInformation("Competing for mount {0}...", RoleEnvironment.CurrentRoleInstance.Id);
@@ -153,7 +167,13 @@ namespace SMBServer
                 Utils.SetupOfflineSiteSettings(_drive.LocalPath);
 
                 // Now, spin checking if the drive is still accessible.
-                Utils.WaitForMoutingFailure(_drive);
+                WaitForMoutingFailure(_drive);
+
+
+                if (_returnedFromRunMethod)
+                {
+                    return;
+                }
 
                 // Drive is not accessible. Remove the share
                 Utils.DeleteShare(Utils.GetSetting("shareName"));
@@ -171,7 +191,48 @@ namespace SMBServer
         }
 // ReSharper restore FunctionNeverReturns
 
+        /// <summary>
+        /// Waits for mouting failure.
+        /// </summary>
+        /// <param name="drive">The drive.</param>
+        /// <returns>Returns true if there was a mounting failure; false if the </returns>
+        public void WaitForMoutingFailure(CloudDrive drive)
+        {
+            var drivePath = drive.LocalPath;
+            if (RoleEnvironment.IsEmulated)
+            {
+                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
+                                          Utils.GetSetting("driveName"));
+            }
 
+            for (; ; )
+            {
+                if (_onStopCalled)
+                {
+                    Trace.TraceInformation("onStopCalled WorkerRole");
+                    // Cleanup resources
+                    OnStopCleanup();
+                    _returnedFromRunMethod = true;
+                    return;
+                }
+
+                try
+                {
+                    var logFileName = drivePath + @"\logs\MountStatus.log";
+                    Utils.AppendLogEntryWithRetries(logFileName, 5,
+                                              string.Format("Role {0} has the lease",
+                                                            RoleEnvironment.CurrentRoleInstance.Id));
+                    Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    // Go back and remount it
+                    Trace.TraceWarning("Connection to the drive has been lost. Remounting the drive on role {0}. Error: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+                    break;
+                }
+            }
+        }
 
         /// <summary>
         /// Enables the SMB firewall traffic.
@@ -207,7 +268,22 @@ namespace SMBServer
         /// Any exception that occurs within the OnStop method is an unhandled exception.
         ///   </para>
         /// </remarks>
+        /// 
         public override void OnStop()
+        {
+            _onStopCalled = true;
+            Trace.TraceInformation("OnStop called from Worker Role.");
+            while (_returnedFromRunMethod == false)
+            {
+                Trace.TraceInformation("Waiting for returnedFromRunMethod");
+                Thread.Sleep(1000);
+            }
+            Trace.TraceInformation("returnedFromRunMethod is true, so restarting");
+
+
+        }
+
+        private void OnStopCleanup()
         {
             try
             {
@@ -234,8 +310,6 @@ namespace SMBServer
             {
                 Trace.TraceError("Error while stopping the role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
             }
-
-            base.OnStop();
         }
 
         /// <summary>
