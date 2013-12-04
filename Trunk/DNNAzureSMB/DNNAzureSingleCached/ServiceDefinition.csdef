@@ -149,7 +149,7 @@
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
       <LocalStorage name="WebPITemp" cleanOnRoleRecycle="true" sizeInMB="500" />
       <LocalStorage name="DiagnosticStore" sizeInMB="20000" cleanOnRoleRecycle="false" />
-      <LocalStorage name="SitesRoot" cleanOnRoleRecycle="true" sizeInMB="100" />
+      <LocalStorage name="SitesRoot" cleanOnRoleRecycle="false" sizeInMB="100" />
     </LocalResources>
     <Certificates>
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
