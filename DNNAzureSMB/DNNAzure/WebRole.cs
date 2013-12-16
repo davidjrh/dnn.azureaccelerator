@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
@@ -362,8 +364,115 @@ namespace DNNAzure
             {
                 Trace.TraceError("Failed to setup IIS: {0}", ex);
             }
-            
+
+            SetupAuditPrivilege();
         }
+
+        /// <summary>
+        /// Changes the local security policies needed for WCF services to generate security audits by including the Application pool name to 
+        /// the "Local Policies\User Rights Assignment\Generate securrity audits" policy. This security setting determines which accounts can be 
+        /// used by a process to add entries to the security log. The security log is used to trace unauthorized system access. Misuse of this user 
+        /// right can result in the generation of many auditing events, potentially hiding evidence of an attack or causing a denial of service 
+        /// if the Audit: Shut down system immediately if unable to log security audits security policy setting is enabled. For more information 
+        /// see Audit: Shut down system immediately if unable to log security audits.
+        /// </summary>
+        private static void SetupAuditPrivilege()
+        {
+            string tmp1 = "", tmp2 = "";
+            try
+            {
+                const string accountToSetup = @"IIS AppPool\" + AppPoolName;
+                Trace.TraceInformation("Configuring audit privileges for account {0}...", accountToSetup);
+
+                var principal = new System.Security.Principal.NTAccount(accountToSetup);
+                var sid = principal.Translate(typeof(System.Security.Principal.SecurityIdentifier));
+                var sidstr = sid.Value;
+
+                if (string.IsNullOrEmpty(sidstr))
+                {
+                    Trace.TraceWarning("Can't setup adudit privileges: account not found");
+                    return;
+                }
+
+                // Exports current local security policy
+                tmp1 = Path.GetTempFileName();
+                string errorDes;
+                var error = Utils.ExecuteCommand("secedit.exe", string.Format("/export /cfg \"{0}\"", tmp1), out errorDes,
+                    10000);
+                if (error != 0)
+                {
+                    return;
+                }
+
+                // Search for the current values
+                var content = File.ReadAllText(tmp1);
+                var regEx = new Regex(@"(SeAuditPrivilege\s=\s(?<currentSettingValue>.*\n))");
+                var match = regEx.Match(content);
+                if (match.Success)
+                {
+                    // If the security setting has been added just exit
+                    if (match.Groups["currentSettingValue"].Success &&
+                        match.Groups["currentSettingValue"].Value.Contains(sidstr))
+                    {
+                        Trace.TraceInformation("Audit privileges already configured for application pool account");
+                        return;
+                    }
+
+                    // Generate a file to import with the merged SID value
+                    var newValue = "*" + sidstr +
+                                   (match.Groups["currentSettingValue"].Success
+                                       ? "," + match.Groups["currentSettingValue"].Value
+                                       : "");
+                    var outfileContents = string.Format(@"[Unicode]
+Unicode=yes
+[Version]
+signature=""$CHICAGO$""
+Revision=1
+[Privilege Rights]
+SeAuditPrivilege = {0}
+", newValue);
+                    tmp2 = Path.GetTempFileName();
+                    File.WriteAllText(tmp2, outfileContents, Encoding.Unicode);
+
+                    // Import the security setting
+                    error = Utils.ExecuteCommand("secedit.exe", string.Format("/configure /db \"secedit.sdb\" /cfg \"{0}\" /areas USER_RIGHTS ", tmp2), out errorDes,
+                        10000);
+                    if (error != 0)
+                    {
+                        Trace.TraceWarning("Failed to setup audit privileges for the App pool identity. See previous errors.");
+                    }
+                }
+                else
+                {
+                    Trace.TraceError(
+                        "'Generate security audits' local security policy not found. Can't setup WCF permissions.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Failed to setup audit privileges for the App pool identity: {0}", ex.Message);
+            }
+            finally
+            {
+                // Cleanup
+                try
+                {
+                    if (File.Exists(tmp1))
+                    {
+                        File.Delete(tmp1);
+                    }
+                    if (File.Exists(tmp2))
+                    {
+                        File.Delete(tmp2);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning("Error while deleting the temp files on the Audit privileges: {0}", ex.Message);
+                }
+            }
+        }
+
 
         /// <summary>
         /// Competes for the cloud drive lease.
@@ -375,7 +484,6 @@ namespace DNNAzure
             {
                 _driveMounted = false;
                 _drivePath = "";
-
                 if (_onStopCalled)
                 {
                     Trace.TraceInformation("onStopCalled WorkerRole");
