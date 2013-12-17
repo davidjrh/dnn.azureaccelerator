@@ -96,7 +96,7 @@ New-Item -ItemType Directory -Force -Path $localFolder
 cd $localFolder
 
 # Split the URL in individual startup tasks
-$tasks = $tasksUrl.Split(";",[System.StringSplitOptions]::RemoveEmptyEntries)
+$tasks = $tasksUrl.Split(" ",[System.StringSplitOptions]::RemoveEmptyEntries)
 $i = 0
 foreach ($task in $tasks) {
     Process-ExternalTask $task.Trim() $localFolder $i
