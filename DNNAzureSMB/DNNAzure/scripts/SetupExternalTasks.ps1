@@ -3,7 +3,6 @@
     [string]$localFolder = ""
 )
 
-
 # Function to unzip file contents
 function Expand-ZIPFile($file, $destination)
 {
@@ -32,7 +31,7 @@ function Process-ExternalTask($taskUrl, $localFolder, $index) {
         if ($taskUrl.ToLower().EndsWith(".zip")) {
             $file = "$localFolder\ExternalTasks_$index.zip"
         }
-        if ($taskUrl.ToLower().EndsWith(".ps1")) {
+        elseif ($taskUrl.ToLower().EndsWith(".ps1")) {
             $file = "$localFolder\ExternalTasks_$index.ps1"
         }
 
@@ -44,19 +43,23 @@ function Process-ExternalTask($taskUrl, $localFolder, $index) {
 
         # If the tasks are zipped, unzip them first
         if ($taskUrl.ToLower().EndsWith(".zip")) {
+            
+            New-Item -ItemType Directory -Force -Path "$localFolder\$index"
+            cd "$localFolder\$index"
+
             Write-Log "Unzipping $file..."
-            Expand-ZIPFile -file "$file" -destination $localFolder
-            Write-Log "Unzip completed"
+            Expand-ZIPFile -file "$file" -destination "$localFolder\$index"
+            Write-Log "Unzip completed"            
 
             # When a .zip file is specied, only files called "Task???.cmd" and "Task???.ps1" will be executed
             # This allows to include assemblies and other file dependencies in the zip file
-            Get-ChildItem $localFolder | Where-Object {$_.Name.ToLower() -match "task[0-9][0-9][0-9].[cmd|ps1]"} | Sort-Object $_.Name | ForEach-Object {
-                Write-Log "Executing $localfolder\$_"        
+            Get-ChildItem "$localFolder\$index" | Where-Object {$_.Name.ToLower() -match "task[0-9][0-9][0-9].[cmd|ps1]"} | Sort-Object $_.Name | ForEach-Object {
+                Write-Log "Executing $localfolder\$index\$_"        
                 if ($_.Name.ToLower().EndsWith(".ps1")) {
-                    powershell.exe "$localFolder\$_"
+                    powershell.exe "$localFolder\$index\$_"
                 }
                 elseif ($_.Name.ToLower().EndsWith(".cmd")) {
-                    cmd.exe /C "$localFolder\$_"
+                    cmd.exe /C "$localFolder\$index\$_"
                 }
             }
         }
@@ -70,6 +73,7 @@ function Process-ExternalTask($taskUrl, $localFolder, $index) {
     catch {
         Write-Log "Error while processing task $i : " + $_.Exception.Message
     }
+    cd $localFolder
 }
 
 
@@ -80,6 +84,11 @@ if ($tasksUrl -eq "") {
 
 if ($localFolder -eq "") {
     $localFolder = "$pwd\External"
+}
+
+# Clean the folder if exists
+if (Test-Path $localFolder) {
+    Remove-Item $localFolder\* -Recurse -Force
 }
 
 # Create folder if does not exist
