@@ -93,7 +93,7 @@ namespace DNNAzureWizard
                     (txtPassword.Text.Contains(txtAdminUser.Text)) ||
                     !Regex.Match(txtPassword.Text, FrmDNNAzureWizard.PasswordStrengthRegex).Success)
                 {
-                     throw new ApplicationException("The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols.");
+                    throw new ApplicationException(string.Format("The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols (excluding {0}).", FrmDNNAzureWizard.NotAllowedSymbols));
                 }
 
                 if (txtPassword.Text != txtConfirmPassword.Text)
