@@ -95,6 +95,21 @@ namespace DNNAzureWizard
 
         #region " Event Handlers "
 
+        private void cmdCopyClipboard_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (MessageBox.Show("You are going to put sensitive data in your clipboard. Are you sure?", "Copy to clipboard", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    Clipboard.SetText(GetSettingsSummary(false));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+        }
+
         private void FrmDNNAzureWizardLoad(object sender, EventArgs e)
         {
             try
@@ -934,7 +949,7 @@ namespace DNNAzureWizard
             return !invalidInput;
         }
 
-        private string GetSettingsSummary()
+        private string GetSettingsSummary(bool hideSensitiveData = true) 
         {
             var summary = new StringBuilder("======================= SUMMARY OF SETTINGS =======================");
             if (optSubscription.Checked)
@@ -947,7 +962,7 @@ namespace DNNAzureWizard
             summary.AppendLine("");
             summary.AppendLine("STORAGE ACCOUNT SETTINGS:");
             summary.AppendLine("- Storage name: " + (optSubscription.Checked ? cboStorage.Text : txtStorageName.Text.Trim()));
-            summary.AppendLine("- Storage key: " + txtStorageKey.Text.Trim());
+            summary.AppendLine("- Storage key: " + (hideSensitiveData?"<not shown>": txtStorageKey.Text.Trim()));
             summary.AppendLine("- Storage package container: " + txtStorageContainer.Text.Trim());
             summary.AppendLine("- VHD blob name: " + (optSubscription.Checked ? txtVHDName.Text.Trim() : txtVHDBlobName.Text.Trim()));
             summary.AppendLine("- VHD size: " + (optSubscription.Checked ? txtVHDDriveSize.Text.Trim() : txtVHDSize.Text.Trim()));
@@ -955,9 +970,9 @@ namespace DNNAzureWizard
             summary.AppendLine("DATABASE SETTINGS:");
             summary.AppendLine("- DB Server Name: " + (txtDBServer.Visible ? txtDBServer.Text : cboDatabase.Text) + ".database.windows.net");
             summary.AppendLine("- DB Admin user name: " + txtDBAdminUser.Text.Trim());
-            summary.AppendLine("- DB Admin password: <not shown>");
+            summary.AppendLine("- DB Admin password: " + (hideSensitiveData?"<not shown>": txtDBAdminPassword.Text));
             summary.AppendLine("- DB user name: " + txtDBUser.Text.Trim());
-            summary.AppendLine("- DB password: <not shown>");
+            summary.AppendLine("- DB password: " + (hideSensitiveData?"<not shown>": txtDBPassword.Text));
             summary.AppendLine("");
 
             summary.AppendLine("REMOTE MANAGEMENT SETTINGS:");
@@ -972,7 +987,7 @@ namespace DNNAzureWizard
 #if DEBUG
                 summary.AppendLine("- Password: " + EncryptWithCertificate(txtRDPPassword.Text, Certificate));
 #else
-                summary.AppendLine("- Password: <not shown>");
+                summary.AppendLine("- Password: " + (hideSensitiveData?"<not shown>":txtRDPPassword.Text));
 #endif
                 summary.AppendLine("- Expires: " + cboRDPExpirationDate.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK"));
                 if (chkEnableRDP.Checked)
@@ -1988,6 +2003,11 @@ namespace DNNAzureWizard
         public void ReloadDeploymentPackages()
         {
             lstPackages.Items.Clear();
+
+            if (!Directory.Exists(Path.Combine(Environment.CurrentDirectory, "packages")))
+            {
+                return;
+            }
             foreach (FileInfo filedef in new DirectoryInfo(Environment.CurrentDirectory + "\\packages").GetFiles("*.xml"))
             {
                 var doc = new XmlDocument();
@@ -2977,5 +2997,6 @@ namespace DNNAzureWizard
             }
         }
         #endregion
+
     }
 }
