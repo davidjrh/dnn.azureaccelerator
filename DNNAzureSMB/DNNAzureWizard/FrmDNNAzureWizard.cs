@@ -40,7 +40,7 @@ namespace DNNAzureWizard
         private const string CustomLabel = "<Custom package Url...>";
         private const string ImportPublishSettings = "<Import publish settings file...>";
 
-        /* The following expression to validate a pwd of 6 to 16 characters and contain three of the following 4 items: 
+        /* The following expression to validate a pwd of 6 to 48 characters and contain three of the following 4 items: 
          * upper case letter, lower case letter, a symbol, a number
          * An explanation of individual components:
          *      (?=^[^\s]{6,16}$) - contain between 8 and 16 non-whitespace characters
@@ -49,7 +49,8 @@ namespace DNNAzureWizard
          *      (?=.*?[a-z]) - contains 1 lowercase character
          *      (?=.*?[^\w\d\s]) - contains 1 symbol
          */
-        internal const string PasswordStrengthRegex = @"(?=^[^\s]{6,16}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
+        internal const string PasswordStrengthRegex = @"(?=^[^\s][^<>&'""?\+;`%#]{6,48}$)((?=.*?\d)(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[^\w\d\s])(?=.*?[a-z])|(?=.*?[^\w\d\s])(?=.*?[A-Z])(?=.*?[a-z])|(?=.*?\d)(?=.*?[A-Z])(?=.*?[^\w\d\s]))^.*";
+        internal const string NotAllowedSymbols = @"<>&'""?\+;`%#";
         internal const string ValidUrlRegex = @"^(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?$";
 
         private enum WizardTabs
@@ -2204,7 +2205,7 @@ namespace DNNAzureWizard
                 (txtRDPPassword.Text.Contains(txtRDPUser.Text)) ||
                 !Regex.Match(txtRDPPassword.Text, PasswordStrengthRegex).Success)
             {
-                error = "The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols.";
+                error = string.Format("The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols (excluding {0}).", NotAllowedSymbols);
             }
             errProv.SetError((Control)sender, error);
         }
@@ -2287,7 +2288,7 @@ namespace DNNAzureWizard
                 (txtDBPassword.Text.Contains(txtDBUser.Text)) ||
                 !Regex.Match(txtDBPassword.Text, PasswordStrengthRegex).Success)
             {
-                error = "The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols.";
+                error = string.Format("The password does not conform to complexity requirements. Ensure the password does not contain the user account name or parts of it. The Password should be at least six characters long and contain a mixture of upper, lower case, digits and symbols (excluding {0}).", NotAllowedSymbols);
             }
             errProv.SetError((Control)sender, error);
         }
