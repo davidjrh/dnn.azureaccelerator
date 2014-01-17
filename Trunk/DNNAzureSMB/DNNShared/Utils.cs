@@ -276,7 +276,14 @@ namespace DNNShared
                 if (Directory.Exists(localPath))
                 {
                     Trace.TraceInformation("Deleting symbolic link {0} on worker role {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
-                    Directory.Delete(localPath);
+                    if (SymbolicLink.Exists(localPath))
+                    {
+                        Directory.Delete(localPath);
+                    }
+                    else
+                    {
+                        Directory.Delete(localPath, true);
+                    }   
                 }
             }
             catch (Exception ex)
