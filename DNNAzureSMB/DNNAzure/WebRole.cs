@@ -105,9 +105,17 @@ namespace DNNAzure
         /// </remarks>
         public override bool OnStart()
         {
-
-            // Set the maximum number of concurrent connections 
+            #region Tips for performance
+            // Set the maximum number of concurrent connections (for Azure Storage better performance)
+            // http://social.msdn.microsoft.com/Forums/en-US/windowsazuredata/thread/d84ba34b-b0e0-4961-a167-bbe7618beb83
             ServicePointManager.DefaultConnectionLimit = int.Parse(Utils.GetSetting("DefaultConnectionLimit", "1000"));
+
+            // Turn off 100-continue (saves 1 roundtrip)
+            ServicePointManager.Expect100Continue = false;
+
+            // Turning off Nagle may help Inserts/Updates
+            ServicePointManager.UseNagleAlgorithm = false;
+            #endregion
 
             // Setup OnStatuscheck event
             RoleEnvironment.StatusCheck += RoleEnvironmentOnStatusCheck;
@@ -121,7 +129,6 @@ namespace DNNAzure
 
             // Inits the Diagnostic Monitor
             Utils.ConfigureDiagnosticMonitor();
-
 
             if (IsSMBServer)
             {

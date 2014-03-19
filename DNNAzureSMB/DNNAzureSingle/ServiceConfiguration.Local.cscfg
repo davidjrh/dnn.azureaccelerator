@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*" schemaVersion="2013-03.2.0">
+<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*" schemaVersion="2013-10.2.2">
   <Role name="DNNAzure">
     <Instances count="1" />
     <ConfigurationSettings>

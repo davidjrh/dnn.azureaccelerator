@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.ServiceRuntime;
@@ -17,7 +18,11 @@ namespace DNNShared
     {
         #region Constants
 
+#if DEBUG
+        private const string PluginsPath = @".\";
+#else
         private const string PluginsPath = @".\plugins";
+#endif
 
         #endregion
 
@@ -119,13 +124,12 @@ namespace DNNShared
                 if (!string.IsNullOrEmpty(pluginsUrl))
                 {
                     var pluginsZipPath = Path.GetTempFileName();
-                    DNNShared.Utils.DownloadFile(pluginsZipPath, pluginsUrl);
-                    DNNShared.Utils.UnzipFile(pluginsZipPath, PluginsPath, true);
+                    Utils.DownloadFile(pluginsZipPath, pluginsUrl);
+                    Utils.UnzipFile(pluginsZipPath, PluginsPath, true);
                     // We no longer need the downloaded ZIP file
-                    File.Delete(pluginsZipPath);
-
-                    Plugins = LoadPlugins(PluginsPath);
+                    File.Delete(pluginsZipPath);                    
                 }
+                Plugins = LoadPlugins(PluginsPath);
             }
             catch (Exception ex)
             {
@@ -149,40 +153,21 @@ namespace DNNShared
                 dllFileNames.AddRange(Directory.GetFiles(path, "*.dll"));
             }
 
-            ICollection<Assembly> assemblies = new List<Assembly>(dllFileNames.Count);
-            foreach (var dllFile in dllFileNames)
-            {
-                var an = AssemblyName.GetAssemblyName(dllFile);
-                var assembly = Assembly.Load(an);
-                assemblies.Add(assembly);
-            }
+            var assemblies = new List<Assembly>(dllFileNames.Count);
+            assemblies.AddRange(dllFileNames.Select(AssemblyName.GetAssemblyName).Select(Assembly.Load));
 
             var pluginType = typeof(IPlugin);
-            ICollection<Type> pluginTypes = new List<Type>();
-            foreach (var assembly in assemblies)
-            {
-                if (assembly != null)
-                {
-                    var types = assembly.GetTypes();
-                    foreach (var type in types)
-                    {
-                        if (!type.IsInterface && !type.IsAbstract)
-                        {
-                            if (type.GetInterface(pluginType.FullName) != null)
-                            {
-                                pluginTypes.Add(type);
-                            }
-                        }
-                    }
-                }
-            }
+            var pluginTypes = (from assembly in assemblies
+                where assembly != null
+                from type in assembly.GetTypes()
+                where !type.IsInterface && !type.IsAbstract
+                where
+                    type.GetInterface(pluginType.FullName) != null && type != typeof (PluginsManager) &&
+                    type != typeof (PluginBase)
+                select type).Distinct().ToList();
 
-            ICollection<IPlugin> plugins = new List<IPlugin>(pluginTypes.Count);
-            foreach (Type type in pluginTypes)
-            {
-                var plugin = (IPlugin)Activator.CreateInstance(type);
-                plugins.Add(plugin);
-            }
+            var plugins = new List<IPlugin>(pluginTypes.Count);
+            plugins.AddRange(pluginTypes.Select(type => (IPlugin) Activator.CreateInstance(type)));
             return plugins;
         }
 
