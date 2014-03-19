@@ -20,6 +20,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Diagnostics;
+using Microsoft.WindowsAzure.Diagnostics.Management;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using System.Configuration;
@@ -775,7 +776,7 @@ namespace DNNShared
                     Trace.TraceInformation("Web site content successfully deployed.");
                 }
                 else
-                    Trace.TraceWarning("The content already exists. No action taken.");
+                    Trace.TraceInformation("The content already exists. No action taken.");
                 return true;
             }
             catch (Exception ex)
@@ -969,10 +970,14 @@ namespace DNNShared
         public static void ConfigureDiagnosticMonitor()
         {
             Trace.TraceInformation("Configuring diagnostic monitor...");
+            var diagnosticsConnectionString =
+                RoleEnvironment.GetConfigurationSettingValue(
+                    "Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString");
 
             // TODO put these settings on the service configuration file
             var transferPeriod = TimeSpan.FromMinutes(1);
-            var bufferQuotaInMB = 100;
+            var transferDirectoriesPeriod = TimeSpan.FromMinutes(5);
+            var bufferQuotaInMB = 512;
 
             // Add Windows Azure Trace Listener
             Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
@@ -990,7 +995,7 @@ namespace DNNShared
             config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
 
             // File-based logs
-            config.Directories.ScheduledTransferPeriod = transferPeriod;
+            config.Directories.ScheduledTransferPeriod = transferDirectoriesPeriod;
             config.Directories.BufferQuotaInMB = bufferQuotaInMB;
 
             config.DiagnosticInfrastructureLogs.ScheduledTransferPeriod = transferPeriod;
@@ -1015,7 +1020,31 @@ namespace DNNShared
             config.PerformanceCounters.ScheduledTransferPeriod = transferPeriod;
             config.PerformanceCounters.BufferQuotaInMB = bufferQuotaInMB;
 
-            DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
+            // Stores the diagnostics configuration in storage
+            try
+            {
+                var diagManager = new DeploymentDiagnosticManager(diagnosticsConnectionString,
+                    RoleEnvironment.DeploymentId);
+                var roleInstanceManager =
+                    diagManager.GetRoleInstanceDiagnosticManager(RoleEnvironment.CurrentRoleInstance.Role.Name,
+                        RoleEnvironment.CurrentRoleInstance.Id);
+                roleInstanceManager.SetCurrentConfiguration(config);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("Error while updating the diagnostics configuration in storage: " + ex.Message);
+            }
+
+            // Starts the diagnostics monitor
+            try
+            {
+                DiagnosticMonitor.StartWithConnectionString(diagnosticsConnectionString, config);
+            }
+            catch (ArgumentException aex)
+            {
+                 Trace.WriteLine("Couldn’t start the DiagnosticMonitor." + aex.Message);
+            }
+            
             Trace.TraceInformation("Diagnostics Setup complete");
         }
 

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2013-03.2.0">
-  <WebRole name="DNNAzure" vmsize="Small">
+<ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2013-10.2.2">
+  <WebRole name="DNNAzure" vmsize="Medium">
     <Runtime executionContext="elevated">
     </Runtime>
     <Startup>
@@ -148,6 +148,7 @@
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
       <LocalStorage name="WebPITemp" cleanOnRoleRecycle="true" sizeInMB="500" />
       <LocalStorage name="SitesRoot" cleanOnRoleRecycle="false" sizeInMB="100" />
+      <LocalStorage name="DiagnosticStore" cleanOnRoleRecycle="false" sizeInMB="20000" />
     </LocalResources>
     <Certificates>
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
