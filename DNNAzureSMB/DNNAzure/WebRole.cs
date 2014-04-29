@@ -408,6 +408,7 @@ namespace DNNAzure
                     10000);
                 if (error != 0)
                 {
+                    Trace.TraceError("Could not export the local security policy: {0}", errorDes);
                     return;
                 }
 
@@ -753,6 +754,10 @@ SeAuditPrivilege = {0}
                     Trace.TraceInformation("Enabling user isolation to 'User name directory'...");
                     site.GetChildElement("ftpServer").GetChildElement("userIsolation")["mode"] = "StartInUsersDirectory";
 
+                    site.LogFile.Period = LoggingRolloverPeriod.Hourly;
+                    site.LogFile.Directory = Path.Combine(RoleEnvironment.GetLocalResource("DiagnosticStore").RootPath,
+                        @"LogFiles\Ftp");
+
                     serverManager.CommitChanges();
                 }
             }
@@ -851,6 +856,13 @@ SeAuditPrivilege = {0}
                     Trace.TraceInformation("Setting application pool to the website...");
                     site.ApplicationDefaults.ApplicationPoolName = AppPoolName;
                     offlineSite.ApplicationDefaults.ApplicationPoolName = AppPoolName;
+
+                    site.LogFile.Period = LoggingRolloverPeriod.Hourly;
+                    site.LogFile.Directory = Path.Combine(RoleEnvironment.GetLocalResource("DiagnosticStore").RootPath,
+                        @"LogFiles\Web");
+                    offlineSite.LogFile.Period = site.LogFile.Period;
+                    offlineSite.LogFile.Directory = site.LogFile.Directory;
+
 
                     // Commit all changes
                     serverManager.CommitChanges();
