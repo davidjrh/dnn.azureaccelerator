@@ -97,6 +97,9 @@
     <Content Include="images\error.png" />
     <Content Include="images\info.png" />
     <Content Include="images\warning.png" />
+    <None Include="scripts\CreateIISLogFolders.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="scripts\en\WebpiCmd.resources.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
