@@ -155,6 +155,7 @@
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />
       <Certificate name="SSL.CA1" storeLocation="LocalMachine" storeName="My" />
       <Certificate name="SSL.CA2" storeLocation="LocalMachine" storeName="My" />
+      <Certificate name="SSL.CA3" storeLocation="LocalMachine" storeName="My" />
     </Certificates>
   </WebRole>
 </ServiceDefinition>
