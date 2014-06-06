@@ -81,6 +81,7 @@
       <Certificate name="SSL" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
       <Certificate name="SSL.CA1" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
       <Certificate name="SSL.CA2" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA3" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
     </Certificates>
   </Role>
 </ServiceConfiguration>
