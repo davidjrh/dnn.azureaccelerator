@@ -726,7 +726,7 @@ namespace DNNShared
                     Directory.CreateDirectory(webSitePath);
                 }
                 const string localDnnPackageFilename = "DNNPackage.zip";
-                string packageFile = Path.Combine(Path.GetTempPath(), localDnnPackageFilename);
+                string packageFile = Path.Combine(RoleEnvironment.GetLocalResource("WebPITemp").RootPath, localDnnPackageFilename);
                 // Delete previous failed attemps of web site creation
                 if (File.Exists(packageFile))
                 {
