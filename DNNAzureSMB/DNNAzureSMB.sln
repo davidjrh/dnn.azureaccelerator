@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30110.0
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cloud Service Packages", "Cloud Service Packages", "{69CB10B5-024F-4751-8CF3-EAECD235FF05}"
 EndProject
@@ -14,21 +14,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 		ReleaseNotes.txt = ReleaseNotes.txt
 	EndProjectSection
 EndProject
-Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "DNNAzureSMB", "DNNAzureSMB\DNNAzureSMB.ccproj", "{1512B578-B7DB-4CAD-823F-CDC910A708B7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMBServer", "SMBServer\SMBServer.csproj", "{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNAzure", "DNNAzure\DNNAzure.csproj", "{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNAzureWizard", "DNNAzureWizard\DNNAzureWizard.csproj", "{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB}"
 EndProject
-Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "DNNAzureSingle", "DNNAzureSingle\DNNAzureSingle.ccproj", "{C3C027B3-4B57-49F2-844A-B137A3435CBA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNNShared", "DNNShared\DNNShared.csproj", "{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}"
+Project("{864BB3E1-6DE1-30E8-9864-5C496B9000A7}") = "DNNAzureSingle", "DNNAzureSingle\DNNAzureSingle.ccproj", "{C3C027B3-4B57-49F2-844A-B137A3435CBA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Azure.Accelerator", "DotNetNuke.Azure.Accelerator\DotNetNuke.Azure.Accelerator.csproj", "{E0AA0D55-E39F-464F-9974-3E302D3A3598}"
 EndProject
-Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "DNNAzureSingleCached", "DNNAzureSingleCached\DNNAzureSingleCached.ccproj", "{A139D209-EC82-4EE9-9B83-34A4EE6CE344}"
+Project("{864BB3E1-6DE1-30E8-9864-5C496B9000A7}") = "DNNAzureSingleCached", "DNNAzureSingleCached\DNNAzureSingleCached.ccproj", "{A139D209-EC82-4EE9-9B83-34A4EE6CE344}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{7A822FB7-E7A1-4D63-8544-A63FDB7AE371}"
 EndProject
@@ -36,46 +30,34 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Azure.Accelerato
 EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 10
+		SccNumberOfProjects = 7
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs22
 		SccLocalPath0 = .
-		SccProjectUniqueName1 = DNNAzureSMB\\DNNAzureSMB.ccproj
+		SccProjectUniqueName1 = DNNAzure\\DNNAzure.csproj
 		SccProjectTopLevelParentUniqueName1 = DNNAzureSMB.sln
-		SccProjectName1 = DNNAzureSMB
-		SccLocalPath1 = DNNAzureSMB
-		SccProjectUniqueName2 = SMBServer\\SMBServer.csproj
+		SccProjectName1 = DNNAzure
+		SccLocalPath1 = DNNAzure
+		SccProjectUniqueName2 = DNNAzureWizard\\DNNAzureWizard.csproj
 		SccProjectTopLevelParentUniqueName2 = DNNAzureSMB.sln
-		SccProjectName2 = SMBServer
-		SccLocalPath2 = SMBServer
-		SccProjectUniqueName3 = DNNAzure\\DNNAzure.csproj
+		SccProjectName2 = DNNAzureWizard
+		SccLocalPath2 = DNNAzureWizard
+		SccProjectUniqueName3 = DNNAzureSingle\\DNNAzureSingle.ccproj
 		SccProjectTopLevelParentUniqueName3 = DNNAzureSMB.sln
-		SccProjectName3 = DNNAzure
-		SccLocalPath3 = DNNAzure
-		SccProjectUniqueName4 = DNNAzureWizard\\DNNAzureWizard.csproj
+		SccProjectName3 = DNNAzureSingle
+		SccLocalPath3 = DNNAzureSingle
+		SccProjectUniqueName4 = DotNetNuke.Azure.Accelerator\\DotNetNuke.Azure.Accelerator.csproj
 		SccProjectTopLevelParentUniqueName4 = DNNAzureSMB.sln
-		SccProjectName4 = DNNAzureWizard
-		SccLocalPath4 = DNNAzureWizard
-		SccProjectUniqueName5 = DNNAzureSingle\\DNNAzureSingle.ccproj
+		SccProjectName4 = DotNetNuke.Azure.Accelerator
+		SccLocalPath4 = DotNetNuke.Azure.Accelerator
+		SccProjectUniqueName5 = DNNAzureSingleCached\\DNNAzureSingleCached.ccproj
 		SccProjectTopLevelParentUniqueName5 = DNNAzureSMB.sln
-		SccProjectName5 = DNNAzureSingle
-		SccLocalPath5 = DNNAzureSingle
-		SccProjectUniqueName6 = DNNShared\\DNNShared.csproj
+		SccProjectName5 = DNNAzureSingleCached
+		SccLocalPath5 = DNNAzureSingleCached
+		SccProjectUniqueName6 = DotNetNuke.Azure.Accelerator.Plugins\\DotNetNuke.Azure.Accelerator.Plugins.csproj
 		SccProjectTopLevelParentUniqueName6 = DNNAzureSMB.sln
-		SccProjectName6 = DNNShared
-		SccLocalPath6 = DNNShared
-		SccProjectUniqueName7 = DotNetNuke.Azure.Accelerator\\DotNetNuke.Azure.Accelerator.csproj
-		SccProjectTopLevelParentUniqueName7 = DNNAzureSMB.sln
-		SccProjectName7 = DotNetNuke.Azure.Accelerator
-		SccLocalPath7 = DotNetNuke.Azure.Accelerator
-		SccProjectUniqueName8 = DNNAzureSingleCached\\DNNAzureSingleCached.ccproj
-		SccProjectTopLevelParentUniqueName8 = DNNAzureSMB.sln
-		SccProjectName8 = DNNAzureSingleCached
-		SccLocalPath8 = DNNAzureSingleCached
-		SccProjectUniqueName9 = DotNetNuke.Azure.Accelerator.Plugins\\DotNetNuke.Azure.Accelerator.Plugins.csproj
-		SccProjectTopLevelParentUniqueName9 = DNNAzureSMB.sln
-		SccProjectName9 = DotNetNuke.Azure.Accelerator.Plugins
-		SccLocalPath9 = DotNetNuke.Azure.Accelerator.Plugins
+		SccProjectName6 = DotNetNuke.Azure.Accelerator.Plugins
+		SccLocalPath6 = DotNetNuke.Azure.Accelerator.Plugins
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -86,26 +68,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7}.Release|x86.ActiveCfg = Release|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7}.Release|x86.ActiveCfg = Release|Any CPU
 		{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -138,16 +100,6 @@ Global
 		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{C3C027B3-4B57-49F2-844A-B137A3435CBA}.Release|x86.ActiveCfg = Release|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE}.Release|x86.ActiveCfg = Release|Any CPU
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -183,14 +135,11 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{1512B578-B7DB-4CAD-823F-CDC910A708B7} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
-		{C3C027B3-4B57-49F2-844A-B137A3435CBA} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
-		{A139D209-EC82-4EE9-9B83-34A4EE6CE344} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
-		{E20E816A-B031-4D1A-9988-3D49BF2DDEE7} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
 		{98F2B7C6-03FD-4B41-A54A-C96CE9E0856F} = {D9F15ADA-CD43-4104-B1B6-5E2CAA9EECCF}
 		{7D6A58DC-303C-4808-AC6C-C4EC97EF0BCB} = {3AFC3AC8-068B-4A3B-8941-159DFCE47076}
+		{C3C027B3-4B57-49F2-844A-B137A3435CBA} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
 		{E0AA0D55-E39F-464F-9974-3E302D3A3598} = {3AFC3AC8-068B-4A3B-8941-159DFCE47076}
-		{8793D1A3-7514-425A-8FCF-BDF6985AFCFE} = {7A822FB7-E7A1-4D63-8544-A63FDB7AE371}
+		{A139D209-EC82-4EE9-9B83-34A4EE6CE344} = {69CB10B5-024F-4751-8CF3-EAECD235FF05}
 		{2A19B314-74BF-4CD4-B3FA-6C1095AF4CC4} = {7A822FB7-E7A1-4D63-8544-A63FDB7AE371}
 	EndGlobalSection
 EndGlobal

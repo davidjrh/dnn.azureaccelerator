@@ -1,4 +1,4 @@
-namespace DNNShared
+namespace DNNAzure.Components
 {
     public class SqlConnectionSettings
     {

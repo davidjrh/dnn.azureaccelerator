@@ -1,5 +1,4 @@
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,10 +7,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using DNNAzure.Components;
 using Microsoft.WindowsAzure.ServiceRuntime;
-using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.Web.Administration;
-using DNNShared;
 
 namespace DNNAzure
 {
@@ -22,10 +20,6 @@ namespace DNNAzure
         private const string AppPoolName = "DotNetNukeApp";
         private const string SitesRoot = "root";
 
-        private static string _drivePath;
-        private static CloudDrive _drive;
-        private static bool _driveMounted;
-
         private volatile bool _busy = true;
         private bool Busy
         {
@@ -35,28 +29,6 @@ namespace DNNAzure
                 _busy = value;
                 Trace.TraceInformation(_busy ? "Role instance {0} is going Busy" : "Role instance {0} is going Ready",
                                        RoleEnvironment.CurrentRoleInstance.Id);
-            }
-        }
-
-        private volatile bool _onStopCalled = false;
-        private volatile bool _returnedFromRunMethod = false;
-
-        /// <summary>
-        /// Gets a value indicating whether this instance is SMB server.
-        /// </summary>
-        /// <value>
-        /// <c>true</c> if this instance is SMB server; otherwise, <c>false</c>.
-        /// </value>
-        private static bool IsSMBServer 
-        { 
-            get
-            {
-                try
-                {
-                    // Role "SMBServer" does not exist, so the webrole will act as a SMB Server
-                    return RoleEnvironment.Roles.All(x => x.Key != "SMBServer");  
-                }
-                catch { return true; }                
             }
         }
 
@@ -126,37 +98,13 @@ namespace DNNAzure
             // Setup OnChanged event
             RoleEnvironment.Changed += RoleEnvironmentOnChanged;
 
-
             // Inits the Diagnostic Monitor
             Utils.ConfigureDiagnosticMonitor();
 
-            if (IsSMBServer)
-            {
-                Trace.TraceInformation("Creating DNNAzure instance as a SMB Server");
+            Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
 
-                // Mount the drive and publish on the same server
-                try
-                {
-                    // Create windows user accounts for shareing the drive and other FTP related
-                    Utils.CreateUserAccounts();
+            // Create Azure Storgea File Share 
 
-                    // Enable SMB traffic through the firewall
-                    EnableSMBFirewallTraffic();
-
-                    // Setup the drive object
-                    _drive = Utils.InitializeCloudDrive(Utils.GetSetting("AcceleratorConnectionString"),
-                                                            Utils.GetSetting("driveContainer"),
-                                                            Utils.GetSetting("driveName"),
-                                                            Utils.GetSetting("driveSize"));
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceError("Fatal error on the OnStart event: {0}", ex);
-                    throw;
-                }
-            }
-            else
-                Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
 
             Plugins.OnStart();
 
@@ -195,7 +143,7 @@ namespace DNNAzure
                                                                            RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["HttpsInOffline"].IPEndpoint.Port);
                         }
                         // Setup IIS sites
-                        SetupIISSites();
+                        SetupIisSites();
                     }
 
                 }
@@ -234,18 +182,9 @@ namespace DNNAzure
 
             try
             {
-                // Create another thread to continuosly check for the mapped network drive
-                ThreadPool.QueueUserWorkItem(o => SetupNetworkDriveAndWebsite());
+                SetupNetworkDriveAndWebsite();
 
-                if (IsSMBServer)
-                {
-                    // If acts as a SMB server, compete for the drive lease
-                    CompeteForMount();
-                }
-                else
-                {
-                    base.Run();
-                }
+                base.Run();
             }
             catch (Exception ex)
             {
@@ -282,10 +221,10 @@ namespace DNNAzure
                 Busy = true;
                 try
                 {
-                    if (Utils.CreateSymbolicLink(LocalPath, shareName, userName, password, (IsSMBServer?"DNNAzure":"SMBServer")))
+                    if (Utils.CreateSymbolicLink(LocalPath, shareName, userName, password, "DNNAzure"))
                     {
                         // Setup IIS - Website and FTP site
-                        SetupIISSites();
+                        SetupIisSites();
 
                         // Change the status to Ready
                         Busy = false;
@@ -319,13 +258,13 @@ namespace DNNAzure
         /// <summary>
         /// Setups the IIS sites.
         /// </summary>
-        private static void SetupIISSites()
+        private static void SetupIisSites()
         {
             Trace.TraceInformation("Setting up IIS configuration...");
             // Create the DNN Web site
             try
             {
-                if (CreateDNNWebSite(Utils.GetSetting("hostHeaders"),
+                if (CreateDnnWebSite(Utils.GetSetting("hostHeaders"),
                                           Path.Combine(LocalPath, Utils.GetSetting("dnnFolder")),
                                           Path.Combine(LocalPath, Utils.GetSetting("AppOffline.Folder")),
                                           Utils.GetSetting("fileshareUserName"),
@@ -338,21 +277,21 @@ namespace DNNAzure
                     if (bool.Parse(Utils.GetSetting("FTP.Enabled", "False")))
                     {
                         // Create the FTP site
-                        var externalIP =
+                        var externalIp =
                             Utils.GetExternalIP(
                                 Utils.GetSetting("FTP.ExternalIpProvider.Url", @"http://checkip.dyndns.org/"),
                                 Utils.GetSetting("FTP.ExternalIpProvider.RegexPattern", @"[^\d\.]*"));
 
-                        CreateDNNFTPSite(Utils.GetSetting("hostHeaders"),
+                        CreateDnnftpSite(Utils.GetSetting("hostHeaders"),
                                          Utils.GetSetting("FTP.Root.Username"),
                                          Utils.GetSetting("FTP.Portals.Username"),
                                          Path.Combine(LocalPath, Utils.GetSetting("dnnFolder")),
                                          Path.Combine(Path.Combine(LocalPath, Utils.GetSetting("dnnFolder")), "Portals"),
                                          WebSiteName,
-                                         externalIP,
+                                         externalIp,
                                          RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port,
                                          RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port);
-                        if (!string.IsNullOrEmpty(externalIP))
+                        if (!string.IsNullOrEmpty(externalIp))
                         {
                             Utils.RestartService("FTPSVC");
                         }
@@ -483,151 +422,6 @@ SeAuditPrivilege = {0}
 
 
         /// <summary>
-        /// Competes for the cloud drive lease.
-        /// </summary>
-        private void CompeteForMount()
-        {
-
-            for (; ; )
-            {
-                _driveMounted = false;
-                _drivePath = "";
-                if (_onStopCalled)
-                {
-                    Trace.TraceInformation("onStopCalled WorkerRole");
-                    // Cleanup resources
-                    OnStopCleanup();
-                    _returnedFromRunMethod = true;
-                    return;
-                }
-
-
-                try
-                {
-                    Trace.TraceInformation("Competing for mount {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-                    Utils.MountCloudDrive(_drive);
-                    _driveMounted = true;
-                    Trace.TraceInformation("{0} Successfully mounted the drive!", RoleEnvironment.CurrentRoleInstance.Id);
-                }
-                catch (Exception ex)
-                {
-                    if (ex.Message.Equals("ERROR_LEASE_LOCKED"))
-                    {
-                        //Trace.TraceInformation("{0} could not mount the drive. The lease is locked. Will retry in 5 seconds.",
-                        //                   RoleEnvironment.CurrentRoleInstance.Id);
-                    }
-                    else
-                    {
-                        Trace.TraceWarning("{0} could not mount the drive, Will retry in 5 seconds. Reason: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    }
-                }
-
-                if (!_driveMounted)
-                {
-                    Thread.Sleep(5000);
-                    continue;   // Compete again for the lease
-                }
-
-                // Shares the drive
-                _drivePath = Utils.ShareDrive(_drive);
-
-                // Setup the website settings
-                Utils.SetupWebSiteSettings(_drive);
-
-                // Setup the offline site settings
-                Utils.SetupOfflineSiteSettings(_drive.LocalPath);
-
-                // Now, spin checking if the drive is still accessible.
-                WaitForMoutingFailure(_drive);
-
-                if (_returnedFromRunMethod)
-                {
-                    return;
-                }
-
-                // Drive is not accessible. Remove the share
-                Utils.DeleteShare(Utils.GetSetting("shareName"));
-                try
-                {
-                    Trace.TraceInformation("Unmounting cloud drive on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-                    _drive.Unmount();
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceWarning("Error while unmounting the cloud drive on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);                    
-                }
-            }
-            // ReSharper disable FunctionNeverReturns
-        }
-        // ReSharper restore FunctionNeverReturns
-
-
-
-        /// <summary>
-        /// Waits for mouting failure.
-        /// </summary>
-        /// <param name="drive">The drive.</param>
-        /// <returns>Returns true if there was a mounting failure; false if the </returns>
-        public void WaitForMoutingFailure(CloudDrive drive)
-        {
-            var drivePath = drive.LocalPath;
-            if (RoleEnvironment.IsEmulated)
-            {
-                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
-                                          Utils.GetSetting("driveName"));
-            }
-
-            for (; ; )
-            {
-                if (_onStopCalled)
-                {
-                    Trace.TraceInformation("onStopCalled WorkerRole");
-                    // Cleanup resources
-                    OnStopCleanup();
-                    _returnedFromRunMethod = true;
-                    return;
-                }
-
-                try
-                {
-                    var logFileName = drivePath + @"\logs\MountStatus.log";
-                    Utils.AppendLogEntryWithRetries(logFileName, 5,
-                                              string.Format("Role {0} has the lease",
-                                                            RoleEnvironment.CurrentRoleInstance.Id));
-                    Thread.Sleep(5000);
-                }
-                catch (Exception ex)
-                {
-                    // Go back and remount it
-                    Trace.TraceWarning("Connection to the drive has been lost. Remounting the drive on role {0}. Error: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Enables the SMB firewall traffic.
-        /// </summary>
-        /// <exception cref="System.Configuration.ConfigurationErrorsException">Could not setup the firewall rules. See previous errors</exception>
-        private static void EnableSMBFirewallTraffic()
-        {
-            if (Utils.EnableSMBFirewallTraffic() != 0)
-            {
-                throw new ConfigurationErrorsException("Could not setup the firewall rules. See previous errors");
-            }
-
-            if (bool.Parse(Utils.GetSetting("FTP.Enabled", "False")))
-            {
-                // Enable FTP traffic through the firewall
-                if (Utils.EnableFTPFirewallTraffic() != 0)
-                {
-                    Trace.TraceWarning("Coud not setup the FTP firewall rules. See previous errors");
-                }
-            }
-        }
-
-        /// <summary>
         /// Creates the DNNFTP site.
         /// </summary>
         /// <param name="hostHeaders">The host headers.</param>
@@ -640,7 +434,7 @@ SeAuditPrivilege = {0}
         /// <param name="lowDataChannelPort">The low data channel port.</param>
         /// <param name="highDataChannelPort">The high data channel port.</param>
         /// <returns></returns>
-        private static bool CreateDNNFTPSite(string hostHeaders, string rootUsername, string portalsAdminUsername, string siteRoot, string portalsRoot, string webSiteName, string externalIP, int lowDataChannelPort, int highDataChannelPort)
+        private static bool CreateDnnftpSite(string hostHeaders, string rootUsername, string portalsAdminUsername, string siteRoot, string portalsRoot, string webSiteName, string externalIP, int lowDataChannelPort, int highDataChannelPort)
         {
             Trace.TraceInformation("Creating FTP site...");
             try
@@ -780,7 +574,7 @@ SeAuditPrivilege = {0}
         /// <param name="sslHostHeader">Host header for SSL binding</param>
         /// <param name="sslThumbprint">Certificate thumbprint of the SSL binding</param>
         /// <returns></returns>
-        private static bool CreateDNNWebSite(string hostHeaders, string homePath, string offlinePath, string userName, string password, string sslThumbprint, string sslHostHeader)
+        private static bool CreateDnnWebSite(string hostHeaders, string homePath, string offlinePath, string userName, string password, string sslThumbprint, string sslHostHeader)
         {
             // Create the user account for the Application Pool. 
             Trace.TraceInformation("Creating user account for the Application Pool");
@@ -997,14 +791,9 @@ SeAuditPrivilege = {0}
         /// </remarks>
         public override void OnStop()
         {
-            _onStopCalled = true;
             Trace.TraceInformation("OnStop called from Worker Role.");
-            while (_returnedFromRunMethod == false)
-            {
-                Trace.TraceInformation("Waiting for returnedFromRunMethod");
-                Thread.Sleep(1000);
-            }
-            Trace.TraceInformation("returnedFromRunMethod is true, so restarting");
+            OnStopCleanup();
+            Trace.TraceInformation("Worker role stopped");
         }
 
         private void OnStopCleanup()
@@ -1012,33 +801,13 @@ SeAuditPrivilege = {0}
             try
             {
                 Trace.TraceInformation("Stopping worker role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-
                 // Change the status to Busy
                 Busy = true;
-
                 Plugins.OnStop();
 
                 // clean up directory link
                 Utils.DeleteSymbolicLink(LocalPath);
 
-                // Remove the share
-                if (!string.IsNullOrEmpty(_drivePath))
-                {
-                    Utils.DeleteShare(Utils.GetSetting("shareName"));
-                }
-
-                if (_driveMounted && _drive != null)
-                {
-                    try
-                    {
-                        Trace.TraceInformation("Unmounting cloud drive on role {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-                        _drive.Unmount();
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.TraceWarning("Error while unmounting the cloud drive on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    }
-                }
             }
             catch (Exception ex)
             {
@@ -1065,20 +834,8 @@ SeAuditPrivilege = {0}
                 switch (settingChange.ConfigurationSettingName)
                 {
                     case "AcceleratorConnectionString":
-                    case "driveName":
-                    case "driveSize":
-                    case "fileshareUserName":
-                    case "fileshareUserPassword":
-                    case "shareName":
-                    case "driveContainer":
-                        if (IsSMBServer)    
-                        {
-                            Trace.TraceWarning("The specified configuration changes can't be made on a running instance. Recycling...");
-                            e.Cancel = true;
-                            return;
-                        }
-                        break;
                     case "Startup.ExternalTasks":
+
                         Trace.TraceWarning("The specified configuration changes can't be made on a running instance. Recycling...");
                         e.Cancel = true;
                         return;
@@ -1095,7 +852,7 @@ SeAuditPrivilege = {0}
         {
             Plugins.RoleEnvironmentOnStatusCheck(sender, roleInstanceStatusCheckEventArgs);
 
-            if (_busy)
+            if (Busy)
             {
                 roleInstanceStatusCheckEventArgs.SetBusy();
             }

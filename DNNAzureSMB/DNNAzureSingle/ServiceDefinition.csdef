@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2013-10.2.2">
+<ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-01.2.3">
   <WebRole name="DNNAzure" vmsize="Medium">
     <Runtime executionContext="elevated">
     </Runtime>
@@ -98,9 +98,6 @@
     </Imports>
     <ConfigurationSettings>
       <Setting name="AcceleratorConnectionString" />
-      <Setting name="driveName" />
-      <Setting name="driveSize" />
-      <Setting name="driveContainer" />
       <Setting name="DatabaseConnectionString" />
       <Setting name="dnnFolder" />
       <Setting name="hostHeaders" />
@@ -109,8 +106,6 @@
       <Setting name="fileshareUserName" />
       <Setting name="fileshareUserPassword" />
       <Setting name="shareName" />
-      <Setting name="localPath" />
-      <Setting name="SMBMode" />
       <Setting name="packageContainer" />
       <Setting name="package" />
       <Setting name="packageUrl" />

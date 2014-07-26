@@ -5,10 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.ServiceRuntime;
 using DotNetNuke.Azure.Accelerator.Plugins;
+using Microsoft.WindowsAzure.ServiceRuntime;
 
-namespace DNNShared
+namespace DNNAzure.Components
 {
     ///<summary>
     /// This class is responsible for the plugins management, i.e. it loads all the assemblies that implements the <see cref="PluginInterface.IPlugin"/> interface, and it calls the corresponding 
