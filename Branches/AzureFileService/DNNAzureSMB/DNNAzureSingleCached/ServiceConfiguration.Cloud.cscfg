@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceConfiguration serviceName="DNNAzureSingleCached" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="4" osVersion="*" schemaVersion="2013-10.2.2">
+  <Role name="DNNAzure">
+    <Instances count="1" />
+    <ConfigurationSettings>
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=http;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="driveName" value="@@VHDBLOBNAME@@" />
+      <Setting name="driveSize" value="@@VHDBLOBSIZE@@" />
+      <Setting name="driveContainer" value="azure-accelerator-drives" />
+      <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
+      <Setting name="dnnFolder" value="DotNetNuke" />
+      <Setting name="hostHeaders" value="@@HOSTHEADERS@@" />
+      <Setting name="managedRuntimeVersion" value="v4.0" />
+      <Setting name="managedPipelineMode" value="Integrated" />
+      <Setting name="fileshareUserName" value="fileshareuser" />
+      <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
+      <Setting name="shareName" value="sharerw" />
+      <Setting name="localPath" value="X:" />
+      <Setting name="SMBMode" value="false" />
+      <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
+      <Setting name="package" value="" />
+      <Setting name="packageUrl" value="@@PACKAGEURL@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="@@RDPENABLED@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="@@RDPUSERNAME@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="@@RDPPASSWORD@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="@@RDPEXPIRATIONDATE@@" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="@@RDPENABLED@@" />
+      <Setting name="DBAdminUser" value="@@DBADMINUSER@@" />
+      <Setting name="DBAdminPassword" value="@@DBADMINPASSWORD@@" />
+      <Setting name="ShowDeploymentProgressDetails" value="false" />
+      <Setting name="packageInstallConfiguration" value="" />
+      <Setting name="appPool.IdleTimeout" value="Infinite" />
+      <Setting name="appPool.StartupTimeLimit" value="180" />
+      <Setting name="appPool.PingResponseTime" value="180" />
+      <Setting name="InstallationDate" value="" />
+      <Setting name="AddonsUrl" value="" />
+      <Setting name="SSL.CertificateThumbprint" value="@@SSLTHUMBPRINT@@" />
+      <Setting name="SSL.HostHeader" value="" />
+      <Setting name="WebPlatformInstaller.Products" value="@@WPIPRODUCTS@@" />
+      <Setting name="WebPlatformInstaller.Enabled" value="true" />
+      <Setting name="IISRemoteManagement.Enabled" value="@@REMOTEMGMTENABLED@@" />
+      <Setting name="FTP.Enabled" value="@@FTPSERVERENABLED@@" />
+      <Setting name="FTP.Root.Username" value="@@FTPROOTUSERNAME@@" />
+      <Setting name="FTP.Root.EncryptedPassword" value="@@FTPROOTPASSWORD@@" />
+      <Setting name="FTP.Portals.Username" value="@@FTPPORTALSUSERNAME@@" />
+      <Setting name="FTP.Portals.EncryptedPassword" value="@@FTPPORTALSPASSWORD@@" />
+      <Setting name="FTP.ExternalIpProvider.Url" value="http://checkip.dyndns.org/" />
+      <Setting name="FTP.ExternalIpProvider.RegexPattern" value="[^\d\.]*" />
+      <Setting name="UpdateService.Source" value="" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Caching.NamedCaches" value="{&quot;caches&quot;:[{&quot;name&quot;:&quot;default&quot;,&quot;policy&quot;:{&quot;eviction&quot;:{&quot;type&quot;:0},&quot;expiration&quot;:{&quot;defaultTTL&quot;:10,&quot;isExpirable&quot;:true,&quot;type&quot;:1},&quot;serverNotification&quot;:{&quot;isEnabled&quot;:false}},&quot;secondaries&quot;:0},{&quot;name&quot;:&quot;DotNetNuke&quot;,&quot;policy&quot;:{&quot;eviction&quot;:{&quot;type&quot;:0},&quot;expiration&quot;:{&quot;defaultTTL&quot;:10,&quot;isExpirable&quot;:true,&quot;type&quot;:1},&quot;serverNotification&quot;:{&quot;isEnabled&quot;:true}},&quot;secondaries&quot;:0}]}" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Caching.DiagnosticLevel" value="1" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Caching.CacheSizePercentage" value="20" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Caching.ConfigStoreConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="AppOffline.Enabled" value="false" />
+      <Setting name="AppOffline.Folder" value="Offline" />
+      <Setting name="WebPlatformInstaller.CustomFeed" value="@@WPICUSTOMFEED@@" />
+      <Setting name="appPool.Enable32bitApps" value="false" />
+      <Setting name="Plugins.Url" value="" />
+      <Setting name="Startup.ExternalTasks" value="" />
+      <Setting name="Startup.ExternalTasks.KeyValueSettings" value="" />
+    </ConfigurationSettings>
+    <Certificates>
+      <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL" thumbprint="00DEAD557BEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA1" thumbprint="00DEAD557CA1BEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA2" thumbprint="00DEAD557CA2BEEF00" thumbprintAlgorithm="sha1" />
+      <Certificate name="SSL.CA3" thumbprint="00DEAD557CA2BEEF00" thumbprintAlgorithm="sha1" />
+    </Certificates>
+  </Role>
+</ServiceConfiguration>
