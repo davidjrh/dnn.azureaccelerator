@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DNNShared.Exceptions
+namespace DNNAzure.Components
 {
     class CompressOperationException
         : Exception

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace DNNShared
+namespace DNNAzure.Components
 {
     /// <remarks>
     /// Refer to http://msdn.microsoft.com/en-us/library/windows/hardware/ff552012%28v=vs.85%29.aspx

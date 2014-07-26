@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Web.UI.WebControls;
-using DNNShared;
+using DNNAzure.Components;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.StorageClient;
 using Microsoft.WindowsAzure;

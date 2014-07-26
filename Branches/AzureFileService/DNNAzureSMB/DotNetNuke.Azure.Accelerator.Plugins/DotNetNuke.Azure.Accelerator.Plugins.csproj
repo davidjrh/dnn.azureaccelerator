@@ -11,7 +11,7 @@
     <AssemblyName>DotNetNuke.Azure.Accelerator.Plugins</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <SccProjectName>%24/dnnazureaccelerator/Trunk/DNNAzureSMB/DotNetNuke.Azure.Accelerator.Plugins</SccProjectName>
+    <SccProjectName>%24/dnnazureaccelerator/Branches/AzureFileService/DNNAzureSMB/DotNetNuke.Azure.Accelerator.Plugins</SccProjectName>
     <SccLocalPath>.</SccLocalPath>
     <SccAuxPath>https://tfs.codeplex.com/tfs/tfs22</SccAuxPath>
     <SccProvider>{4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}</SccProvider>

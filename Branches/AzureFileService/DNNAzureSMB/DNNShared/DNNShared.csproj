@@ -82,12 +82,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Exceptions\CompressOperationException.cs" />
-    <Compile Include="PluginsManager.cs" />
-    <Compile Include="SqlConnectionSettings.cs" />
-    <Compile Include="SymbolicLink.cs" />
-    <Compile Include="SymbolicLinkReparseData.cs" />
-    <Compile Include="Utils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -121,6 +115,9 @@
   <ItemGroup>
     <Content Include="assemblies\ICSharpCode.SharpZipLib.dll" />
     <Content Include="assemblies\Microsoft.Web.Administration.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

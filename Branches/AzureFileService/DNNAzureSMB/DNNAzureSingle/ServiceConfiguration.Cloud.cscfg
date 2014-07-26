@@ -1,13 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="4" osVersion="*" schemaVersion="2013-10.2.2">
+<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="4" osVersion="*" schemaVersion="2014-01.2.3">
   <Role name="DNNAzure">
     <Instances count="1" />
     <ConfigurationSettings>
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
       <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=http;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
-      <Setting name="driveName" value="@@VHDBLOBNAME@@" />
-      <Setting name="driveSize" value="@@VHDBLOBSIZE@@" />
-      <Setting name="driveContainer" value="azure-accelerator-drives" />
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
       <Setting name="dnnFolder" value="DotNetNuke" />
       <Setting name="hostHeaders" value="@@HOSTHEADERS@@" />
@@ -16,8 +13,6 @@
       <Setting name="fileshareUserName" value="fileshareuser" />
       <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
       <Setting name="shareName" value="sharerw" />
-      <Setting name="localPath" value="X:" />
-      <Setting name="SMBMode" value="false" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />
       <Setting name="packageUrl" value="@@PACKAGEURL@@" />

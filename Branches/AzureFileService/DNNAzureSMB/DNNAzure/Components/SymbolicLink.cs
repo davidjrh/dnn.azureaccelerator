@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-namespace DNNShared
+namespace DNNAzure.Components
 {
     public static class SymbolicLink
     {
