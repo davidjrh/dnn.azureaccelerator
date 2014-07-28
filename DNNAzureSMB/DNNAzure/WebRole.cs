@@ -103,8 +103,11 @@ namespace DNNAzure
 
             Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
 
-            // Create Azure Storgea File Share 
+            // Create windows user accounts for shareing the drive and other FTP related
+            Utils.CreateUserAccounts();
 
+            // Create Azure Storage File Share 
+            Utils.CreateStorageFileShare();
 
             Plugins.OnStart();
 
@@ -183,8 +186,6 @@ namespace DNNAzure
             try
             {
                 SetupNetworkDriveAndWebsite();
-
-                base.Run();
             }
             catch (Exception ex)
             {
@@ -197,15 +198,15 @@ namespace DNNAzure
         private void SetupNetworkDriveAndWebsite()
         {
             Trace.TraceInformation("Setting up network drive and website...");
-            string shareName = Utils.GetSetting("shareName");
+            var shareName = Utils.GetSetting("shareName");
             var userName = Utils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
             var password =
                 Utils.DecryptPassword(
                     Utils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword"));
 
-            string logDir = Path.Combine(LocalPath, "logs");
-            string fileName = RoleEnvironment.CurrentRoleInstance.Id + ".txt";
-            string logFilePath = Path.Combine(logDir, fileName);
+            var logDir = Path.Combine(LocalPath, "logs");
+            var fileName = RoleEnvironment.CurrentRoleInstance.Id + ".txt";
+            var logFilePath = Path.Combine(logDir, fileName);
 
             Trace.TraceInformation("Impersonating with user {0}...", userName);
             var impersonationContext = Utils.ImpersonateValidUser(userName, "", password);
@@ -221,7 +222,7 @@ namespace DNNAzure
                 Busy = true;
                 try
                 {
-                    if (Utils.CreateSymbolicLink(LocalPath, shareName, userName, password, "DNNAzure"))
+                    if (Utils.CreateSymbolicLink(LocalPath, shareName))
                     {
                         // Setup IIS - Website and FTP site
                         SetupIisSites();

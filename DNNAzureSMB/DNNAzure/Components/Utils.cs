@@ -11,17 +11,21 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
-using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.Diagnostics.Management;
 using Microsoft.WindowsAzure.ServiceRuntime;
-using Microsoft.WindowsAzure.StorageClient;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.File;
+using LogLevel = Microsoft.WindowsAzure.Diagnostics.LogLevel;
 
 #endregion
 
@@ -36,31 +40,7 @@ namespace DNNAzure.Components
         public const int SleepTimeBetweenWriteErrors = 1000;
         public const int SleepTimeBeforeStartToRemap = 5000;
 
-        #region Cloud Drive operations
-
-
-
-        /// <summary>
-        /// Mounts the VHD as a local drive
-        /// </summary>
-        /// <returns>A string with the path of the local mounted drive</returns>
-        public static string MountCloudDrive(CloudDrive drive)
-        {
-            if (drive == null) throw new ArgumentNullException("drive");
-
-            // Mount the Cloud Drive    
-            var driveLetter = drive.Mount(RoleEnvironment.GetLocalResource("AzureDriveCache").MaximumSizeInMegabytes, DriveMountOptions.None);
-            try
-            {
-                AppendLogEntryWithRetries(driveLetter + "\\logs\\MountHistory.log", 5,
-                                          string.Format("Drive mounted by {0}", RoleEnvironment.CurrentRoleInstance.Id));
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceWarning("Error while writing on the mount history log file on role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-            } 
-            return driveLetter;
-        }
+        #region Cloud Storage operations
 
         /// <summary>
         /// Appends the current date and time to the log file, retrying the operation to avoid false positives
@@ -92,161 +72,68 @@ namespace DNNAzure.Components
             }
         }
 
-        /// <summary>
-        /// Shares the drive.
-        /// </summary>
-        /// <param name="drive">The drive.</param>
-        /// <returns></returns>
-        public static string ShareDrive(CloudDrive drive)
+        public static void CreateStorageFileShare()
         {
-            // Modify path to share a specific directory on the drive
-            var drivePath = drive.LocalPath;
-            if (RoleEnvironment.IsEmulated)
-            {
-                drivePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                          @"dftmp\wadd\devstoreaccount1\drivecontainer",
-                                          GetSetting("driveName"));
-            }
-
-            // Share it using SMB (add permissions for RDP user if it's configured)
-            var rdpUserName = "";
-            try
-            {
-                rdpUserName =
-                    GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
-            }
-            catch
-            {
-                Trace.TraceWarning("No RDP user name was specified. Consider enabling RDP for better maintenance options.");
-            }
-
-            // The cloud drive can't be shared if it is running on Windows Azure Compute Emulator. 
-            ShareLocalFolder(new[]
-                                    {
-                                        GetSetting("fileshareUserName"),
-                                        rdpUserName,
-                                        GetSetting("FTP.Root.Username"),
-                                        GetSetting("FTP.Portals.Username")
-                                    },
-                                drivePath,
-                                GetSetting("shareName"));
-            return drivePath;
+            var account = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue(
+                "AcceleratorConnectionString"));
+            var client = account.CreateCloudFileClient();
+            var share = client.GetShareReference(RoleEnvironment.GetConfigurationSettingValue(
+                "shareName"));
+            share.CreateIfNotExistsAsync().Wait();
         }
-
-
-        /// <summary>
-        /// Initializes the drive.
-        /// </summary>
-        /// <param name="storageConnectionString">The storage connection string.</param>
-        /// <param name="driveContainerName">Name of the drive container.</param>
-        /// <param name="driveName">Name of the drive.</param>
-        /// <param name="driveSize">Size of the drive.</param>
-        /// <returns></returns>
-        public static CloudDrive InitializeCloudDrive(string storageConnectionString, string driveContainerName, string driveName, string driveSize)
+        public static bool CreateSymbolicLink(string localPath, string shareName)
         {
-            try
-            {
-                Trace.TraceInformation("Setting up drive object...");
-                var blobClient = CloudStorageAccount.Parse(storageConnectionString).CreateCloudBlobClient();
-
-                var driveContainer = blobClient.GetContainerReference(driveContainerName);
-                Trace.TraceInformation("Creating VHD container if not exists...");
-                driveContainer.CreateIfNotExist();
-
-                Trace.TraceInformation("Drive local cache initialization...");
-                var localCache = RoleEnvironment.GetLocalResource("AzureDriveCache");
-                CloudDrive.InitializeCache(localCache.RootPath, localCache.MaximumSizeInMegabytes);
-
-                Trace.TraceInformation("Creating cloud drive...");
-                var drive = new CloudDrive(driveContainer.GetBlobReference(driveName).Uri, blobClient.Credentials);
-                try
-                {
-                    drive.CreateIfNotExist(int.Parse(driveSize));
-                }
-                catch (CloudDriveException ex)
-                {
-                    Trace.TraceWarning("Error while creating cloud drive on SMB worker role: {0}", ex);
-                }
-                return drive;
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError("Fatal error while setting up the Drive object: {0}", ex);
-                throw;
-            }
-        }
-
-        public static bool CreateSymbolicLink(string localPath, string shareName, string userName, string password, string smbRoleName)
-        {
-
             // Cleanup stale mounts
             DeleteSymbolicLink(localPath);
 
-            int i = 1;
-            bool found;
-            string machineIP = null;
-
             Trace.TraceInformation("Creating symbolic link {0} on role instance {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
 
+            var found = false;
+            var i = 1;
+            var accountName =
+                CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"))
+                    .Credentials.AccountName;
+            var target = string.Format(@"\\{0}.file.core.windows.net\{1}", accountName, shareName);
 
 
             while (true)
             {
-                found = false;
-                Trace.TraceInformation("Looking for an available SMB server to create the symbolic link on role instance {0}...", RoleEnvironment.CurrentRoleInstance.Id);
-
-                int countServers = RoleEnvironment.Roles[smbRoleName].Instances.Count;
-                for (int instance = 0; instance < countServers; instance++)
+                try
                 {
-                    var server = RoleEnvironment.Roles[smbRoleName].Instances[instance];
-                    Trace.TraceInformation("Trying to create symbolic link to SMB Server {0} on role instance {1}...", server.Id, RoleEnvironment.CurrentRoleInstance.Id);
-                    machineIP = server.InstanceEndpoints["SMB"].IPEndpoint.Address.ToString();
-                    if (RoleEnvironment.IsEmulated)
+                    if (Directory.Exists(target))
                     {
-                        machineIP = "127.0.0.1";
+                        SymbolicLink.CreateDirectoryLink(localPath, target);
+                        Trace.TraceInformation(
+                            "Created symbolic link {0} to share {1} on role instance {2}. Verifying...",
+                            localPath, target, RoleEnvironment.CurrentRoleInstance.Id);
+
+                        if (!Directory.Exists(localPath))
+                            throw new IOException(string.Format("Directory {0} not found", localPath));
+
+                        if (!SymbolicLink.Exists(localPath))
+                            throw new IOException(string.Format("Symbolic link {0} not found", localPath));
+
+                        var currentTarget = SymbolicLink.GetTarget(localPath);
+                        if (currentTarget != target)
+                            throw new IOException(
+                                string.Format("Symbolic link {0} targets {1} and does not match {2}", localPath,
+                                              currentTarget, target));
+                        found = true;
                     }
-                    machineIP = "\\\\" + machineIP + "\\";
-                    var target = machineIP + shareName;
-
-                    try
-                    {                        
-                        if (Directory.Exists(target))
-                        {
-                            SymbolicLink.CreateDirectoryLink(localPath, target);
-                            Trace.TraceInformation(
-                                "Created symbolic link {0} to SMB Server {1} on role instance {2}. Verifying...",
-                                localPath, server.Id, RoleEnvironment.CurrentRoleInstance.Id);
-
-                            if (!Directory.Exists(localPath))
-                                throw new IOException(string.Format("Directory {0} not found", localPath));
-
-                            if (!SymbolicLink.Exists(localPath))
-                                throw new IOException(string.Format("Symbolic link {0} not found", localPath));
-
-                            var currentTarget = SymbolicLink.GetTarget(localPath);
-                            if (currentTarget != target)
-                                throw new IOException(
-                                    string.Format("Symbolic link {0} targets {1} and does not match {2}", localPath,
-                                                  currentTarget, target));
-
-                            found = true;
-                            break;
-                        }
-                        else
-                        {
-                            Trace.TraceInformation("Shared folder {0} does not exist on role {1}. Trying next role instance...", target, server.Id);
-                        }
-                    }
-                    catch (Exception ex)
+                    else
                     {
-                        Trace.TraceWarning("Error creating symbolic link to SMB Server {0} on role instance {1}: {2}", server.Id, RoleEnvironment.CurrentRoleInstance.Id, ex);
-                        DeleteSymbolicLink(localPath);                        
+                        throw new Exception(string.Format("Shared folder {0} does not exist.", target));
                     }
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning("Error creating symbolic link on role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+                    DeleteSymbolicLink(localPath);
                 }
 
                 if (!found)
                 {
-                    Trace.TraceWarning("Error creating the symbolic link on role instance {0}: No available SMB server found. Retrying in 5 seconds (attempt {1} of 1000)...", RoleEnvironment.CurrentRoleInstance.Id, i);
+                    Trace.TraceWarning("Error creating the symbolic link on role instance {0}: No available share found. Retrying in 5 seconds (attempt {1} of 1000)...", RoleEnvironment.CurrentRoleInstance.Id, i);
                     Thread.Sleep(SleepTimeBeforeStartToRemap);
 
                     i++;
@@ -261,10 +148,10 @@ namespace DNNAzure.Components
 
             if (found)
             {
-                Trace.TraceInformation("Success: created symbolic link {0} to location {1} on role {2}", localPath, machineIP + shareName, RoleEnvironment.CurrentRoleInstance.Id);
+                Trace.TraceInformation("Success: created symbolic link {0} to location {1} on role {2}", localPath, target, RoleEnvironment.CurrentRoleInstance.Id);
                 return true;
             }
-            Trace.TraceError("Error creating symbolic link on role instance {0}: Could not find an available SMB Server and maximum attemtps reached", RoleEnvironment.CurrentRoleInstance.Id);
+            Trace.TraceError("Error creating symbolic link on role instance {0}: Could not find an available SMB share and maximum attemtps reached", RoleEnvironment.CurrentRoleInstance.Id);
             return false;
         }
 
@@ -290,7 +177,6 @@ namespace DNNAzure.Components
             {
                 Trace.TraceError("Error while deleting symbolic link {0} on worker role {1}: {2}", localPath, RoleEnvironment.CurrentRoleInstance.Id, ex);
             }
-            string error;
         }
         #endregion
 
@@ -323,7 +209,7 @@ namespace DNNAzure.Components
         /// Setups the web site settings.
         /// </summary>
         /// <param name="drive">The drive.</param>
-        public static void SetupWebSiteSettings(CloudDrive drive)
+        public static void SetupWebSiteSettings(string localPath)
         {
             // Check for the database existence
             Trace.TraceInformation("Checking for database existence...");
@@ -334,7 +220,7 @@ namespace DNNAzure.Components
 
             // Check for the creation of the Website contents from Azure storage
             Trace.TraceInformation("Check for website content...");
-            if (!SetupWebSiteContents(drive.LocalPath + "\\" + GetSetting("dnnFolder"),
+            if (!SetupWebSiteContents(localPath + "\\" + GetSetting("dnnFolder"),
                                                     GetSetting("AcceleratorConnectionString"),
                                                     GetSetting("packageContainer"),
                                                     GetSetting("package"),
@@ -343,7 +229,7 @@ namespace DNNAzure.Components
 
 
             // Setup Database Connection string
-            SetupWebConfig(drive.LocalPath + "\\" + GetSetting("dnnFolder") + "\\web.config",
+            SetupWebConfig(localPath + "\\" + GetSetting("dnnFolder") + "\\web.config",
                                             GetSetting("DatabaseConnectionString"),
                                             GetSetting("InstallationDate"),
                                             GetSetting("UpdateService.Source"));
@@ -352,7 +238,7 @@ namespace DNNAzure.Components
             SetupInstallConfig(
                                 Path.Combine(new[]
                                                          {
-                                                             drive.LocalPath, GetSetting("dnnFolder"),
+                                                             localPath, GetSetting("dnnFolder"),
                                                              "Install\\DotNetNuke.install.config"
                                                          }),
                                 GetSetting("AcceleratorConnectionString"),
@@ -361,7 +247,7 @@ namespace DNNAzure.Components
 
             // Setup post install addons (always overwrite)
             InstallAddons(GetSetting("AddonsUrl"),
-                                            drive.LocalPath + "\\" + GetSetting("dnnFolder"));            
+                                            localPath + "\\" + GetSetting("dnnFolder"));            
 
         }
 
@@ -752,8 +638,8 @@ namespace DNNAzure.Components
                         var blobContainer = blobClient.GetContainerReference(packageContainer);
                         blobContainer.FetchAttributes(); // Check for the container existence
 
-                        Trace.TraceInformation(string.Format("Downloading package '{0}' to '{1}'...", packageName, packageFile));
-                        blobContainer.GetBlobReference(packageName).DownloadToFile(packageFile);                        
+                        Trace.TraceInformation("Downloading package '{0}' to '{1}'...", packageName, packageFile);
+                        blobContainer.GetBlockBlobReference(packageName).DownloadToFile(packageFile, FileMode.CreateNew);                        
                     }
 
                     // Unzip downloaded file
@@ -804,8 +690,8 @@ namespace DNNAzure.Components
                     var blobClient = account.CreateCloudBlobClient();
                     var blobContainer = blobClient.GetContainerReference(packageContainer);
 
-                    Trace.TraceInformation(string.Format("Downloading customized installation settings '{0}' to '{1}'...", packageInstallConfig, localInstallConfig));
-                    blobContainer.GetBlobReference(packageInstallConfig).DownloadToFile(localInstallConfig);
+                    Trace.TraceInformation("Downloading customized installation settings '{0}' to '{1}'...", packageInstallConfig, localInstallConfig);
+                    blobContainer.GetBlockBlobReference(packageInstallConfig).DownloadToFile(localInstallConfig, FileMode.CreateNew);
                 }
                 catch (Exception ex)
                 {

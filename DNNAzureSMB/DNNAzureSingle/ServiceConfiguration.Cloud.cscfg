@@ -4,14 +4,14 @@
     <Instances count="1" />
     <ConfigurationSettings>
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
-      <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=http;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
+      <Setting name="AcceleratorConnectionString" value="DefaultEndpointsProtocol=https;AccountName=@@STORAGEACCOUNTNAME@@;AccountKey=@@STORAGEKEY@@" />
       <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
       <Setting name="dnnFolder" value="DotNetNuke" />
       <Setting name="hostHeaders" value="@@HOSTHEADERS@@" />
       <Setting name="managedRuntimeVersion" value="v4.0" />
       <Setting name="managedPipelineMode" value="Integrated" />
-      <Setting name="fileshareUserName" value="fileshareuser" />
-      <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
+      <Setting name="fileshareUserName" value="@@STORAGEACCOUNTNAME@@" />
+      <Setting name="fileshareUserPassword" value="@@STORAGEKEY@@" />
       <Setting name="shareName" value="sharerw" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />

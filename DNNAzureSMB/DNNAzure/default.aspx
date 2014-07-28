@@ -20,19 +20,5 @@
         <p>This site is currently under maintenance. We should be back shortly. Thank you for your patience.</p>
     </div>
 </div>    
-    <!-- Site is being deployed -->
-    <form id="form1" runat="server">
-    <asp:Label runat="server" ID="lblError" EnableViewState="False" CssClass="Error"></asp:Label>
-    <asp:GridView ID="grdLog" runat="server" AutoGenerateColumns="False">
-        <Columns>
-            <asp:BoundField DataField="Timestamp" HeaderText="Datetime">
-            <ItemStyle CssClass="Info" />
-            </asp:BoundField>
-            <asp:BoundField DataField="Role" HeaderText="Role" />
-            <asp:BoundField DataField="RoleInstance" HeaderText="Instance" />
-            <asp:BoundField DataField="Message" HeaderText="Message" />
-        </Columns>
-    </asp:GridView>
-    </form>
 </body>
 </html>
