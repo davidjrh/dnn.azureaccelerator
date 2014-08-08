@@ -1,0 +1,54 @@
+﻿body 
+{
+    font-family: Segoe UI, Arial;
+    font-size: 11pt;
+    color: gray;
+}
+
+h1 {
+    font-family: Segoe UI Light, Arial;
+    color: dodgerblue;
+    font-size: 18pt;
+    font-weight: normal;
+}
+
+.Error {
+    color: red;
+}
+
+#grdLog {
+    width: 100%;
+    font-size: 10pt;
+    border: 0px;
+}
+
+#grdLog TH {
+    background-color: #00a2e8;
+    color: white;
+    height: 20px;
+    font-weight: normal;
+}
+#grdLog TD {
+    border: 0px;
+    height: 20px;
+}
+
+#grdLog TD.Info {
+    background-image: url('../images/info.png');
+    background-position: left;
+    background-repeat: no-repeat;
+    padding-left: 20px;
+}
+#grdLog TD.Warning {
+    background-image: url('../images/warning.png');
+    background-position: left;
+    background-repeat: no-repeat;
+    padding-left: 20px;
+}
+#grdLog TD.Error {
+    background-image: url('../images/error.png');
+    background-position: left;
+    background-repeat: no-repeat;
+    padding-left: 20px;
+}
+

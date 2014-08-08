@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://update.dotnetnuke.com/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" targetNamespace="http://update.dotnetnuke.com/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://update.dotnetnuke.com/">
+      <s:element name="GetVersions">
+        <s:complexType />
+      </s:element>
+      <s:element name="GetVersionsResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetVersionsResult" type="tns:ArrayOfVersionInfo" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfVersionInfo">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="VersionInfo" nillable="true" type="tns:VersionInfo" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="VersionInfo">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="PackageName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Version" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="DownloadURL" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="GetVersionsSoapIn">
+    <wsdl:part name="parameters" element="tns:GetVersions" />
+  </wsdl:message>
+  <wsdl:message name="GetVersionsSoapOut">
+    <wsdl:part name="parameters" element="tns:GetVersionsResponse" />
+  </wsdl:message>
+  <wsdl:portType name="UpdateServiceSoap">
+    <wsdl:operation name="GetVersions">
+      <wsdl:input message="tns:GetVersionsSoapIn" />
+      <wsdl:output message="tns:GetVersionsSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="UpdateServiceSoap" type="tns:UpdateServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetVersions">
+      <soap:operation soapAction="http://update.dotnetnuke.com/GetVersions" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="UpdateServiceSoap12" type="tns:UpdateServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetVersions">
+      <soap12:operation soapAction="http://update.dotnetnuke.com/GetVersions" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="UpdateService">
+    <wsdl:port name="UpdateServiceSoap" binding="tns:UpdateServiceSoap">
+      <soap:address location="http://update.dotnetnuke.com/azurepackages.asmx" />
+    </wsdl:port>
+    <wsdl:port name="UpdateServiceSoap12" binding="tns:UpdateServiceSoap12">
+      <soap12:address location="http://update.dotnetnuke.com/azurepackages.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
