@@ -1,9 +1,0 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="DNNAzureWizard.Properties" GeneratedClassName="Settings">
-  <Profiles />
-  <Settings>
-    <Setting Name="DNNAzureWizard_DotNetNuke_UpdateService_UpdateService" Type="(Web Service URL)" Scope="Application">
-      <Value Profile="(Default)">http://update.dotnetnuke.com/azurepackages.asmx</Value>
-    </Setting>
-  </Settings>
-</SettingsFile>
