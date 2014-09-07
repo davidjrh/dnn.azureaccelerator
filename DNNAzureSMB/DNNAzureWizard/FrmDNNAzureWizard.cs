@@ -596,25 +596,12 @@ namespace DNNAzureWizard
             errProv.SetError((Control)sender, error);
         }
 
-        private void TxtVhdNameOnValidating(object sender, CancelEventArgs cancelEventArgs)
+        private void TxtShareNameOnValidating(object sender, CancelEventArgs cancelEventArgs)
         {
             string error = null;
-            if (txtVHDName.Text.Length == 0)
+            if (txtShareName.Text.Length == 0)
             {
-                error = "You must specify a blob name for the VHD";
-            }
-            errProv.SetError((Control)sender, error);
-        }
-
-        private void TxtVhdDriveSizeOnValidating(object sender, CancelEventArgs cancelEventArgs)
-        {
-            string error = null;
-            int driveSize;
-            if ((txtVHDDriveSize.Text.Length == 0) ||
-                !int.TryParse(txtVHDDriveSize.Text, out driveSize) ||
-                (driveSize < 128) || (driveSize > 1048576))
-            {
-                error = "You must specify a valid VHD size (recommended minumum: 512Mb; maximum 1Tb=1048576Mb)";
+                error = "You must specify a share name to store the site contents on the File Service";
             }
             errProv.SetError((Control)sender, error);
         }
@@ -887,8 +874,7 @@ namespace DNNAzureWizard
             CboHostingServiceOnValidating(cboHostingService, null);
             CboStorageOnValidating(cboStorage, null);
             TxtPackagesContainerOnValidating(txtPackagesContainer, null);
-            TxtVhdNameOnValidating(txtVHDName, null);
-            TxtVhdDriveSizeOnValidating(txtVHDDriveSize, null);
+            TxtShareNameOnValidating(txtShareName, null);
 
             if (pnlHostingServices.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0))
                 invalidInput = true;
@@ -964,8 +950,7 @@ namespace DNNAzureWizard
             summary.AppendLine("- Storage name: " + (optSubscription.Checked ? cboStorage.Text : txtStorageName.Text.Trim()));
             summary.AppendLine("- Storage key: " + (hideSensitiveData?"<not shown>": txtStorageKey.Text.Trim()));
             summary.AppendLine("- Storage package container: " + txtStorageContainer.Text.Trim());
-            summary.AppendLine("- VHD blob name: " + (optSubscription.Checked ? txtVHDName.Text.Trim() : txtVHDBlobName.Text.Trim()));
-            summary.AppendLine("- VHD size: " + (optSubscription.Checked ? txtVHDDriveSize.Text.Trim() : txtVHDSize.Text.Trim()));
+            summary.AppendLine("- File Service share name: " + (optSubscription.Checked ? txtShareName.Text.Trim() : txtFileServiceShareName.Text.Trim()));
             summary.AppendLine("");
             summary.AppendLine("DATABASE SETTINGS:");
             summary.AppendLine("- DB Server Name: " + (txtDBServer.Visible ? txtDBServer.Text : cboDatabase.Text) + ".database.windows.net");
@@ -1065,8 +1050,7 @@ namespace DNNAzureWizard
             TxtStorageKeyValidating(txtStorageKey, null);
             TxtBindingsValidating(txtBindings, null);
             TxtStorageContainerValidating(txtStorageContainer, null);
-            TxtVhdBlobNameValidating(txtVHDBlobName, null);
-            TxtVhdSizeValidating(txtVHDSize, null);
+            TxtFileServiceShareNameValidating(txtFileServiceShareName, null);
             bool invalidInput = AzureSettings.Controls.Cast<Control>().Any(control => errProv.GetError(control).Length != 0);
             return !invalidInput;
         }
@@ -1114,8 +1098,7 @@ namespace DNNAzureWizard
             cfgStr = cfgStr.Replace("@@PACKAGEURL@@", txtDNNUrl.Text.Trim());
 
             // Replace the tokens - VHD settings
-            cfgStr = cfgStr.Replace("@@VHDBLOBNAME@@", (optSubscription.Checked ? txtVHDName.Text.Trim() : txtVHDBlobName.Text.Trim()));
-            cfgStr = cfgStr.Replace("@@VHDBLOBSIZE@@", (optSubscription.Checked ? txtVHDDriveSize.Text.Trim() : txtVHDSize.Text.Trim()));
+            cfgStr = cfgStr.Replace("@@SHARENAME@@", (optSubscription.Checked ? txtShareName.Text.Trim() : txtFileServiceShareName.Text.Trim()));
 
             // Replace the tokens - RDP settings
             if (chkEnableRemoteMgmt.Checked && chkEnableRDP.Checked)
@@ -1968,10 +1951,8 @@ namespace DNNAzureWizard
             txtBindings.Text = ConfigurationManager.AppSettings["Bindings"];
             txtPackagesContainer.Text = txtStorageContainer.Text;
 
-            txtVHDBlobName.Text = ConfigurationManager.AppSettings["VHDBlobBName"];
-            txtVHDName.Text = txtVHDBlobName.Text;
-            txtVHDSize.Text = ConfigurationManager.AppSettings["VHDSizeInMb"];
-            txtVHDDriveSize.Text = txtVHDSize.Text;
+            txtFileServiceShareName.Text = ConfigurationManager.AppSettings["ShareName"];
+            txtShareName.Text = txtFileServiceShareName.Text;
 
             _uploadBlockSize = Convert.ToInt32(ConfigurationManager.AppSettings["UploadBlockSize"]);
 
@@ -2378,25 +2359,12 @@ namespace DNNAzureWizard
             errProv.SetError((Control)sender, error);
         }
 
-        void TxtVhdBlobNameValidating(object sender, CancelEventArgs e)
+        void TxtFileServiceShareNameValidating(object sender, CancelEventArgs e)
         {
             string error = null;
-            if (txtVHDBlobName.Text.Length == 0)
+            if (txtFileServiceShareName.Text.Length == 0)
             {
-                error = "You must specify a blob name for the VHD";
-            }
-            errProv.SetError((Control)sender, error);
-        }
-
-        void TxtVhdSizeValidating(object sender, CancelEventArgs e)
-        {
-            string error = null;
-            int driveSize;
-            if ((txtVHDSize.Text.Length == 0) ||
-                !int.TryParse(txtVHDSize.Text, out driveSize) ||
-                (driveSize < 128) || (driveSize > 1048576))
-            {
-                error = "You must specify a valid VHD size (recommended minumum: 512Mb; maximum 1Tb=1048576Mb)";
+                error = "You must specify a share name for the File Service";
             }
             errProv.SetError((Control)sender, error);
         }
@@ -2798,7 +2766,7 @@ namespace DNNAzureWizard
         {
             try
             {
-                Process.Start("https://windows.azure.com/download/publishprofile.aspx");
+                Process.Start("https://manage.windowsazure.com/publishsettings/index?client=dnnaccelerator");
             }
             catch (Exception ex)
             {
