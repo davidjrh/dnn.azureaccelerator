@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ServicePackage>
+  <Name>DNN on Small instances</Name>
+  <Description>This package offers the capability of working on HA mode by using the Azure File Service. All the instances are Small.</Description>
+  <ConfigurationFile>DNNAzureSmall_2014Q3Beta.cscfg</ConfigurationFile>
+  <PackageFile>DNNAzureSmall_2014Q3Beta.cspkg</PackageFile>
+  <RDPEnabled>true</RDPEnabled>
+</ServicePackage>
