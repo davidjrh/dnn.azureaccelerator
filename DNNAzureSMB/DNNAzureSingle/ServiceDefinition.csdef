@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-06.2.4">
-  <WebRole name="DNNAzure" vmsize="Small">
+  <WebRole name="DNNAzure" vmsize="Medium">
     <Runtime executionContext="elevated">
     </Runtime>
     <Startup>

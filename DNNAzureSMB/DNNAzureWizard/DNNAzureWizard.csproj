@@ -135,16 +135,16 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.map</DependentUpon>
     </Compile>
-    <Content Include="packages\DNNAzureSingleAndSmall_2013Q4.xml">
+    <None Include="packages\DNNAzureSmall_2014Q3Beta.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
+    <None Include="packages\DNNAzureSmall_2014Q3Beta.cscfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages\DNNAzureSmall_2014Q3Beta.cspkg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Resources\MSAzureLogo.png" />
-    <None Include="packages\DNNAzureSingleAndSmall_2013Q4.cscfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages\DNNAzureSingleAndSmall_2013Q4.cspkg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="Resources\Reporting.png" />
     <None Include="Resources\Blob.png" />
     <None Include="Resources\Cancel.png" />
