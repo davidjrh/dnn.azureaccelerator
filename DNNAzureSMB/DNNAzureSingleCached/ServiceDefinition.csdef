@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingleCached" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-01.2.3">
   <WebRole name="DNNAzure" vmsize="Medium">
-    <Runtime executionContext="elevated"></Runtime>
+    <Runtime executionContext="elevated">
+    </Runtime>
     <Startup>
       <Task executionContext="elevated" commandLine="scripts\SetupSiteRoot.cmd" taskType="simple">
         <Environment>
@@ -143,6 +144,8 @@
       <Setting name="Plugins.Url" />
       <Setting name="Startup.ExternalTasks" />
       <Setting name="Startup.ExternalTasks.KeyValueSettings" />
+      <Setting name="Smtp.Enabled" />
+      <Setting name="WebPlatformInstaller.BackgroundProducts" />
     </ConfigurationSettings>
     <LocalResources>
       <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />

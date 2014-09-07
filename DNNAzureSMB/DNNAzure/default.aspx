@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" >    
     <title>Site under maintenance</title>
     <link href="css/styles.css" rel="stylesheet" type="text/css" />
-    <meta http-equiv="Refresh" content="30;URL=" />
+    <meta http-equiv="Refresh" content="5;URL=" />
     <style type="text/css">
         BODY { font-family: 'Segoe UI',Arial; font-weight: lighter; overflow:hidden;}
         H1 { font-family: 'Segoe UI', Arial; font-weight: lighter; color: #0094ff}
