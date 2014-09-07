@@ -1,29 +1,29 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*" schemaVersion="2014-01.2.3">
+<ServiceConfiguration serviceName="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceConfiguration" osFamily="1" osVersion="*" schemaVersion="2014-06.2.4">
   <Role name="DNNAzure">
     <Instances count="1" />
     <ConfigurationSettings>
       <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="UseDevelopmentStorage=true" />
       <Setting name="AcceleratorConnectionString" value="UseDevelopmentStorage=true" />
-      <Setting name="DatabaseConnectionString" value="Data Source=@@DBSERVER@@.database.windows.net;Initial Catalog=@@DBNAME@@;User ID=@@DBUSER@@;Password=@@DBPASSWORD@@" />
+      <Setting name="DatabaseConnectionString" value="Data Source=LOCALHOST;Initial Catalog=dnn;User ID=dnn;Password=dnn.password" />
       <Setting name="dnnFolder" value="DotNetNuke" />
       <Setting name="hostHeaders" value="" />
       <Setting name="managedRuntimeVersion" value="v4.0" />
       <Setting name="managedPipelineMode" value="Integrated" />
       <Setting name="fileshareUserName" value="fileshareuser" />
       <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
-      <Setting name="shareName" value="sharerw" />
+      <Setting name="shareName" value="\\localhost\sharerw" />
       <Setting name="packageContainer" value="dotnetnuke-packages" />
-      <Setting name="package" value="" />
-      <Setting name="packageUrl" value="@@PACKAGEURL@@" />
+      <Setting name="package" value="Evoq_Content_07.03.01_Install.zip" />
+      <Setting name="packageUrl" value="" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="false" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="" />
-      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="2013-03-27T23:59:59.0000000+00:00" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="2015-03-27T23:59:59.0000000+00:00" />
       <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="true" />
-      <Setting name="DBAdminUser" value="" />
-      <Setting name="DBAdminPassword" value="" />
-      <Setting name="ShowDeploymentProgressDetails" value="true" />
+      <Setting name="DBAdminUser" value="dnn" />
+      <Setting name="DBAdminPassword" value="dnn.password" />
+      <Setting name="ShowDeploymentProgressDetails" value="false" />
       <Setting name="packageInstallConfiguration" value="" />
       <Setting name="appPool.IdleTimeout" value="Infinite" />
       <Setting name="appPool.StartupTimeLimit" value="180" />
@@ -32,10 +32,10 @@
       <Setting name="AddonsUrl" value="" />
       <Setting name="SSL.CertificateThumbprint" value="" />
       <Setting name="SSL.HostHeader" value="" />
-      <Setting name="WebPlatformInstaller.Products" value="WDeploy,FTPServer" />
+      <Setting name="WebPlatformInstaller.Products" value="" />
       <Setting name="WebPlatformInstaller.Enabled" value="true" />
       <Setting name="IISRemoteManagement.Enabled" value="true" />
-      <Setting name="FTP.Enabled" value="true" />
+      <Setting name="FTP.Enabled" value="false" />
       <Setting name="FTP.Root.Username" value="" />
       <Setting name="FTP.Root.EncryptedPassword" value="" />
       <Setting name="FTP.Portals.Username" value="" />
@@ -50,6 +50,8 @@
       <Setting name="Plugins.Url" value="" />
       <Setting name="Startup.ExternalTasks" value="" />
       <Setting name="Startup.ExternalTasks.KeyValueSettings" value="" />
+      <Setting name="Smtp.Enabled" value="false" />
+      <Setting name="WebPlatformInstaller.BackgroundProducts" value="WDeploy,FTPServer" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />

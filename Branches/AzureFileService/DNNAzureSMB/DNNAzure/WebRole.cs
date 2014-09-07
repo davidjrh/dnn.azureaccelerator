@@ -10,6 +10,8 @@ using System.Threading;
 using DNNAzure.Components;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.Web.Administration;
+using Microsoft.WindowsAzure.Storage;
+using Site = Microsoft.Web.Administration.Site;
 
 namespace DNNAzure
 {
@@ -18,10 +20,10 @@ namespace DNNAzure
         private const string WebSiteName = "DotNetNuke";
         private const string OfflineSiteName = "Offline";
         private const string AppPoolName = "DotNetNukeApp";
-        private const string SitesRoot = "root";
+        internal static string WebSiteUrl { get; set; }
 
         private volatile bool _busy = true;
-        private bool Busy
+        internal bool Busy
         {
             get { return _busy; }
             set
@@ -32,13 +34,25 @@ namespace DNNAzure
             }
         }
 
+        private static string _localPath;
         private static string LocalPath
         {
             get
             {
-                // To avoid the "Path too long" issue, we are going to use the folder short path name. This gives us an additional 56 characters.
-                // Thiis is in combination with the SetupSiteRoot.cmd startup task
-                return Path.Combine(@"C:\Resources\Directory\Sites", SitesRoot);
+                if (!string.IsNullOrEmpty(_localPath)) return _localPath;
+                if (RoleEnvironment.IsEmulated)
+                {
+                    _localPath = RoleEnvironment.GetConfigurationSettingValue("shareName");
+                }
+                else
+                {
+                    var account = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue(
+                        "AcceleratorConnectionString"));
+                    _localPath =
+                        string.Format(@"\\{0}.file.core.windows.net\{1}", account.Credentials.AccountName,
+                            RoleEnvironment.GetConfigurationSettingValue("shareName"));
+                }
+                return _localPath;
             }
         }
 
@@ -77,40 +91,69 @@ namespace DNNAzure
         /// </remarks>
         public override bool OnStart()
         {
-            #region Tips for performance
-            // Set the maximum number of concurrent connections (for Azure Storage better performance)
-            // http://social.msdn.microsoft.com/Forums/en-US/windowsazuredata/thread/d84ba34b-b0e0-4961-a167-bbe7618beb83
-            ServicePointManager.DefaultConnectionLimit = int.Parse(Utils.GetSetting("DefaultConnectionLimit", "1000"));
+            try
+            {
+                #region Tips for performance
 
-            // Turn off 100-continue (saves 1 roundtrip)
-            ServicePointManager.Expect100Continue = false;
+                // Set the maximum number of concurrent connections (for Azure Storage better performance)
+                // http://social.msdn.microsoft.com/Forums/en-US/windowsazuredata/thread/d84ba34b-b0e0-4961-a167-bbe7618beb83
+                ServicePointManager.DefaultConnectionLimit = 1000;
+                // int.Parse(Utils.GetSetting("DefaultConnectionLimit", "1000"));
 
-            // Turning off Nagle may help Inserts/Updates
-            ServicePointManager.UseNagleAlgorithm = false;
-            #endregion
+                // Turn off 100-continue (saves 1 roundtrip)
+                ServicePointManager.Expect100Continue = false;
 
-            // Setup OnStatuscheck event
-            RoleEnvironment.StatusCheck += RoleEnvironmentOnStatusCheck;
+                // Turning off Nagle may help Inserts/Updates
+                ServicePointManager.UseNagleAlgorithm = false;
 
-            // Setup OnChanging event
-            RoleEnvironment.Changing += RoleEnvironmentOnChanging;
+                #endregion
 
-            // Setup OnChanged event
-            RoleEnvironment.Changed += RoleEnvironmentOnChanged;
+                // Setup OnStatuscheck event
+                RoleEnvironment.StatusCheck += RoleEnvironmentOnStatusCheck;
 
-            // Inits the Diagnostic Monitor
-            Utils.ConfigureDiagnosticMonitor();
+                // Setup OnChanging event
+                RoleEnvironment.Changing += RoleEnvironmentOnChanging;
 
-            Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
+                // Setup OnChanged event
+                RoleEnvironment.Changed += RoleEnvironmentOnChanged;
 
-            // Create windows user accounts for shareing the drive and other FTP related
-            Utils.CreateUserAccounts();
+                // Inits the Diagnostic Monitor
+                Utils.ConfigureDiagnosticMonitor();
 
-            // Create Azure Storage File Share 
-            Utils.CreateStorageFileShare();
+                Trace.TraceInformation("Creating DNNAzure instance as a SMB Client");
 
-            Plugins.OnStart();
+                // Create Azure Storage File Share 
+                Utils.CreateStorageFileShare();
 
+                // Mounts the drive to cache the credentials for current thread
+                var account = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue(
+                    "AcceleratorConnectionString"));
+                Utils.MountShare(
+                    string.Format(@"\\{0}.file.core.windows.net\{1}", account.Credentials.AccountName,
+                        RoleEnvironment.GetConfigurationSettingValue(
+                            "shareName")), "X:", account.Credentials.AccountName,
+                    account.Credentials.ExportBase64EncodedKey());
+
+                // Setup IIS - Website and FTP site
+                SetupIisSites();
+
+                // Inform the plugins that the site is up and running
+                Plugins.OnSiteReady();
+
+                // Setup the website settings
+                Utils.SetupContents(LocalPath);
+
+                // Setup the offline site settings
+                Utils.SetupOfflineContents(LocalPath);
+
+                Plugins.OnStart();
+
+                Utils.UnmountShare("X:");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Error on role OnStart: {0}", ex);
+            }
             return base.OnStart();
         }
 
@@ -135,8 +178,8 @@ namespace DNNAzure
                     {
                         var appOfflineEnabled = bool.Parse(Utils.GetSetting("AppOffline.Enabled"));
                         Trace.TraceInformation("AppOffline.Enabled has changed to '{0}'. Swapping the sites...", appOfflineEnabled);
-                        // Setup the offline site settings
-                        Utils.SetupOfflineSiteSettings(LocalPath);
+                        // Setup the offline site contents
+                        Utils.SetupOfflineContents(LocalPath);
 
                         // Ensure that the portal aliases for the offline site have been created (only needed if the AppOffline.Enabled == "true")
                         if (appOfflineEnabled)
@@ -182,10 +225,15 @@ namespace DNNAzure
             // Each client role instance writes to a log file named after the role instance in the logfile directory
 
             Trace.TraceInformation("DNNAzure entry point called (Role {0})...", RoleEnvironment.CurrentRoleInstance.Id);
-
             try
             {
-                SetupNetworkDriveAndWebsite();
+                // Change busy status
+                Busy = false;
+
+                while (true)
+                {
+                    Thread.Sleep(Utils.SleepTimeAfterSuccessfulPolling);
+                }
             }
             catch (Exception ex)
             {
@@ -194,67 +242,6 @@ namespace DNNAzure
         }
 
         #region Private functions
-
-        private void SetupNetworkDriveAndWebsite()
-        {
-            Trace.TraceInformation("Setting up network drive and website...");
-            var shareName = Utils.GetSetting("shareName");
-            var userName = Utils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername");
-            var password =
-                Utils.DecryptPassword(
-                    Utils.GetSetting("Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword"));
-
-            var logDir = Path.Combine(LocalPath, "logs");
-            var fileName = RoleEnvironment.CurrentRoleInstance.Id + ".txt";
-            var logFilePath = Path.Combine(logDir, fileName);
-
-            Trace.TraceInformation("Impersonating with user {0}...", userName);
-            var impersonationContext = Utils.ImpersonateValidUser(userName, "", password);
-            if (impersonationContext == null)
-            {
-                Trace.TraceError("Fatal error: could not impersonate user {0}.", userName);
-                return;
-            }
-
-            while (true)
-            {
-                // Change the instance status to Busy
-                Busy = true;
-                try
-                {
-                    if (Utils.CreateSymbolicLink(LocalPath, shareName))
-                    {
-                        // Setup IIS - Website and FTP site
-                        SetupIisSites();
-
-                        // Change the status to Ready
-                        Busy = false;
-
-                        // Inform the plugins that the site is up and running
-                        Plugins.OnSiteReady();
-
-                        while (true)
-                        {
-                            // write to the log file. Do some retries in the case of failure to avoid false positives
-                            Utils.AppendLogEntryWithRetries(logFilePath, 5);
-
-                            // If the file/share becomes inaccessible, AppendAllText will throw an exception and
-                            // the worker role will exit, and then get restarted, and then it fill find the new share
-                            Thread.Sleep(Utils.SleepTimeAfterSuccessfulPolling);
-                        }
-                    }
-                    Trace.TraceError("Failed to mount {0} on role instance {1}", shareName, RoleEnvironment.CurrentRoleInstance.Id);
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceWarning("Starting remapping process because of error on role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    Thread.Sleep(Utils.SleepTimeBeforeStartToRemap);
-                }
-            }
-
-// ReSharper disable FunctionNeverReturns
-        }
-// ReSharper restore FunctionNeverReturns
 
         /// <summary>
         /// Setups the IIS sites.
@@ -317,7 +304,7 @@ namespace DNNAzure
 
         /// <summary>
         /// Changes the local security policies needed for WCF services to generate security audits by including the Application pool name to 
-        /// the "Local Policies\User Rights Assignment\Generate securrity audits" policy. This security setting determines which accounts can be 
+        /// the "Local Policies\User Rights Assignment\Generate security audits" policy. This security setting determines which accounts can be 
         /// used by a process to add entries to the security log. The security log is used to trace unauthorized system access. Misuse of this user 
         /// right can result in the generation of many auditing events, potentially hiding evidence of an attack or causing a denial of service 
         /// if the Audit: Shut down system immediately if unable to log security audits security policy setting is enabled. For more information 
@@ -577,14 +564,10 @@ SeAuditPrivilege = {0}
         /// <returns></returns>
         private static bool CreateDnnWebSite(string hostHeaders, string homePath, string offlinePath, string userName, string password, string sslThumbprint, string sslHostHeader)
         {
-            // Create the user account for the Application Pool. 
-            Trace.TraceInformation("Creating user account for the Application Pool");
-            Utils.CreateUserAccount(userName, password);
-            
+
 
             // Build bindings based on HostHeaders
             Trace.TraceInformation("Creating website...");
-            string systemDrive = Environment.SystemDirectory.Substring(0, 2);
             string originalwebSiteName = RoleEnvironment.CurrentRoleInstance.Id + "_Web";
             string[] headers = hostHeaders.Split(';');
             const string protocol = "http";
@@ -603,16 +586,19 @@ SeAuditPrivilege = {0}
             // Creates the DNN WebSite 
             try
             {
-                using (var serverManager = new ServerManager())
+                if (!RoleEnvironment.IsEmulated)
                 {
-                    // Change the default web site binding to allow DNN website to be the default site
-                    var webroleSite = serverManager.Sites[originalwebSiteName];
-                    if (webroleSite != null)
+                    using (var serverManager = new ServerManager())
                     {
-                        webroleSite.Bindings.Clear();
-                        webroleSite.Bindings.Add(string.Format("*:{0}:admin.dnndev.me", port), protocol);
+                        // Change the default web site binding to allow DNN website to be the default site
+                        var webroleSite = serverManager.Sites[originalwebSiteName];
+                        if (webroleSite != null)
+                        {
+                            webroleSite.Bindings.Clear();
+                            webroleSite.Bindings.Add(string.Format("*:{0}:admin.dnndev.me", port), protocol);
 
-                        serverManager.CommitChanges();
+                            serverManager.CommitChanges();
+                        }
                     }                    
                 }
 
@@ -689,6 +675,7 @@ SeAuditPrivilege = {0}
             appPool.ProcessModel.IdentityType = ProcessModelIdentityType.SpecificUser;
             appPool.ProcessModel.UserName = "localhost\\" + userName;
             appPool.ProcessModel.Password = password;
+            appPool.ProcessModel.LoadUserProfile = true;
 
             // Setup limits
             appPool.ProcessModel.IdleTimeout = Utils.GetSetting("appPool.IdleTimeout").ToLower() == "infinite" ?
@@ -710,6 +697,7 @@ SeAuditPrivilege = {0}
                 appPool.SetAttributeValue("startMode", 1); // Always running
             }
 
+            
             appPool.ManagedRuntimeVersion = Utils.GetSetting("managedRuntimeVersion");
             appPool.ManagedPipelineMode = Utils.GetSetting("managedPipelineMode").ToLower() == "integrated" ? ManagedPipelineMode.Integrated : ManagedPipelineMode.Classic;            
         }
@@ -727,10 +715,20 @@ SeAuditPrivilege = {0}
                                                homePath);
             }
             else
-            {
+            {                
                 Trace.TraceInformation("Updating website " + webSiteName + "...");
+                site.Applications["/"].VirtualDirectories["/"].PhysicalPath = homePath;
                 site.Bindings.Clear();
                 site.Bindings.Add(localIpAddress + ":" + (isOffline ? offlinePort : port) + ":", protocol);
+            }
+            if (RoleEnvironment.IsEmulated && !isOffline)
+            {
+                WebSiteUrl = new UriBuilder()
+                {
+                    Host = localIpAddress,
+                    Port = int.Parse(port),
+                    Scheme = protocol                
+                }.Uri.ToString();                
             }
 
             // Setup header bindings
@@ -805,10 +803,6 @@ SeAuditPrivilege = {0}
                 // Change the status to Busy
                 Busy = true;
                 Plugins.OnStop();
-
-                // clean up directory link
-                Utils.DeleteSymbolicLink(LocalPath);
-
             }
             catch (Exception ex)
             {

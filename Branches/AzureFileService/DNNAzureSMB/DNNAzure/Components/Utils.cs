@@ -13,7 +13,6 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
-using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -23,8 +22,6 @@ using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.Diagnostics.Management;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.File;
 using LogLevel = Microsoft.WindowsAzure.Diagnostics.LogLevel;
 
 #endregion
@@ -40,40 +37,96 @@ namespace DNNAzure.Components
         public const int SleepTimeBetweenWriteErrors = 1000;
         public const int SleepTimeBeforeStartToRemap = 5000;
 
-        #region Cloud Storage operations
 
-        /// <summary>
-        /// Appends the current date and time to the log file, retrying the operation to avoid false positives
-        /// </summary>
-        /// <param name="logFilePath">Path to the log file</param>
-        /// <param name="maxAttempts">Maximum attempts to retry the operation</param>
-        /// <param name="message">The message.</param>
-        public static void AppendLogEntryWithRetries(string logFilePath, int maxAttempts, string message = "")
+        #region Network share mount
+        [DllImport("Mpr.dll",
+                    EntryPoint = "WNetAddConnection2",
+                    CallingConvention = CallingConvention.Winapi)]
+        private static extern int WNetAddConnection2(NETRESOURCE lpNetResource,
+                                                     string lpPassword,
+                                                     string lpUsername,
+                                                     System.UInt32 dwFlags);
+
+        [DllImport("Mpr.dll",
+                   EntryPoint = "WNetCancelConnection2",
+                   CallingConvention = CallingConvention.Winapi)]
+        private static extern int WNetCancelConnection2(string lpName,
+                                                        System.UInt32 dwFlags,
+                                                        System.Boolean fForce);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private class NETRESOURCE
         {
-            if (logFilePath == null) throw new ArgumentNullException("logFilePath");
-            var i = 0;
-            while (i < maxAttempts)
-            {
-                try
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(logFilePath)); // Ensure directory exists
-                    File.AppendAllText(logFilePath, string.Format("{0} - {1}", DateTime.UtcNow, message) + Environment.NewLine);
-                    break;
-                }
-                catch (Exception)
-                {
-                    i++;
-                    if (i >= maxAttempts)
-                    {
-                        throw;
-                    }
-                    Thread.Sleep(SleepTimeBetweenWriteErrors);
-                }
-            }
+            public int dwScope;
+            public ResourceType dwType;
+            public int dwDisplayType;
+            public int dwUsage;
+            public string lpLocalName;
+            public string lpRemoteName;
+            public string lpComment;
+            public string lpProvider;
+        };
+
+        public enum ResourceType
+        {
+            RESOURCETYPE_DISK = 1,
+        };
+
+        public static int MountShare(string shareName,
+                              string driveLetterAndColon,
+                              string username,
+                              string password)
+        {
+            if (RoleEnvironment.IsEmulated)
+                return 0;
+
+            if (string.IsNullOrEmpty(shareName)) throw new ArgumentNullException("shareName");
+            if (string.IsNullOrEmpty(driveLetterAndColon)) throw new ArgumentNullException("driveLetterAndColon");
+            Trace.TraceInformation("Mounting share {0}...", shareName);
+
+            // Make sure we aren't using this driveLetter for another mapping
+            WNetCancelConnection2(driveLetterAndColon, 0, true);
+
+            var nr = new NETRESOURCE();
+            nr.dwType = ResourceType.RESOURCETYPE_DISK;
+            nr.lpRemoteName = shareName;
+            nr.lpLocalName = driveLetterAndColon;
+
+            return WNetAddConnection2(nr, password, username, 0);
         }
+
+        public static int UnmountShare(string driveLetterAndColon)
+        {
+            if (string.IsNullOrEmpty(driveLetterAndColon)) throw new ArgumentNullException("driveLetterAndColon");
+            return WNetCancelConnection2(driveLetterAndColon, 0, true);
+        }
+
+        public static string GetRemoteSharePath()
+        {
+            if (RoleEnvironment.IsEmulated)
+                return RoleEnvironment.GetConfigurationSettingValue("shareName");
+
+            var credentials =
+                CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"))
+                    .Credentials;
+            credentials.ExportBase64EncodedKey();
+
+
+            var accountName =
+                CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"))
+                    .Credentials.AccountName;
+            return string.Format(@"\\{0}.file.core.windows.net\{1}", accountName, RoleEnvironment.GetConfigurationSettingValue(
+                "shareName"));
+        }
+
+        #endregion
+
+        #region Cloud Storage operations
 
         public static void CreateStorageFileShare()
         {
+            if (RoleEnvironment.IsEmulated)
+                return;
             var account = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue(
                 "AcceleratorConnectionString"));
             var client = account.CreateCloudFileClient();
@@ -81,135 +134,13 @@ namespace DNNAzure.Components
                 "shareName"));
             share.CreateIfNotExistsAsync().Wait();
         }
-        public static bool CreateSymbolicLink(string localPath, string shareName)
-        {
-            // Cleanup stale mounts
-            DeleteSymbolicLink(localPath);
-
-            Trace.TraceInformation("Creating symbolic link {0} on role instance {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
-
-            var found = false;
-            var i = 1;
-            var accountName =
-                CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("AcceleratorConnectionString"))
-                    .Credentials.AccountName;
-            var target = string.Format(@"\\{0}.file.core.windows.net\{1}", accountName, shareName);
-
-
-            while (true)
-            {
-                try
-                {
-                    if (Directory.Exists(target))
-                    {
-                        SymbolicLink.CreateDirectoryLink(localPath, target);
-                        Trace.TraceInformation(
-                            "Created symbolic link {0} to share {1} on role instance {2}. Verifying...",
-                            localPath, target, RoleEnvironment.CurrentRoleInstance.Id);
-
-                        if (!Directory.Exists(localPath))
-                            throw new IOException(string.Format("Directory {0} not found", localPath));
-
-                        if (!SymbolicLink.Exists(localPath))
-                            throw new IOException(string.Format("Symbolic link {0} not found", localPath));
-
-                        var currentTarget = SymbolicLink.GetTarget(localPath);
-                        if (currentTarget != target)
-                            throw new IOException(
-                                string.Format("Symbolic link {0} targets {1} and does not match {2}", localPath,
-                                              currentTarget, target));
-                        found = true;
-                    }
-                    else
-                    {
-                        throw new Exception(string.Format("Shared folder {0} does not exist.", target));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceWarning("Error creating symbolic link on role instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
-                    DeleteSymbolicLink(localPath);
-                }
-
-                if (!found)
-                {
-                    Trace.TraceWarning("Error creating the symbolic link on role instance {0}: No available share found. Retrying in 5 seconds (attempt {1} of 1000)...", RoleEnvironment.CurrentRoleInstance.Id, i);
-                    Thread.Sleep(SleepTimeBeforeStartToRemap);
-
-                    i++;
-                    if (i > 1000)
-                    {
-                        break;
-                    }
-                }
-                else
-                    break;
-            }
-
-            if (found)
-            {
-                Trace.TraceInformation("Success: created symbolic link {0} to location {1} on role {2}", localPath, target, RoleEnvironment.CurrentRoleInstance.Id);
-                return true;
-            }
-            Trace.TraceError("Error creating symbolic link on role instance {0}: Could not find an available SMB share and maximum attemtps reached", RoleEnvironment.CurrentRoleInstance.Id);
-            return false;
-        }
-
-
-        public static void DeleteSymbolicLink(string localPath)
-        {
-            try
-            {
-                if (Directory.Exists(localPath))
-                {
-                    Trace.TraceInformation("Deleting symbolic link {0} on worker role {1}...", localPath, RoleEnvironment.CurrentRoleInstance.Id);
-                    if (SymbolicLink.Exists(localPath))
-                    {
-                        Directory.Delete(localPath);
-                    }
-                    else
-                    {
-                        Directory.Delete(localPath, true);
-                    }   
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError("Error while deleting symbolic link {0} on worker role {1}: {2}", localPath, RoleEnvironment.CurrentRoleInstance.Id, ex);
-            }
-        }
         #endregion
 
         #region DotNetNuke setup utilities
-
-        /// <summary>
-        /// Creates the Windows user accounts for sharing the drive and FTP access
-        /// </summary>
-        public static void CreateUserAccounts()
-        {
-            // Create a local account for sharing the drive
-            CreateUserAccount(GetSetting("fileshareUserName"),
-                              GetSetting("fileshareUserPassword"));
-
-            // To ensure FTP users can access the shared folder
-            if (bool.Parse(GetSetting("FTP.Enabled", "False")))
-            {
-                // Create a local account for the FTP root user
-                CreateUserAccount(GetSetting("FTP.Root.Username"), DecryptPassword(GetSetting("FTP.Root.EncryptedPassword")));
-
-                if (!string.IsNullOrEmpty(GetSetting("FTP.Portals.Username")))
-                {
-                    // Optionally create a local account for the FTP portals user
-                    CreateUserAccount(GetSetting("FTP.Portals.Username"), DecryptPassword(GetSetting("FTP.Portals.EncryptedPassword")));
-                }
-            }
-        }
-
         /// <summary>
         /// Setups the web site settings.
         /// </summary>
-        /// <param name="drive">The drive.</param>
-        public static void SetupWebSiteSettings(string localPath)
+        public static void SetupContents(string localPath)
         {
             // Check for the database existence
             Trace.TraceInformation("Checking for database existence...");
@@ -256,7 +187,7 @@ namespace DNNAzure.Components
         /// Setups the offline site settings.
         /// </summary>
         /// <param name="contentsRoot">The contents root.</param>
-        public static void SetupOfflineSiteSettings(string contentsRoot)
+        public static void SetupOfflineContents(string contentsRoot)
         {
             try
             {
@@ -767,84 +698,6 @@ namespace DNNAzure.Components
             return ConfigurationManager.AppSettings.AllKeys.Contains(key) ? ConfigurationManager.AppSettings[key] : defaultValue;
         }
 
-
-        /// <summary>
-        /// Decrypts the password.
-        /// </summary>
-        /// <param name="encryptedPassword">The encrypted password.</param>
-        /// <returns></returns>
-        /// <exception cref="System.Security.SecurityException">Unable to decrypt password. Make sure that the cert used for encryption was uploaded to the Azure service</exception>
-        public static string DecryptPassword(string encryptedPassword)
-        {
-            SecureString password = null;
-            if (string.IsNullOrEmpty(encryptedPassword))
-            {
-                password = null;
-            }
-            else
-            {
-                try
-                {
-                    var encryptedBytes = Convert.FromBase64String(encryptedPassword);
-                    var envelope = new EnvelopedCms();
-                    envelope.Decode(encryptedBytes);
-                    var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-                    store.Open(OpenFlags.ReadOnly);
-                    envelope.Decrypt(store.Certificates);
-                    char[] passwordChars = Encoding.UTF8.GetChars(envelope.ContentInfo.Content);
-                    password = new SecureString();
-                    foreach (var character in passwordChars)
-                    {
-                        password.AppendChar(character);
-                    }
-                    Array.Clear(envelope.ContentInfo.Content, 0, envelope.ContentInfo.Content.Length);
-                    Array.Clear(passwordChars, 0, passwordChars.Length);
-                    password.MakeReadOnly();
-                }
-                catch (CryptographicException)
-                {
-                    // Unable to decrypt password. Make sure that the cert used for encryption was uploaded to the Azure service
-                    password = null;
-                }
-                catch (FormatException)
-                {
-                    // Encrypted password is not a valid base64 string
-                    password = null;
-                }
-            }
-            if (password == null)
-            {
-                throw new SecurityException("Unable to decrypt password. Make sure that the cert used for encryption was uploaded to the Azure service");
-            }
-            return GetUnsecuredString(password);
-        }
-
-        /// <summary>
-        /// Gets the unsecured string.
-        /// </summary>
-        /// <param name="secureString">The secure string.</param>
-        /// <returns></returns>
-        /// <exception cref="System.ArgumentNullException">secureString</exception>
-        public static string GetUnsecuredString(SecureString secureString)
-        {
-            if (secureString == null)
-            {
-                throw new ArgumentNullException("secureString");
-            }
-
-            IntPtr ptrUnsecureString = IntPtr.Zero;
-
-            try
-            {
-                ptrUnsecureString = Marshal.SecureStringToGlobalAllocUnicode(secureString);
-                return Marshal.PtrToStringUni(ptrUnsecureString);
-            }
-            finally
-            {
-                Marshal.ZeroFreeGlobalAllocUnicode(ptrUnsecureString);
-            }
-        }
-
         #endregion
 
         #region Diagnostic monitor initialization
@@ -935,35 +788,6 @@ namespace DNNAzure.Components
 
         #endregion
 
-        #region Mime types
-        internal static string GetMimeType(FileInfo fileInfo)
-        {
-            var mimeType = "application/octet-stream";
-            var regKey = Registry.ClassesRoot.OpenSubKey(fileInfo.Extension.ToLower());
-            if (regKey != null)
-            {
-                var contentType = regKey.GetValue("Content Type");
-                if (contentType != null) mimeType = contentType.ToString();
-            }
-            return mimeType;
-        }
-
-        internal static string GetMimeType(string path)
-        {
-            var mimeType = "application/octet-stream";
-            var extension = Path.GetExtension(path);
-            if (extension != null)
-            {
-                var regKey = Registry.ClassesRoot.OpenSubKey(extension.ToLower());
-                if (regKey != null)
-                {
-                    var contenType = regKey.GetValue("Content Type");
-                    if (contenType != null) mimeType = contenType.ToString();
-                }
-            }
-            return mimeType;
-        }
-        #endregion
 
         #region Zip
 
@@ -1170,81 +994,6 @@ namespace DNNAzure.Components
         #endregion 
 
         #region Non-managed code utilities
-        /// <summary>
-        /// Shares a local folder
-        /// </summary>
-        /// <param name="userNames">Username list to share the drive with full access permissions</param>
-        /// <param name="path">Path to share</param>
-        /// <param name="shareName">Share name</param>
-        /// <returns>Returns 0 if success</returns>
-        public static int ShareLocalFolder(string[] userNames, string path, string shareName)
-        {
-            string error;
-            var grants = userNames.Where(userName => !string.IsNullOrEmpty(userName)).Aggregate("", (current, userName) => current + string.Format(" /Grant:{0},full", userName));
-            Trace.TraceInformation("Sharing local folder {0} with grants: {1}", path, grants);
-            int exitCode = ExecuteCommand("net.exe", " share " + shareName + "=" + path + grants, out error, 10000);
-
-            if (exitCode != 0)
-                //Log error and continue since the drive may already be shared
-                Trace.TraceError("Error creating fileshare, error msg:" + error);
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Deletes the share.
-        /// </summary>
-        /// <param name="shareName">The share name.</param>
-        /// <returns></returns>
-        public static int DeleteShare(string shareName)
-        {
-            var i = 0;
-            int exitCode = 0;
-            while (i <= 10)
-            {
-                i++;
-                Trace.TraceInformation("Removing share on role {0} ({1} of 10)...", RoleEnvironment.CurrentRoleInstance.Id, i);
-                string error;
-                exitCode = ExecuteCommand("net.exe", " share /d " + shareName + " /Y", out error, 10000);
-
-                if (exitCode != 0)
-                {
-                    //Log error and continue
-                    Trace.TraceWarning("Error deleting fileshare on role {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id,
-                                       error);
-                    Thread.Sleep(SleepTimeBeforeStartToRemap);
-                }
-                else
-                {
-                    Trace.TraceInformation("Successfully deleted the share");
-                    return exitCode;                
-                }
-            }
-            return exitCode;
-        }
-
-        public static int EnableFTPFirewallTraffic()
-        {
-            int exitCode = 0;
-            //Enable SMB traffic through the firewall
-            Trace.TraceInformation("Enabling FTP traffic through the firewall");     
-
-            if (UseAdvancedFirewall())
-            {
-                Trace.TraceInformation("Enabling FTP traffic through the firewall using advanced firewall");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (FTP Server - Data)", "In", "Public", "TCP", "20", "Any", "Any", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (FTP Server - Command)", "In", "Public", "TCP", "21", "Any", "Any", "");
-            }
-            else
-            {
-                Trace.TraceInformation("Enabling FTP traffic through the firewall using non advanced firewall"); 
-                string error;
-                exitCode |= ExecuteCommand("netsh.exe", "firewall set portopening TCP 20 \"DotNetNuke Azure Accelerator (FTP Server - Data)\"", out error, 10000);
-                exitCode |= ExecuteCommand("netsh.exe", "firewall set portopening TCP 21 \"DotNetNuke Azure Accelerator (FTP Server - Command)\"", out error, 10000);
-            }
-
-            return exitCode;
-        }
-
 
         public static  int RestartService(string serviceName)
         {
@@ -1258,160 +1007,6 @@ namespace DNNAzure.Components
                 Trace.TraceWarning("There was an error while starting the {0} service: {1}", serviceName, error);
             }
 
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Enables SMB traffic through the firewall
-        /// </summary>
-        /// <returns>Returns 0 if success</returns>
-        public static int EnableSMBFirewallTraffic()
-        {
-            //Enable SMB traffic through the firewall
-            Trace.TraceInformation("Enabling SMB traffic through the firewall");
-
-            string error;
-            int exitCode = ExecuteCommand("netsh.exe", "firewall set service type=fileandprint mode=enable scope=all", out error, 10000);  
-
-            if (UseAdvancedFirewall()) // Is Windows Server 2008 R2? (OS Family == "2" in the service configuration file)
-            {
-                // This rules are needed after enabling the fileandprint service on Windows Server 2008 R2, to enable
-                // mapping the drive using Windows Azure Connect on a remote machine
-                // Changed to the new netsh firewall syntax. For more info, see http://support.microsoft.com/kb/947709/. 
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Public", "In", "Public", "ICMPv4", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Domain", "In", "Domain", "ICMPv4", "Any", "Any", "Any", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-In) - Private", "In", "Private", "ICMPv4", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-In) - Public", "In", "Public", "ICMPv6", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-In) - Domain", "In", "Domain", "ICMPv6", "Any", "Any", "Any", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-In) - Private", "In", "Private", "ICMPv6", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-In) - Public", "In", "Public", "UDP", "138", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-In) - Domain", "In", "Domain", "UDP", "138", "Any", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-In) - Private", "In", "Private", "UDP", "138", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-In) - Public", "In", "Public", "UDP", "137", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-In) - Domain", "In", "Domain", "UDP", "137", "Any", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-In) - Private", "In", "Private", "UDP", "137", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-In) - Public", "In", "Public", "TCP", "139", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-In) - Domain", "In", "Domain", "TCP", "139", "Any", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-In) - Private", "In", "Private", "TCP", "139", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-In) - Public", "In", "Public", "TCP", "445", "Any", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-In) - Domain", "In", "Domain", "TCP", "445", "Any", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-In) - Private", "In", "Private", "TCP", "445", "Any", "LocalSubnet", "System");
-
-                // Outbound rules
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-Out) - Public", "Out", "Public", "ICMPv4", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-Out) - Domain", "Out", "Domain", "ICMPv4", "Any", "Any", "Any", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv4-Out) - Private", "Out", "Private", "ICMPv4", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-Out) - Public", "Out", "Public", "ICMPv6", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-Out) - Domain", "Out", "Domain", "ICMPv6", "Any", "Any", "Any", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (Echo Request - ICMPv6-Out) - Private", "Out", "Private", "ICMPv6", "Any", "Any", "LocalSubnet", "");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-Out) - Public", "Out", "Public", "UDP", "Any", "138", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-Out) - Domain", "Out", "Domain", "UDP", "Any", "138", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Datagram-Out) - Private", "Out", "Private", "UDP", "Any", "138", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-Out) - Public", "Out", "Public", "UDP", "Any", "137", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-Out) - Domain", "Out", "Domain", "UDP", "Any", "137", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Name-Out) - Private", "Out", "Private", "UDP", "Any", "137", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-Out) - Public", "Out", "Public", "TCP", "Any", "139", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-Out) - Domain", "Out", "Domain", "TCP", "Any", "139", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (NB-Session-Out) - Private", "Out", "Private", "TCP", "Any", "139", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Public", "Out", "Public", "TCP", "Any", "445", "LocalSubnet", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Domain", "Out", "Domain", "TCP", "Any", "445", "Any", "System");
-                exitCode |= SetupAdvancedFirewallRule("DotNetNuke Azure Accelerator (SMB-Out) - Private", "Out", "Private", "TCP", "Any", "445", "LocalSubnet", "System");         
-            }
-
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Returns true if the OS version is 6.1 or higher (Windows Server 2008 R2, Windows 7, Windows 8)
-        /// </summary>
-        /// <returns></returns>
-        private static bool UseAdvancedFirewall()
-        {
-            return (Environment.OSVersion.Version.Major == 6 && Environment.OSVersion.Version.Minor >= 1) ||
-                   (Environment.OSVersion.Version.Major > 6);
-        }
-
-        private static int SetupAdvancedFirewallRule(string ruleName, string direction, string profile, string protocol, string localPort, string remotePort, string remoteIp, string program)
-        {
-            // Try to update the rule first
-            var rule = string.Format(" dir={0}", direction);
-            rule += string.Format(" profile={0}", profile);
-            rule += string.Format(" protocol={0}", protocol);
-            if (protocol.ToUpperInvariant() == "TCP" || protocol.ToUpperInvariant() == "UDP")
-            {
-                rule += string.Format(" localport={0}", localPort);
-                rule += string.Format(" remoteport={0}", remotePort);
-            }
-
-            rule += string.Format(" remoteip={0}", remoteIp);
-            if (!string.IsNullOrEmpty(program))
-                rule += string.Format(" program={0}", program);
-            rule += " action=Allow enable=Yes";
-
-            var updateArgs = string.Format("advfirewall firewall set rule name=\"{0}\" new {1}", ruleName, rule);
-            var createArgs = string.Format("advfirewall firewall add rule name=\"{0}\" {1}", ruleName, rule);
-
-            string error;
-            var exitCode = ExecuteCommand("netsh.exe", updateArgs, out error, 10000, false);
-            if (exitCode != 0) // If not exists, then create the rule
-            {
-                exitCode = ExecuteCommand("netsh.exe", createArgs, out error, 10000);
-            }
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Creates an user account on the local machine
-        /// </summary>
-        /// <param name="userName">Name for the user account</param>
-        /// <param name="password">Password for the user account</param>
-        /// <param name="passwordNeverExpires">Boolean to indicate if the password never expires (true by default)</param>
-        /// <returns>Returns 0 if success</returns>
-        public static int CreateUserAccount(string userName, string password, bool passwordNeverExpires = true)
-        {
-            string error;
-
-            //Create the user account    
-            Trace.TraceInformation("Creating user account '{0}'...", userName);
-            int exitCode = ExecuteCommand("net.exe", string.Format("user {0} {1} /expires:never /add /Y", userName, password), out error, 10000);
-            if (exitCode != 0)
-            {
-                //Log error and continue since the user account may already exist
-                Trace.TraceWarning("Error creating user account, error msg:" + error);
-            }
-            else
-            {
-                // Password never expires
-                if (passwordNeverExpires)
-                {
-                    Trace.TraceInformation("Setting account password expiration to never for user account '{0}'...", userName);
-                    exitCode = ExecuteCommand("wmic.exe", string.Format("USERACCOUNT WHERE \"Name='{0}'\" SET PasswordExpires=FALSE", userName), out error, 10000);
-                    if (exitCode != 0)
-                    {
-                        Trace.TraceWarning("Error while setting account password expiration, error msg:" + error);
-                    }
-                }                
-            }
-            return exitCode;
-        }
-
-        /// <summary>
-        /// Deletes an user account on the local machine
-        /// </summary>
-        /// <param name="userName">User name of the account</param>
-        /// <returns>Returns 0 if success</returns>
-        public static int DeleteUserAccount(string userName)
-        {
-            string error;
-
-            //Create the user account    
-            Trace.TraceInformation(string.Format("Deleting user account '{0}'...", userName));
-            int exitCode = ExecuteCommand("net.exe", string.Format("user {0} /delete", userName), out error, 10000);
-            if (exitCode != 0)
-            {
-                //Log error and continue since the user account may already exist
-                Trace.TraceWarning("Error deleting user account, error msg:" + error);
-            }
             return exitCode;
         }
 
@@ -1581,52 +1176,6 @@ namespace DNNAzure.Components
                 Trace.TraceError(string.Format("Error while downloading addons file '{0}': {1}", url, ex));
                 return false;
             }            
-        }
-
-        #endregion
-
-        #region Impersonation
-        private const int LOGON32_LOGON_INTERACTIVE = 2;
-        private const int LOGON32_PROVIDER_DEFAULT = 0;
-
-        [DllImport("advapi32.dll")]
-        public static extern int LogonUserA(String lpszUserName, String lpszDomain, String lpszPassword, int dwLogonType, int dwLogonProvider, ref IntPtr phToken);
-        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern int DuplicateToken(IntPtr hToken, int impersonationLevel, ref IntPtr hNewToken);
-        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern bool RevertToSelf();
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-        public static extern bool CloseHandle(IntPtr handle);
-
-        public static WindowsImpersonationContext ImpersonateValidUser(String userName, String domain, String password)
-        {
-            WindowsIdentity tempWindowsIdentity;
-            IntPtr token = IntPtr.Zero;
-            IntPtr tokenDuplicate = IntPtr.Zero;
-
-            if (RevertToSelf())
-            {
-                if (LogonUserA(userName, domain, password, LOGON32_LOGON_INTERACTIVE,
-                    LOGON32_PROVIDER_DEFAULT, ref token) != 0)
-                {
-                    if (DuplicateToken(token, 2, ref tokenDuplicate) != 0)
-                    {
-                        tempWindowsIdentity = new WindowsIdentity(tokenDuplicate);
-                        WindowsImpersonationContext impersonationContext = tempWindowsIdentity.Impersonate();
-                        if (impersonationContext != null)
-                        {
-                            CloseHandle(token);
-                            CloseHandle(tokenDuplicate);
-                            return impersonationContext;
-                        }
-                    }
-                }
-            }
-            if (token != IntPtr.Zero)
-                CloseHandle(token);
-            if (tokenDuplicate != IntPtr.Zero)
-                CloseHandle(tokenDuplicate);
-            return null;
         }
 
         #endregion
