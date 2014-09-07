@@ -12,7 +12,7 @@
       <Setting name="managedPipelineMode" value="Integrated" />
       <Setting name="fileshareUserName" value="fileshareuser" />
       <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
-      <Setting name="shareName" value="sharerw" />
+      <Setting name="shareName" value="@@SHARENAME@@" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />
       <Setting name="packageUrl" value="@@PACKAGEURL@@" />

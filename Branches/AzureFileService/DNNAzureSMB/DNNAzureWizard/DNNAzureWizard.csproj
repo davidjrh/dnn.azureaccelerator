@@ -138,6 +138,7 @@
     <Content Include="packages\DNNAzureSingleAndSmall_2013Q4.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="Resources\MSAzureLogo.png" />
     <None Include="packages\DNNAzureSingleAndSmall_2013Q4.cscfg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
