@@ -7,13 +7,6 @@ namespace DNNAzure
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (RoleEnvironment.IsEmulated)
-            {
-                if (!string.IsNullOrEmpty(WebRole.WebSiteUrl))
-                {
-                    Response.Redirect(WebRole.WebSiteUrl);
-                }
-            }
         }
     }
 }

@@ -43,8 +43,6 @@
       <Setting name="FTP.Enabled" value="true" />
       <Setting name="FTP.Root.Username" value="" />
       <Setting name="FTP.Root.EncryptedPassword" value="" />
-      <Setting name="FTP.Portals.Username" value="" />
-      <Setting name="FTP.Portals.EncryptedPassword" value="" />
       <Setting name="FTP.ExternalIpProvider.Url" value="http://checkip.dyndns.org/" />
       <Setting name="FTP.ExternalIpProvider.RegexPattern" value="[^\d\.]*" />
       <Setting name="UpdateService.Source" value="" />

@@ -165,23 +165,6 @@ SeInteractiveLogonRight = $($currentLogonSetting)
     Write-Host "Done." 
 }
 
-
-function SetSiteRootPermissions($accountToAdd) {
-	if (-Not [Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment]::IsEmulated) {
-		return;
-	}
-
-    Write-Host "Changing site root folder permissions..."
-    $rootPath = [Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment]::GetLocalResource("SitesRoot").RootPath
-    $acl = Get-Acl $rootPath
-    $permission = "$accountToAdd","FullControl","ContainerInherit,ObjectInherit","None","Allow"
-    $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
-    $acl.SetAccessRule($accessRule)
-    $acl | Set-Acl $rootPath    
-}
-
-
-
 # END Support functions
 
 
@@ -200,19 +183,20 @@ $accountKey = $account.Credentials.ExportBase64EncodedKey()
 cmd.exe /C net.exe user "$username" "$password" /expires:never /add /Y
 cmd.exe /C wmic.exe USERACCOUNT WHERE "Name='$username'" SET PasswordExpires=FALSE
 
-# Setup local policies
-$machineName = [System.Environment]::MachineName
-$accountToAdd = "$machineName\$username"
-SetupLocalPolicies $accountToAdd
+# If the appPool user is different from the SMB user, we need to persist the credentials
+# Need to use psexec for this step since need to run with elevation
+if ($username -ne $accountName) {
+	# Setup local policies
+	$machineName = [System.Environment]::MachineName
+	$accountToAdd = "$machineName\$username"
+	SetupLocalPolicies $accountToAdd
 
-# Persist File Service credentials
-Push-Location
-cd "$env:RoleRoot\approot\bin\scripts"
-.\psexec.exe -accepteula -h -u "$username" -p "$password" cmd.exe /C cmdkey.exe /add:$accountName.file.core.windows.net /user:$accountName /pass:$accountKey
-Pop-Location
-
-# Set site root folder permissions (needed for Emulator)
-SetSiteRootPermissions $accountToAdd
+	# Persist File Service credentials
+	Push-Location
+	cd "$env:RoleRoot\approot\bin\scripts"
+	.\psexec.exe -accepteula -h -u "$username" -p "$password" cmd.exe /C cmdkey.exe /add:$accountName.file.core.windows.net /user:$accountName /pass:$accountKey
+	Pop-Location
+}
 
 # Setup FTP accounts
 $ftpEnabled = Get-Setting "FTP.Enabled" "false"
@@ -222,14 +206,5 @@ if ($ftpEnabled.ToLowerInvariant() -eq "true") {
     $ftpRootPassword = Decrypt-Password($ftpRootEncryptedPassword)
     cmd.exe /C net.exe user "$ftpRootUserName" "$ftpRootPassword" /expires:never /add /Y
     cmd.exe /C wmic.exe USERACCOUNT WHERE "Name='$ftpRootUserName'" SET PasswordExpires=FALSE
-
-
-    $ftpPortalUserName = Get-Setting "FTP.Portals.Username"
-    if ($ftpPortalUserName -ne "") {
-        $ftpPortalEncryptedPassword = Get-Setting "FTP.Portals.EncryptedPassword"
-        $ftpPortalPassword = Decrypt-Password($ftpPortalEncryptedPassword)
-        cmd.exe /C net.exe user "$ftpPortalUserName" "$ftpPortalPassword" /expires:never /add /Y
-        cmd.exe /C wmic.exe USERACCOUNT WHERE "Name='$ftpPortalUserName'" SET PasswordExpires=FALSE
-    }
 }
 

@@ -640,25 +640,33 @@ namespace DNNAzure.Components
         /// <returns>External IP address of the current host</returns>
         public static string GetExternalIP(string providerUrl, string regexPattern)
         {
-            var direction = "";
-            try
+            var address = "";
+            var attempts = 0;
+
+            while (attempts < 3)
             {
-                var regReplace = new Regex(regexPattern, RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
-                var request = WebRequest.Create(providerUrl);
-                using (var response = request.GetResponse())
+                try
                 {
-                    using (var stream = new StreamReader(response.GetResponseStream()))
+                    var regReplace = new Regex(regexPattern, RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+                    var request = WebRequest.Create(providerUrl);
+                    using (var response = request.GetResponse())
                     {
-                        direction = stream.ReadToEnd();
+                        using (var stream = new StreamReader(response.GetResponseStream()))
+                        {
+                            address = stream.ReadToEnd();
+                        }
                     }
+                    address = regReplace.Replace(address, "");
+                    break;
                 }
-                direction = regReplace.Replace(direction, "");
+                catch (Exception ex)
+                {
+                    attempts++;
+                    Trace.TraceError("Error while getting the external IP address: {0}", ex.Message);
+                    Thread.Sleep(1000 * 3 * attempts);
+                }                
             }
-            catch (Exception ex)
-            {
-                Trace.TraceError("Error while getting the external IP address: {0}", ex.Message);
-            }
-            return direction;
+            return address;
         }
 
         /// <summary>
@@ -676,17 +684,11 @@ namespace DNNAzure.Components
             return localAddress != null ? localAddress.ToString() : "";
         }
 
+        [DebuggerStepThrough]
         public static string GetSetting(string key, string defaultValue = "")
         {
             if (RoleEnvironment.IsAvailable)
             {
-                //try
-                //{
-                //        var prefix = RoleEnvironment.GetConfigurationSettingValue("Prefix");
-                //        return RoleEnvironment.GetConfigurationSettingValue(prefix + key);
-                //}
-                //catch (RoleEnvironmentException)  // The configuration setting that was being retrieved does not exist.
-                //{}
                 try
                 {
                     return RoleEnvironment.GetConfigurationSettingValue(key);
@@ -707,6 +709,10 @@ namespace DNNAzure.Components
         /// </summary>
         public static void ConfigureDiagnosticMonitor()
         {
+            // Add Windows Azure Trace Listener
+            Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
+            Trace.Listeners.Add(new EventLogTraceListener("DotNetNuke"));
+            
             Trace.TraceInformation("Configuring diagnostic monitor...");
             var diagnosticsConnectionString =
                 RoleEnvironment.GetConfigurationSettingValue(
@@ -717,9 +723,6 @@ namespace DNNAzure.Components
             var transferDirectoriesPeriod = TimeSpan.FromMinutes(5);
             var bufferQuotaInMB = 512;
 
-            // Add Windows Azure Trace Listener
-            Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
-            Trace.Listeners.Add(new EventLogTraceListener("DotNetNuke"));
 
             // Enable Collection of Crash Dumps
             CrashDumps.EnableCollection(true);

@@ -43,8 +43,6 @@
       <Setting name="FTP.Enabled" value="@@FTPSERVERENABLED@@" />
       <Setting name="FTP.Root.Username" value="@@FTPROOTUSERNAME@@" />
       <Setting name="FTP.Root.EncryptedPassword" value="@@FTPROOTPASSWORD@@" />
-      <Setting name="FTP.Portals.Username" value="@@FTPPORTALSUSERNAME@@" />
-      <Setting name="FTP.Portals.EncryptedPassword" value="@@FTPPORTALSPASSWORD@@" />
       <Setting name="FTP.ExternalIpProvider.Url" value="http://checkip.dyndns.org/" />
       <Setting name="FTP.ExternalIpProvider.RegexPattern" value="[^\d\.]*" />
       <Setting name="UpdateService.Source" value="" />
