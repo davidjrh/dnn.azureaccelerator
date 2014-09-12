@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2014-06.2.4">
-  <WebRole name="DNNAzure" vmsize="Medium">
+  <WebRole name="DNNAzure" vmsize="ExtraSmall">
     <Runtime executionContext="elevated">
     </Runtime>
     <Startup>
@@ -138,8 +138,6 @@
       <Setting name="FTP.Enabled" />
       <Setting name="FTP.Root.Username" />
       <Setting name="FTP.Root.EncryptedPassword" />
-      <Setting name="FTP.Portals.Username" />
-      <Setting name="FTP.Portals.EncryptedPassword" />
       <Setting name="FTP.ExternalIpProvider.Url" />
       <Setting name="FTP.ExternalIpProvider.RegexPattern" />
       <Setting name="UpdateService.Source" />
@@ -154,10 +152,8 @@
       <Setting name="WebPlatformInstaller.BackgroundProducts" />
     </ConfigurationSettings>
     <LocalResources>
-      <LocalStorage name="AzureDriveCache" cleanOnRoleRecycle="true" sizeInMB="1044" />
       <LocalStorage name="WebPITemp" cleanOnRoleRecycle="true" sizeInMB="500" />
-      <LocalStorage name="SitesRoot" cleanOnRoleRecycle="false" sizeInMB="100" />
-      <LocalStorage name="DiagnosticStore" cleanOnRoleRecycle="false" sizeInMB="20000" />
+      <LocalStorage name="DiagnosticStore" cleanOnRoleRecycle="false" sizeInMB="6000" />
     </LocalResources>
     <Certificates>
       <Certificate name="SSL" storeLocation="LocalMachine" storeName="My" />

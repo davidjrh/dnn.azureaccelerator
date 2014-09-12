@@ -10,8 +10,8 @@
       <Setting name="hostHeaders" value="@@HOSTHEADERS@@" />
       <Setting name="managedRuntimeVersion" value="v4.0" />
       <Setting name="managedPipelineMode" value="Integrated" />
-      <Setting name="fileshareUserName" value="fileshareuser" />
-      <Setting name="fileshareUserPassword" value="SecurePassw0rd" />
+      <Setting name="fileshareUserName" value="@@STORAGEACCOUNTNAME@@" />
+      <Setting name="fileshareUserPassword" value="@@STORAGEKEY@@" />
       <Setting name="shareName" value="@@SHARENAME@@" />
       <Setting name="packageContainer" value="@@PACKAGECONTAINER@@" />
       <Setting name="package" value="" />
@@ -32,14 +32,12 @@
       <Setting name="AddonsUrl" value="" />
       <Setting name="SSL.CertificateThumbprint" value="@@SSLTHUMBPRINT@@" />
       <Setting name="SSL.HostHeader" value="" />
-      <Setting name="WebPlatformInstaller.Products" value="" />
+      <Setting name="WebPlatformInstaller.Products" value="@@WPIPRODUCTS@@" />
       <Setting name="WebPlatformInstaller.Enabled" value="true" />
       <Setting name="IISRemoteManagement.Enabled" value="@@REMOTEMGMTENABLED@@" />
       <Setting name="FTP.Enabled" value="@@FTPSERVERENABLED@@" />
       <Setting name="FTP.Root.Username" value="@@FTPROOTUSERNAME@@" />
       <Setting name="FTP.Root.EncryptedPassword" value="@@FTPROOTPASSWORD@@" />
-      <Setting name="FTP.Portals.Username" value="@@FTPPORTALSUSERNAME@@" />
-      <Setting name="FTP.Portals.EncryptedPassword" value="@@FTPPORTALSPASSWORD@@" />
       <Setting name="FTP.ExternalIpProvider.Url" value="http://checkip.dyndns.org/" />
       <Setting name="FTP.ExternalIpProvider.RegexPattern" value="[^\d\.]*" />
       <Setting name="UpdateService.Source" value="" />
@@ -51,7 +49,7 @@
       <Setting name="Startup.ExternalTasks" value="" />
       <Setting name="Startup.ExternalTasks.KeyValueSettings" value="" />
       <Setting name="Smtp.Enabled" value="false" />
-      <Setting name="WebPlatformInstaller.BackgroundProducts" value="@@WPIPRODUCTS@@" />
+      <Setting name="WebPlatformInstaller.BackgroundProducts" value="" />
     </ConfigurationSettings>
     <Certificates>
       <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="00DEADBEEF00" thumbprintAlgorithm="sha1" />

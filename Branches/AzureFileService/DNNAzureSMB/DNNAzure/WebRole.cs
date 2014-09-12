@@ -20,7 +20,6 @@ namespace DNNAzure
         private const string WebSiteName = "DotNetNuke";
         private const string OfflineSiteName = "Offline";
         private const string AppPoolName = "DotNetNukeApp";
-        internal static string WebSiteUrl { get; set; }
 
         private volatile bool _busy = true;
         internal bool Busy
@@ -148,7 +147,7 @@ namespace DNNAzure
 
                 Plugins.OnStart();
 
-                Utils.UnmountShare("X:");
+                //Utils.UnmountShare("X:");
             }
             catch (Exception ex)
             {
@@ -252,7 +251,7 @@ namespace DNNAzure
             // Create the DNN Web site
             try
             {
-                if (CreateDnnWebSite(Utils.GetSetting("hostHeaders"),
+                if (CreateWebSite(Utils.GetSetting("hostHeaders"),
                                           Path.Combine(LocalPath, Utils.GetSetting("dnnFolder")),
                                           Path.Combine(LocalPath, Utils.GetSetting("AppOffline.Folder")),
                                           Utils.GetSetting("fileshareUserName"),
@@ -270,15 +269,11 @@ namespace DNNAzure
                                 Utils.GetSetting("FTP.ExternalIpProvider.Url", @"http://checkip.dyndns.org/"),
                                 Utils.GetSetting("FTP.ExternalIpProvider.RegexPattern", @"[^\d\.]*"));
 
-                        CreateDnnftpSite(Utils.GetSetting("hostHeaders"),
+                        CreateFtpSite(Utils.GetSetting("hostHeaders"),
                                          Utils.GetSetting("FTP.Root.Username"),
-                                         Utils.GetSetting("FTP.Portals.Username"),
                                          Path.Combine(LocalPath, Utils.GetSetting("dnnFolder")),
-                                         Path.Combine(Path.Combine(LocalPath, Utils.GetSetting("dnnFolder")), "Portals"),
                                          WebSiteName,
-                                         externalIp,
-                                         RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port,
-                                         RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port);
+                                         externalIp);
                         if (!string.IsNullOrEmpty(externalIp))
                         {
                             Utils.RestartService("FTPSVC");
@@ -419,23 +414,27 @@ SeAuditPrivilege = {0}
         /// <param name="portalsRoot">The portals root.</param>
         /// <param name="webSiteName">Name of the web site.</param>
         /// <param name="externalIP">The external IP.</param>
-        /// <param name="lowDataChannelPort">The low data channel port.</param>
-        /// <param name="highDataChannelPort">The high data channel port.</param>
         /// <returns></returns>
-        private static bool CreateDnnftpSite(string hostHeaders, string rootUsername, string portalsAdminUsername, string siteRoot, string portalsRoot, string webSiteName, string externalIP, int lowDataChannelPort, int highDataChannelPort)
+        private static bool CreateFtpSite(string hostHeaders, string rootUsername, string siteRoot, string webSiteName, string externalIP)
         {
             Trace.TraceInformation("Creating FTP site...");
             try
             {
                 const string protocol = "ftp";
                 var ftproot = Environment.SystemDirectory.Substring(0, 2) + @"\inetpub\ftproot";
-                var port = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPCmd"].IPEndpoint.Port.ToString();                
+                // Internal endpoints not available on the emulator
+                var port = RoleEnvironment.IsEmulated
+                    ? 21
+                    : RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPCmd"].IPEndpoint.Port;
+                var ftpPassivePort = RoleEnvironment.IsEmulated
+                    ? 20000
+                    : RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["FTPDataPassive"].IPEndpoint.Port;
                 var ftpSiteName = string.Format("{0}_FTP", webSiteName);
                 string[] headers = hostHeaders.Split(';');
 
                 using (var serverManager = new ServerManager())
                 {
-                    var site = serverManager.Sites[ftpSiteName];
+                    var site = serverManager.Sites.FirstOrDefault(x => x.Name == ftpSiteName);
                     if (site == null)
                     {
                         var localIpAddress = Utils.GetFirstIPv4LocalNetworkAddress();
@@ -443,8 +442,8 @@ SeAuditPrivilege = {0}
                             localIpAddress = "*";
                         var binding = localIpAddress + ":" + port + ":";
                         Trace.TraceInformation(
-                            "Creating FTP (SiteName={0}; Protocol={1}; Bindings={2}; RootPath={3}; PortalsPath={4}",
-                            ftpSiteName, "ftp", binding, siteRoot, portalsRoot);
+                            "Creating FTP (SiteName={0}; Protocol={1}; Bindings={2}; RootPath={3};",
+                            ftpSiteName, "ftp", binding, siteRoot);
                         site = serverManager.Sites.Add(ftpSiteName, protocol, localIpAddress + ":" + port + ":", ftproot);
 
                         for (int i = 1; i < headers.Length; i++)
@@ -452,9 +451,7 @@ SeAuditPrivilege = {0}
                     }
                     else
                     {
-                        // TODO Rebuild the site permissions below and don't exit here
-                        Trace.TraceInformation("FTP site was already configured");
-                        return true;
+                        Trace.TraceInformation("FTP site was already created");
                     }
 
                     // Enable basic authentication
@@ -469,72 +466,40 @@ SeAuditPrivilege = {0}
                         Trace.TraceInformation("Enabling passive mode on the FTP site...");
                         var firewallSupportSection = config.GetSection("system.ftpServer/firewallSupport");
                         site.GetChildElement("ftpServer").GetChildElement("firewallSupport")["externalIp4Address"] = externalIP;
-                        firewallSupportSection["lowDataChannelPort"] = lowDataChannelPort;
-                        firewallSupportSection["highDataChannelPort"] = highDataChannelPort;
+                        firewallSupportSection["lowDataChannelPort"] = ftpPassivePort;
+                        firewallSupportSection["highDataChannelPort"] = ftpPassivePort;
                     }
                     else
                     {
                         Trace.TraceWarning("Cannot enable FTP passive mode");
                     }
 
+                    // Change root folder and permissions
+                    var vdir = site.Applications[0].VirtualDirectories["/"];
+                    vdir.PhysicalPath = siteRoot;
+                    vdir.LogonMethod = AuthenticationLogonMethod.ClearText;
+                    vdir.UserName = Utils.GetSetting("fileshareUserName");
+                    vdir.Password = Utils.GetSetting("fileshareUserPassword");
+
                     // Enable authorization for users in the root folder (read only)
-                    Trace.TraceInformation("Setting upt authorization for users in the FTP root folder (read only)...");
+                    Trace.TraceInformation("Setting up FTP permissions...");
                     var authorizationSection = config.GetSection("system.ftpServer/security/authorization", ftpSiteName);
                     var authorizationCollection = authorizationSection.GetCollection();
+                    authorizationCollection.Clear();
                     var authElement = authorizationCollection.CreateElement("add");
                     authElement["accessType"] = @"Allow";
                     authElement["users"] = rootUsername;
-                    authElement["permissions"] = @"Read";
+                    authElement["permissions"] = @"Read, Write";
                     authorizationCollection.Add(authElement);
-                    if (!string.IsNullOrEmpty(portalsAdminUsername))
-                    {
-                        authElement = authorizationCollection.CreateElement("add");
-                        authElement["accessType"] = @"Allow";
-                        authElement["users"] = portalsAdminUsername;
-                        authElement["permissions"] = @"Read";
-                        authorizationCollection.Add(authElement);                        
-                    }
 
                     // Remove SSL requirement
                     Trace.TraceInformation("Removing SSL requirement for FTP...");
                     site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("ssl")["controlChannelPolicy"] = 0;
                     site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("ssl")["dataChannelPolicy"] = 0;
 
-                    // Add two virtual directories (one for each user)
-                    Trace.TraceInformation("Creating FTP virtual directories...");
-                    site.Applications[0].VirtualDirectories.Add("/" + rootUsername, siteRoot);
-                    if (!string.IsNullOrEmpty(portalsAdminUsername))
-                    {
-                        site.Applications[0].VirtualDirectories.Add("/" + portalsAdminUsername, portalsRoot);
-                    }
-
-                    // Add read/write permissions for each user
-                    Trace.TraceInformation("Setting up FTP permissions...");
-                    //   Root
-                    authorizationSection = config.GetSection("system.ftpServer/security/authorization", string.Format("{0}/{1}", ftpSiteName, rootUsername));
-                    authorizationCollection = authorizationSection.GetCollection();
-                    authorizationCollection.Clear();
-                    authElement = authorizationCollection.CreateElement("add");
-                    authElement["accessType"] = @"Allow";
-                    authElement["users"] = rootUsername;
-                    authElement["permissions"] = @"Read, Write";
-                    authorizationCollection.Add(authElement);
-                    if (!string.IsNullOrEmpty(portalsAdminUsername))
-                    {
-                        //   PortalsAdmin
-                        authorizationSection = config.GetSection("system.ftpServer/security/authorization", string.Format("{0}/{1}", ftpSiteName, portalsAdminUsername));
-                        authorizationCollection = authorizationSection.GetCollection();
-                        authorizationCollection.Clear();
-                        authElement = authorizationCollection.CreateElement("add");
-                        authElement["accessType"] = @"Allow";
-                        authElement["users"] = portalsAdminUsername;
-                        authElement["permissions"] = @"Read, Write";
-                        authorizationCollection.Add(authElement);
-                    }
-
                     // Enable user isolation to "User name directory"
                     Trace.TraceInformation("Enabling user isolation to 'User name directory'...");
-                    site.GetChildElement("ftpServer").GetChildElement("userIsolation")["mode"] = "StartInUsersDirectory";
+                    site.GetChildElement("ftpServer").GetChildElement("userIsolation")["mode"] = "None";
 
                     site.LogFile.Period = LoggingRolloverPeriod.Hourly;
                     site.LogFile.Directory = Path.Combine(RoleEnvironment.GetLocalResource("DiagnosticStore").RootPath,
@@ -562,7 +527,7 @@ SeAuditPrivilege = {0}
         /// <param name="sslHostHeader">Host header for SSL binding</param>
         /// <param name="sslThumbprint">Certificate thumbprint of the SSL binding</param>
         /// <returns></returns>
-        private static bool CreateDnnWebSite(string hostHeaders, string homePath, string offlinePath, string userName, string password, string sslThumbprint, string sslHostHeader)
+        private static bool CreateWebSite(string hostHeaders, string homePath, string offlinePath, string userName, string password, string sslThumbprint, string sslHostHeader)
         {
 
 
@@ -706,7 +671,7 @@ SeAuditPrivilege = {0}
                                        bool isOffline, string offlinePort, string port, string[] headers)
         {
             // Creates or updates the DotNetNuke site
-            var site = serverManager.Sites[webSiteName];
+            var site = serverManager.Sites.FirstOrDefault(x => x.Name == webSiteName);
             if (site == null)
             {
                 Trace.TraceInformation("Creating website " + webSiteName + "...");
@@ -720,15 +685,6 @@ SeAuditPrivilege = {0}
                 site.Applications["/"].VirtualDirectories["/"].PhysicalPath = homePath;
                 site.Bindings.Clear();
                 site.Bindings.Add(localIpAddress + ":" + (isOffline ? offlinePort : port) + ":", protocol);
-            }
-            if (RoleEnvironment.IsEmulated && !isOffline)
-            {
-                WebSiteUrl = new UriBuilder()
-                {
-                    Host = localIpAddress,
-                    Port = int.Parse(port),
-                    Scheme = protocol                
-                }.Uri.ToString();                
             }
 
             // Setup header bindings
