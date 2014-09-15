@@ -20,8 +20,8 @@ function Append-Log($text)
     }
 }
 
-function Create-LogPath($siteId) {
-	$iisLogPath = Join-Path $([Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment]::GetLocalResource("DiagnosticStore").RootPath) $("LogFiles\Web\W3SVC" + $siteId)
+function Create-LogPath($logSubfolder) {
+	$iisLogPath = Join-Path $([Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment]::GetLocalResource("DiagnosticStore").RootPath) $logSubfolder
 	
 	Append-Log $("Checking path " + $iisLogPath + "...")
     if (Test-Path $iisLogPath) {
@@ -36,6 +36,9 @@ function Create-LogPath($siteId) {
 }
 
 Append-Log "Creating log folder for the DotNetNuke site..."
-Create-LogPath 1 # We guess that the DotNetNuke app will have Id = 1
+Create-LogPath "LogFiles\Web\W3SVC1" # We guess that the DotNetNuke app will have Id = 1
 Append-Log "Creating log folder for the Offline site..."
-Create-LogPath 2 # We guess that the Offline app will have Id = 2
+Create-LogPath "LogFiles\Web\W3SVC2" # We guess that the Offline app will have Id = 2
+Append-Log "Creating log folder for the FTP site..."
+Create-LogPath "LogFiles\Ftp\FTPSVC3"  # We guess that the FTP app will have Id = 3
+

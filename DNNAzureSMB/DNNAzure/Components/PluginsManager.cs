@@ -147,7 +147,11 @@ namespace DNNAzure.Components
         /// <param name="path">Plugins folder</param>
         private static ICollection<IPlugin> LoadPlugins(string path)
         {
-            var dllFileNames = new List<string>();
+            var dllFileNames = new List<string>
+            {
+                string.Format(@"{0}\approot\bin\DotNetNuke.Azure.Accelerator.Plugins.dll",
+                    Environment.GetEnvironmentVariable("ROLEROOT"))
+            };
             if (Directory.Exists(path))
             {
                 dllFileNames.AddRange(Directory.GetFiles(path, "*.dll"));

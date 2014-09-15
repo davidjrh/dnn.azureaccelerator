@@ -29,9 +29,6 @@ namespace DotNetNuke.Azure.Accelerator.Plugins
         {
             try
             {
-                // If no external tasks were downloaded, there is no external events tasks to execute
-                if (string.IsNullOrEmpty(RoleEnvironment.GetConfigurationSettingValue("Startup.ExternalTasks"))) return;
-
                 string error;
                 Trace.TraceInformation("Calling external event tasks ({0})...", eventName);
                 int exitCode = ExecuteCommand(@"scripts\RunExternalEventTasks.cmd", eventName, out error, 30000);

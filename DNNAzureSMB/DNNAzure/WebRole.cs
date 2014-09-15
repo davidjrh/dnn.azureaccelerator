@@ -147,7 +147,7 @@ namespace DNNAzure
 
                 Plugins.OnStart();
 
-                //Utils.UnmountShare("X:");
+                Utils.UnmountShare("X:");
             }
             catch (Exception ex)
             {
@@ -498,7 +498,7 @@ SeAuditPrivilege = {0}
                     site.GetChildElement("ftpServer").GetChildElement("security").GetChildElement("ssl")["dataChannelPolicy"] = 0;
 
                     // Enable user isolation to "User name directory"
-                    Trace.TraceInformation("Enabling user isolation to 'User name directory'...");
+                    Trace.TraceInformation("Setting user isolation to 'None'...");
                     site.GetChildElement("ftpServer").GetChildElement("userIsolation")["mode"] = "None";
 
                     site.LogFile.Period = LoggingRolloverPeriod.Hourly;

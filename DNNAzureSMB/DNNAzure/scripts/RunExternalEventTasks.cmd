@@ -1,5 +1,5 @@
 cd %ROLEROOT%\approot\bin\scripts
-md %ROLEROOT%\approot\bin\scripts\external
+REM md %ROLEROOT%\approot\bin\scripts\external
 
 echo %DATE% %TIME% - Calling external event tasks (%1%) >> ExternalEventTasks.log
 reg add HKLM\Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell /v ExecutionPolicy /d Unrestricted /f
