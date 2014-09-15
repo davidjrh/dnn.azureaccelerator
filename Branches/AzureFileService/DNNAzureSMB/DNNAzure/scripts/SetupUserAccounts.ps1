@@ -183,14 +183,14 @@ $accountKey = $account.Credentials.ExportBase64EncodedKey()
 cmd.exe /C net.exe user "$username" "$password" /expires:never /add /Y
 cmd.exe /C wmic.exe USERACCOUNT WHERE "Name='$username'" SET PasswordExpires=FALSE
 
+# Setup local policies
+$machineName = [System.Environment]::MachineName
+$accountToAdd = "$machineName\$username"
+SetupLocalPolicies $accountToAdd
+
 # If the appPool user is different from the SMB user, we need to persist the credentials
 # Need to use psexec for this step since need to run with elevation
 if ($username -ne $accountName) {
-	# Setup local policies
-	$machineName = [System.Environment]::MachineName
-	$accountToAdd = "$machineName\$username"
-	SetupLocalPolicies $accountToAdd
-
 	# Persist File Service credentials
 	Push-Location
 	cd "$env:RoleRoot\approot\bin\scripts"
