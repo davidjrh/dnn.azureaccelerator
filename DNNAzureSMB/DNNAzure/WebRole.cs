@@ -136,9 +136,6 @@ namespace DNNAzure
                 // Setup IIS - Website and FTP site
                 SetupIisSites();
 
-                // Inform the plugins that the site is up and running
-                Plugins.OnSiteReady();
-
                 // Setup the website settings
                 Utils.SetupContents(LocalPath);
 
@@ -245,7 +242,7 @@ namespace DNNAzure
         /// <summary>
         /// Setups the IIS sites.
         /// </summary>
-        private static void SetupIisSites()
+        private void SetupIisSites()
         {
             Trace.TraceInformation("Setting up IIS configuration...");
             // Create the DNN Web site
@@ -283,6 +280,9 @@ namespace DNNAzure
                     // Ensure the website is started
                     StartWebsite(WebSiteName);
                     StartWebsite(OfflineSiteName);
+
+                    // Inform the plugins that the site is up and running
+                    Plugins.OnSiteReady();
                 }
                 else
                 {
