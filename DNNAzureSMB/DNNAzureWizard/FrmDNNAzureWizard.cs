@@ -2428,13 +2428,6 @@ namespace DNNAzureWizard
                 if (cboSubscriptions.Text == ImportPublishSettings)
                 {
                     cboSubscriptions.SelectedIndex = 0;
-                    /*var publishSettings = DotNetNuke.Azure.Accelerator.Components.Utils.GetWAPublishingSettings();
-                    if (publishSettings != null)
-                    {
-                        PublishSettings = publishSettings;
-                        PublishSettings.Save(PublishSettingsFilename);
-                        RefreshSubscriptions();
-                    }*/
                     if (dlgFile.ShowDialog(this) == DialogResult.OK)
                     {
                         if (File.Exists(dlgFile.FileName))
@@ -2492,7 +2485,7 @@ namespace DNNAzureWizard
             {
                 return _serviceManager ??
                        (_serviceManager =
-                        ServiceManagementHelper.CreateServiceManagementChannel("WindowsAzureEndPoint", PublishSettings.Certificate));
+                        ServiceManagementHelper.CreateServiceManagementChannel("WindowsAzureEndPoint", Subscription.Certificate));
             }
             set { _serviceManager = value; }
         }
@@ -2504,7 +2497,7 @@ namespace DNNAzureWizard
             {
                 return _databaseManager ??
                        (_databaseManager =
-                        ServiceManagementHelper.CreateDatabaseManagementChannel("SQLAzureEndPoint", PublishSettings.Certificate));
+                        ServiceManagementHelper.CreateDatabaseManagementChannel("SQLAzureEndPoint", Subscription.Certificate));
             }
             set { _databaseManager = value; }
         }
