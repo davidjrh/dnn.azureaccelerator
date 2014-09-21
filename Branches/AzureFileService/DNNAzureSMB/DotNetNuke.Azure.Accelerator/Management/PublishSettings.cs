@@ -15,8 +15,13 @@ namespace DotNetNuke.Azure.Accelerator.Management
             get { return _subscriptions ?? new List<Subscription>(); }
             set { _subscriptions = value; }
         }
-        public X509Certificate2 Certificate { get; set; }
+
+        private X509Certificate2 AllSubscriptionCertificate { get; set; }
+
+
         private XDocument _document;
+
+        public string SchemaVersion { get; set; }
 
         public PublishSettings(string xml)
         {
@@ -29,26 +34,45 @@ namespace DotNetNuke.Azure.Accelerator.Management
             Parse();
         }
 
+
         private void Parse()
         {
             Subscriptions = new List<Subscription>();
-            Certificate = null;
+            AllSubscriptionCertificate = null;
             if (_document == null) return;
+
+
+            var publishProfile = _document.Descendants("PublishProfile").Single();
+            if (publishProfile != null)
+            {
+                if (publishProfile.Attribute("SchemaVersion") != null)
+                {
+                    SchemaVersion = publishProfile.Attribute("SchemaVersion").Value;
+                }
+                if (publishProfile.Attribute("ManagementCertificate") != null)
+                {
+                    AllSubscriptionCertificate = new X509Certificate2(Convert.FromBase64String(publishProfile.Attribute("ManagementCertificate").Value), "", X509KeyStorageFlags.Exportable);                    
+                }                
+            }                
+
             var subscriptions = from subs in _document.Descendants("Subscription")
                                 select subs;
             foreach (var subscription in subscriptions)
             {
                 var isDefault = subscription.Attribute("Default") != null && bool.Parse(subscription.Attribute("Default").Value);
-                Subscriptions.Add(new Subscription
+                var subs = new Subscription
                 {
                     SubscriptionId = subscription.Attribute("Id").Value,
                     Name = subscription.Attribute("Name").Value,
                     Default = isDefault
-                });
+                };
+                subs.Certificate = string.IsNullOrEmpty(SchemaVersion)
+                    ? AllSubscriptionCertificate
+                    : new X509Certificate2(
+                        Convert.FromBase64String(subscription.Attribute("ManagementCertificate").Value), "",
+                        X509KeyStorageFlags.Exportable);
+                Subscriptions.Add(subs);
             }
-            var publishProfile = _document.Descendants("PublishProfile").Single();
-            if (publishProfile != null)
-                Certificate = new X509Certificate2(Convert.FromBase64String(publishProfile.Attribute("ManagementCertificate").Value), "", X509KeyStorageFlags.Exportable);
         }
 
         public void Save(string filename)
