@@ -83,7 +83,7 @@ namespace DNNShared
                 AppendLogEntryWithRetries(driveLetter + "\\logs\\MountHistory.log", 5,
                                           string.Format("Drive mounted by {0}", RoleEnvironment.CurrentRoleInstance.Id));
 
-                SaveWinnerToBlockBlob(drive.Credentials);
+                SaveWinnerToBlockBlob();
             }
             catch (Exception ex)
             {
