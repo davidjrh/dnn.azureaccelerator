@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Diagnostics;
 using System.Linq;
@@ -39,6 +40,32 @@ namespace DNNShared
 
         #region Cloud Drive operations
 
+        private static void SaveWinnerToBlockBlob()
+        {
+            try
+            {
+                var account = CloudStorageAccount.Parse(GetSetting("AcceleratorConnectionString"));
+                var client = account.CreateCloudBlobClient();
+                var container = client.GetContainerReference(GetSetting("driveContainer"));
+                var blobName = string.Format("{0}.log", Path.GetFileNameWithoutExtension(GetSetting("driveName")));
+                var blob = container.GetBlockBlobReference(blobName);
+                blob.UploadText(string.Format("{0} - Drive {1} mounted by {2}", DateTime.UtcNow, GetSetting("driveName"), RoleEnvironment.CurrentRoleInstance.Id));
+                blob.Metadata.Clear();
+                blob.Metadata.Add("DeploymentId", RoleEnvironment.DeploymentId);
+                blob.Metadata.Add("LeasedToInstanceId", RoleEnvironment.CurrentRoleInstance.Id);
+                blob.Metadata.Add("LeasedOn", DateTime.UtcNow.ToString(CultureInfo.InvariantCulture));
+                var instanceIndex = int.Parse(
+                    RoleEnvironment.CurrentRoleInstance.Id
+                        .Substring(RoleEnvironment.CurrentRoleInstance.Id.LastIndexOf("_", StringComparison.Ordinal) + 1));
+                blob.Metadata.Add("MSDeployEndPointPort", (8172 + instanceIndex).ToString(CultureInfo.InvariantCulture));
+                blob.SetMetadata();
+
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("Error while saving the competition winner on instance {0}: {1}", RoleEnvironment.CurrentRoleInstance.Id, ex);
+            }
+        }
 
 
         /// <summary>
@@ -55,6 +82,8 @@ namespace DNNShared
             {
                 AppendLogEntryWithRetries(driveLetter + "\\logs\\MountHistory.log", 5,
                                           string.Format("Drive mounted by {0}", RoleEnvironment.CurrentRoleInstance.Id));
+
+                SaveWinnerToBlockBlob(drive.Credentials);
             }
             catch (Exception ex)
             {
