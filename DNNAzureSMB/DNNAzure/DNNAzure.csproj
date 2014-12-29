@@ -124,6 +124,9 @@
     <None Include="scripts\SetupExternalTasks.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="scripts\SetupRemoteMgmt.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="scripts\SetupSiteRoot.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

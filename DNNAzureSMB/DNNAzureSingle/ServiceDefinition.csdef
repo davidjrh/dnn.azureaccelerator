@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceDefinition name="DNNAzureSingle" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2013-10.2.2">
-  <WebRole name="DNNAzure" vmsize="Medium">
+  <WebRole name="DNNAzure" vmsize="Small">
     <Runtime executionContext="elevated">
     </Runtime>
     <Startup>
@@ -88,6 +88,11 @@
       <InstanceInputEndpoint name="FTPDataPassive" protocol="tcp" localPort="20000">
         <AllocatePublicPortFrom>
           <FixedPortRange max="20020" min="20000" />
+        </AllocatePublicPortFrom>
+      </InstanceInputEndpoint>
+      <InstanceInputEndpoint name="RemoteManagement" protocol="tcp" localPort="5986">
+        <AllocatePublicPortFrom>
+          <FixedPortRange max="30020" min="30000" />
         </AllocatePublicPortFrom>
       </InstanceInputEndpoint>
     </Endpoints>
