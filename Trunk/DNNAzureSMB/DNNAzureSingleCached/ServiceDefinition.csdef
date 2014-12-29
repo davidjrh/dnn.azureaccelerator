@@ -90,6 +90,11 @@
           <FixedPortRange max="20020" min="20000" />
         </AllocatePublicPortFrom>
       </InstanceInputEndpoint>
+      <InstanceInputEndpoint name="RemoteManagement" protocol="tcp" localPort="5986">
+        <AllocatePublicPortFrom>
+          <FixedPortRange max="30020" min="30000" />
+        </AllocatePublicPortFrom>
+      </InstanceInputEndpoint>
     </Endpoints>
     <Imports>
       <Import moduleName="Diagnostics" />
